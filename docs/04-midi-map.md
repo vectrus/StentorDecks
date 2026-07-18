@@ -22,6 +22,7 @@ Factory defaults below are taken from the Mixxx project's RMX2 mapping (communit
 | Kill low | 2A | 3B | toggle EQ low kill |
 | Jog press | 2F | 40 | (reserved; no-op v1) |
 | Pads 1–4 (fx mode) | `01` / `02` | `11` / `12` | pad1 = `filterPad` (filter toggle), pad2 = `flangerPad` (flanger toggle). Owner-confirmed FX mode 2026-07-18 |
+| Vinyl | `47` (shared) | — | toggle `mixer.jog.dualZone`: OFF = single-zone CDJ rate nudge; ON = dual-zone sticky seek + spin. LED lit while dual-zone. **READY FOR HW VERIFICATION** (note/LED) |
 
 Browse cluster (shared): up `45` prev row, down `46` next row, left `44` parent folder, right `43` enter folder. Mic button `48`: reserved, no-op v1.
 
@@ -42,7 +43,7 @@ Browse cluster (shared): up `45` prev row, down `46` next row, left `44` parent 
 | EQ A high/mid/low | 3C / 3E / 40 | 7-bit, soft takeover |
 | EQ B high/mid/low | 4C / 4E / 50 | 7-bit, soft takeover |
 | Jog A / B (turn) | 30 / 31 | relative two's-complement: v<64 → +v, else v−128 |
-| Jog A / B (scratch mode) | 32 / 33 | treat same as turn (no scratching) |
+| Jog A / B (scratch mode) | 32 / 33 | aliased to `deckA.jog` / `deckB.jog` (Vinyl platter often uses these; same feel, no scratching) |
 | Filter amount A / B | **54 / 55** | FX Mode encoder — **relative** (01…3F CW / 40…7F CCW; slow turns often only 01/7F). Not absolute 0…127. |
 | WET A / B | **5C / 5D** | Shift+FX Mode encoder — **relative** (same 1/127 pattern). Or learn a spare absolute knob. |
 | Tap tempo A / B | learn | optional; factory Sync stays Sync |
@@ -51,7 +52,7 @@ Browse cluster (shared): up `45` prev row, down `46` next row, left `44` parent 
 
 ## LED feedback (MIDI out)
 
-Send note-on velocity 7F / 00 to the button's own note number to light/extinguish its LED (Hercules convention; verify per LED on hardware). v1 targets: play (lit while playing), cue-monitor, kills, sync (lit while sync-armed), FX pads. Non-responding LEDs: log, skip, never retry-spam.
+Send note-on velocity 7F / 00 to the button's own note number to light/extinguish its LED (Hercules convention; verify per LED on hardware). v1 targets: play (lit while playing), cue-monitor, kills, sync (lit while sync-armed), FX pads, Vinyl (lit while dual-zone jog). Non-responding LEDs: log, skip, never retry-spam.
 
 ## Mapping model & learn mode (R8.2)
 

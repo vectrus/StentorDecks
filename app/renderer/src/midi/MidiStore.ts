@@ -38,6 +38,7 @@ import { invoke } from '../ipc/client';
 import type { LibraryStore } from '../stores/LibraryStore';
 import type { DeckStore } from '../stores/DeckStore';
 import type { MixerStore } from '../stores/MixerStore';
+import { settingsStore } from '../stores/SettingsStore';
 
 export type MidiMonitorEntry = {
   t: number;
@@ -423,9 +424,20 @@ export class MidiStore {
       case 'deckB.flangerPad':
         this.deckB.toggleFlanger();
         break;
+      case 'mixer.vinyl':
+        this.toggleVinylJogMode();
+        break;
       default:
         break;
     }
+  }
+
+  /** Vinyl LED on = dual-zone (seek+spin); off = single-zone rate nudge (CDJ). */
+  private toggleVinylJogMode(): void {
+    const jog = settingsStore.settings.mixer.jog;
+    void settingsStore.set({
+      mixer: { jog: { ...jog, dualZone: !jog.dualZone } },
+    });
   }
 
   private dispatchButtonUp(id: ControlId): void {

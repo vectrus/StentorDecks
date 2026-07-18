@@ -71,8 +71,9 @@ Notes: Owner confirmed 2026-07-18 (full checklist).
 | 4.1 | Play lit while playing; Sync lit while armed; PFL / kills lit when on. | ☑ |
 | 4.2 | FX pads lit when filter/flanger active. | ☑ |
 | 4.3 | No LED output spam if MIDI out missing (one log line max). | ☑ |
+| 4.4 | Vinyl (`0x47`): toggles dual-zone jog; LED lit when dual-zone on. | ☐ READY FOR HW VERIFICATION |
 
-Notes: Owner confirmed 2026-07-18 (full checklist).
+Notes: 4.1–4.3 owner confirmed 2026-07-18. 4.4 added with Vinyl jog modes (2026-07-18).
 
 ---
 

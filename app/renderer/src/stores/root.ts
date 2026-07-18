@@ -1,3 +1,4 @@
+import { reaction } from 'mobx';
 import { settingsStore } from './SettingsStore';
 import { uiStore } from './UiStore';
 import { DeckStore } from './DeckStore';
@@ -29,6 +30,7 @@ export const midiLeds = new MidiLeds(
   deckB,
   () => midiStore.mapping,
   () => settingsStore.settings.midi.sendLeds,
+  () => settingsStore.settings.mixer.jog.dualZone,
 );
 
 // Soft takeover re-arm: UI/load/sync → same hook MIDI skips while applying (R2.7).
@@ -51,6 +53,35 @@ deckB.setTakeoverHooks({
   },
 });
 mixerStore.setTakeoverHooks({ onSoftwareChange: takeoverNotify });
+
+// Mixer settings → audible immediately + re-arm takeovers (E6 / docs/07).
+reaction(
+  () => ({
+    a: settingsStore.settings.mixer.channelFaders.a.shape,
+    b: settingsStore.settings.mixer.channelFaders.b.shape,
+    eqMaxDb: settingsStore.settings.mixer.eq.maxDb,
+    pitchRange: settingsStore.settings.mixer.pitchFaders.range,
+    pitchDz: settingsStore.settings.mixer.pitchFaders.centerDeadZone,
+  }),
+  () => {
+    deckA.pushGraph();
+    deckB.pushGraph();
+    // Remap transport rate from current fader pos into new pitch domain (no SYNC clear).
+    audioEngine.transport('A')?.setRate(deckA.effectiveRate);
+    audioEngine.transport('B')?.setRate(deckB.effectiveRate);
+    midiStore.noteSoftwareChange('mixer.faderA');
+    midiStore.noteSoftwareChange('mixer.faderB');
+    midiStore.noteSoftwareChange('deckA.pitch');
+    midiStore.noteSoftwareChange('deckB.pitch');
+    midiStore.noteSoftwareChange('deckA.eqHigh');
+    midiStore.noteSoftwareChange('deckA.eqMid');
+    midiStore.noteSoftwareChange('deckA.eqLow');
+    midiStore.noteSoftwareChange('deckB.eqHigh');
+    midiStore.noteSoftwareChange('deckB.eqMid');
+    midiStore.noteSoftwareChange('deckB.eqLow');
+  },
+);
+
 export const audioDeviceStore = new AudioDeviceStore(
   settingsStore,
   async () => {

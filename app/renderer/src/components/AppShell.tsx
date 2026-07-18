@@ -3,7 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { audioDeviceStore, libraryStore, settingsStore } from '../stores/root';
 import { invoke } from '../ipc/client';
 import { uiStore } from '../stores/UiStore';
-import { TempSettingsPanel } from './TempSettingsPanel';
+import { SettingsModal } from './SettingsModal';
 import { AudioSetupScreen } from './AudioSetupScreen';
 import { DevHarness } from './DevHarness';
 import { PrepMode } from './prep/PrepMode';
@@ -14,17 +14,37 @@ import { MidiMonitor } from './MidiMonitor';
 import { HelpPanel } from './HelpPanel';
 import { midiStore } from '../stores/root';
 
+function SettingsCogIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.48a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.82 14.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.43.34.68.22l2.39-.96c.5.4 1.05.72 1.63.94l.36 2.54c.05.24.26.42.5.42h3.8c.24 0 .45-.18.5-.42l.36-2.54c.58-.22 1.13-.54 1.63-.94l2.39.96c.25.12.54.02.68-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Z"
+      />
+    </svg>
+  );
+}
+
 export const AppShell = observer(function AppShell() {
   const [setupOpen, setSetupOpen] = useState(() => audioDeviceStore.needsSetup);
   const [showHarness, setShowHarness] = useState(false);
   const [showMidi, setShowMidi] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showSettings, setShowSettings] = useState(
+    () => settingsStore.settings.library.roots.length === 0,
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'F1') return;
-      e.preventDefault();
-      setShowHelp((v) => !v);
+      if (e.key === 'F1') {
+        e.preventDefault();
+        setShowHelp((v) => !v);
+        return;
+      }
+      if (e.key === ',' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        setShowSettings((v) => !v);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -77,6 +97,16 @@ export const AppShell = observer(function AppShell() {
           <PerfHeaderOuts />
           <button type="button" className="mode" onClick={() => setSetupOpen(true)}>
             Audio
+          </button>
+          <button
+            type="button"
+            className={showSettings ? 'mode on settings-cog' : 'mode settings-cog'}
+            title="Settings (Ctrl+,)"
+            aria-label="Settings"
+            aria-pressed={showSettings}
+            onClick={() => setShowSettings(true)}
+          >
+            <SettingsCogIcon />
           </button>
           <button
             type="button"
@@ -163,7 +193,13 @@ export const AppShell = observer(function AppShell() {
         {showMidi ? <MidiMonitor /> : null}
       </main>
 
-      <TempSettingsPanel />
+      <SettingsModal
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        initialSection={
+          settingsStore.settings.library.roots.length === 0 ? 'library' : undefined
+        }
+      />
       <HelpPanel open={showHelp} onClose={() => setShowHelp(false)} />
     </div>
   );

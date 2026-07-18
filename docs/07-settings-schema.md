@@ -34,17 +34,17 @@ Stored as `settings.json` in `app.getPath('userData')`, written atomically (temp
     "eq": {
       "maxDb": 12                                    // settable; default ±12 dB (R2.12)
     },
-    "jog": {                                         // R2.2 dual-zone feel — live in Settings
-      "dualZone": true,                              // false = fine-only (no spinback boost)
-      "fineSeekMs": 0.05,                            // quiet sticky phase ms/tick (impulse-capped)
-      "spinSeekMs": 12,                              // phase ms/tick at full spin
-      "fineRatePercent": 0,                          // fine = seek-primary (no tempo warble)
+    "jog": {                                         // R2.2 jog feel — live in Settings / Vinyl btn
+      "dualZone": false,                             // false = CDJ rate nudge; true = Vinyl dual
+      "fineSeekMs": 0.06,                            // Vinyl ON sticky phase ms/tick (impulse-capped)
+      "spinSeekMs": 10,                              // phase ms/tick at full spin (Vinyl ON)
+      "fineRatePercent": 0.22,                       // Vinyl OFF main feel (temp pitch %); dual forces 0
       "spinRatePercent": 4,                          // temp rate bend % (spin)
-      "rateDecayMs": 280,                            // how long temp rate holds (spin)
-      "pausedFineSeekMs": 1,                         // stopped scrub (fine)
-      "pausedSpinSeekMs": 12,                        // stopped scrub (spin)
-      "spinStartsAtTps": 140,                        // above light RMX2 ±1 flood
-      "spinFullAtTps": 320                           // tick-rate EMA for full spin
+      "rateDecayMs": 280,                            // how long temp rate holds after ticks stop
+      "pausedFineSeekMs": 0.8,                       // stopped scrub (fine)
+      "pausedSpinSeekMs": 10,                        // stopped scrub (spin)
+      "spinStartsAtTps": 160,                        // above light RMX2 ±1 flood (Vinyl ON)
+      "spinFullAtTps": 340                           // tick-rate EMA for full spin
     }
   },
 

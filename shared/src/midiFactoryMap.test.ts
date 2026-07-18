@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   RMX2_FACTORY_MAP,
   factoryRelativeCcs,
+  lookupControlId,
   migrateFxEncoderBindings,
 } from './midiFactoryMap.js';
+import { factoryMidiMapping } from './midiMappingSchema.js';
 
 describe('RMX2 FX Mode encoders', () => {
   it('factory maps filter amount to relative CC 54/55', () => {
@@ -32,6 +34,18 @@ describe('RMX2 FX Mode encoders', () => {
       ch: 0,
       cc: 0x5d,
     });
+  });
+
+  it('aliases scratch jog CCs 32/33 to turn jogs', () => {
+    const map = factoryMidiMapping();
+    expect(
+      lookupControlId(map, { kind: 'ccRel', channel: 0, cc: 0x32 }),
+    ).toBe('deckA.jog');
+    expect(
+      lookupControlId(map, { kind: 'ccRel', channel: 0, cc: 0x33 }),
+    ).toBe('deckB.jog');
+    expect(factoryRelativeCcs().has(0x32)).toBe(true);
+    expect(factoryRelativeCcs().has(0x33)).toBe(true);
   });
 
   it('migrates mistaken absolute cc7 learns on FX Mode CCs', () => {

@@ -783,7 +783,21 @@ export class DeckStore {
     const scaled = scaleJogTick(v, this.jogActivity.ticksPerSec, feel);
 
     if (this.state === 'playing') {
-      // Quiet sticky phase — coalesce seeks; fine rate is ~0 (no tempo warble).
+      if (!feel.dualZone) {
+        // Single-zone (Vinyl off): R2.2 tempo nudge only — smooth phase, no seek zipper.
+        if (scaled.playingRateAmount > 0) {
+          this.nudgeFactor = 1 + scaled.playingRateAmount * scaled.sign;
+          audioEngine.transport(this.id)?.setRate(this.effectiveRate);
+          if (this.nudgeTimer != null) globalThis.clearTimeout(this.nudgeTimer);
+          this.nudgeTimer = globalThis.setTimeout(() => {
+            this.nudgeFactor = 1;
+            audioEngine.transport(this.id)?.setRate(this.effectiveRate);
+          }, scaled.rateDecayMs) as unknown as number;
+        }
+        return;
+      }
+
+      // Dual-zone (Vinyl on): sticky phase seek + spin rate; coalesce seeks per rAF.
       const gated = gateJogPlayingSeek(
         this.jogImpulse,
         scaled.playingSeekSec * scaled.sign,

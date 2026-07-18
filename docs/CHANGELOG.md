@@ -5,6 +5,24 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — Jog: kill the slow→fast gear change
+
+RMX2 packs larger |delta| on short fast bursts; we were treating that as higher tick-rate / spin, so steady turns and nudges felt like two gears. Activity EMA counts one tick per MIDI message; single-zone bend is constant per message; spin opens only on sustained message rate (not packed delta); scratch CCs `32`/`33` alias to the turn jogs. R2.2, docs/03, docs/04.
+
+---
+
+## 2026-07-18 — Settings modal + channel fader curve editor
+
+Settings moves from the corner FAB into a header **cog** → central modal (Ctrl+,). **Faders & mixer** section: live curve canvas (mockup 06), Linear/Smooth/Sharp presets, shape slider, link A/B, pitch range/dead-zone, EQ max, auto-gain, crossfader guest enable. Shape/EQ/pitch settings re-apply the graph and re-arm takeovers. DeckGraph default shape uses Smooth (55). E6 §9, R2.5–R2.7, R2.12, docs/03, docs/07.
+
+---
+
+## 2026-07-18 — Jog: Vinyl toggles CDJ nudge vs dual-zone
+
+Playing jog default is **single-zone tempo nudge** (no sticky seek zipper) for smooth phase riding to vinyl. RMX2 **Vinyl** (`0x47` / `mixer.vinyl`) toggles `dualZone`; LED follows. Vinyl ON keeps dual-zone sticky seek + spin. Soft preset = CDJ nudge; migrate prior Soft dual bundles. R2.2, docs/03, docs/04, docs/07. Vinyl note/LED: READY FOR HW VERIFICATION.
+
+---
+
 ## 2026-07-18 — Sticky GAIN when auto-gain off
 
 Load no longer zeros trim when `audio.autoGain` is false (or loudness missing). Soft takeover re-arms GAIN only when auto-gain actually rewrote trim. Booth: keep your GAIN through track changes. R2.13 / R3.3, docs/03.

@@ -12,7 +12,7 @@ Reads: docs/06 (authoritative for every visual), docs/03 (behaviors), R7. Depend
 6. Interlock & reset surfacing: LOAD lock state, rejection flash + toast, deck-reset visual confirmation (FX pads visibly extinguish on load).
 7. Cue state UI: per-deck headphone icon, lit when in phones.
 8. Prep mode integration: E4's browser + compact deck strips; mode toggle in UI + mappable ControlId (`app.toggleMode`).
-9. Settings surfaces: fader-curve editor (canvas curve + shape slider + presets + live dB readout, per the interactive demo), pitch dead-zone + range (±8/±16), EQ max dB, auto-gain toggle/target, deck accent colors with derived text-contrast, UI scale, brake toggle, crossfader enable (guest), effect parameter fine-tuning, beat-tick toggle.
+9. Settings surfaces: header cog → central modal; fader-curve editor (canvas curve + shape slider + presets + live dB readout, per mockup 06), pitch dead-zone + range (±8/±16), EQ max dB, auto-gain toggle, UI scale, crossfader enable (guest), beat-tick toggle, jog feel. Remaining: deck accent color picker with derived text-contrast, brake toggle, effect parameter fine-tuning, auto-gain target LUFS.
 10. Flanger/filter parameter tuning session with the owner on real material (closes R3.1 "done well").
 
 ## Acceptance criteria

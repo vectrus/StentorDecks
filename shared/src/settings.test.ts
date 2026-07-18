@@ -39,7 +39,7 @@ describe('settings schema', () => {
     const result = parseSettings(merged);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.settings.mixer.jog.dualZone).toBe(true);
+      expect(result.settings.mixer.jog.dualZone).toBe(false);
       expect(result.settings.mixer.jog.fineSeekMs).toBe(defaultSettings.mixer.jog.fineSeekMs);
     }
   });
@@ -50,7 +50,7 @@ describe('settings schema', () => {
     });
     expect(next.mixer.jog.fineSeekMs).toBe(3);
     expect(next.mixer.jog.spinSeekMs).toBe(40);
-    expect(next.mixer.jog.dualZone).toBe(true);
+    expect(next.mixer.jog.dualZone).toBe(false);
     expect(parseSettings(next).ok).toBe(true);
   });
 

@@ -19,6 +19,7 @@ export class MidiLeds {
     private readonly deckB: DeckStore,
     private readonly getMapping: () => MidiMapping,
     private readonly getSendLeds: () => boolean,
+    private readonly getVinylDualZone: () => boolean = () => false,
   ) {}
 
   /** Call from rAF / audio clock — throttled internally by change detection. */
@@ -36,11 +37,12 @@ export class MidiLeds {
     this.setLed('deckB.killHigh', this.deckB.kills.high);
     this.setLed('deckB.killMid', this.deckB.kills.mid);
     this.setLed('deckB.killLow', this.deckB.kills.low);
-    // FX pads — provisional factory notes; confirm on RMX2 (E3-HW-CHECKLIST)
     this.setLed('deckA.filterPad', this.deckA.filterOn);
     this.setLed('deckA.flangerPad', this.deckA.flangerOn);
     this.setLed('deckB.filterPad', this.deckB.filterOn);
     this.setLed('deckB.flangerPad', this.deckB.flangerOn);
+    // Vinyl lit = dual-zone jog; dark = single-zone CDJ nudge.
+    this.setLed('mixer.vinyl', this.getVinylDualZone());
   }
 
   private setLed(id: ControlId, on: boolean): void {

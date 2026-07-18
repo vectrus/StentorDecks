@@ -59,6 +59,8 @@ export const RMX2_FACTORY_MAP: MidiMapping = {
   'mixer.master': { kind: 'cc14', ch: 0, msb: 0x44, lsb: 0x45 },
   'mixer.headMix': { kind: 'cc14', ch: 0, msb: 0x46, lsb: 0x47 },
   'mixer.crossfader': { kind: 'cc14', ch: 0, msb: 0x48, lsb: 0x49 },
+  // Vinyl mode — Mixxx/HW note 0x47; latches dual-zone jog (on) vs single-zone (off).
+  'mixer.vinyl': { kind: 'button', ch: 0, note: 0x47 },
 
   'browse.up': { kind: 'button', ch: 0, note: 0x45 },
   'browse.down': { kind: 'button', ch: 0, note: 0x46 },
@@ -141,6 +143,12 @@ export function migrateFxEncoderBindings(mapping: MidiMapping): MidiMapping {
 /** Step in 0..1 domain per relative delta unit (FX encoder / learned rel). */
 export const FX_AMOUNT_REL_STEP = 0.01;
 
+/** RMX2 scratch-platter CCs — same relative stream as turn jogs (docs/04). */
+export const RMX2_JOG_SCRATCH_CC: Readonly<Record<number, ControlId>> = {
+  0x32: 'deckA.jog',
+  0x33: 'deckB.jog',
+};
+
 export function lookupControlId(
   mapping: MidiMapping,
   decoded: {
@@ -165,6 +173,11 @@ export function lookupControlId(
     if (binding.kind === 'ccRel' && decoded.kind === 'ccRel') {
       if (binding.ch === decoded.channel && binding.cc === decoded.cc) return id;
     }
+  }
+  // Vinyl/scratch platter often emits 32/33 instead of (or with) 30/31.
+  if (decoded.kind === 'ccRel' && decoded.cc != null) {
+    const alias = RMX2_JOG_SCRATCH_CC[decoded.cc];
+    if (alias) return alias;
   }
   return null;
 }

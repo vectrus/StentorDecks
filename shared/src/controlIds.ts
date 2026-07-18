@@ -50,6 +50,8 @@ export const CONTROL_IDS = [
   'mixer.master',
   'mixer.headMix',
   'mixer.crossfader',
+  /** Vinyl — toggles jog dual-zone (on) vs single-zone rate nudge (off). */
+  'mixer.vinyl',
   'browse.up',
   'browse.down',
   'browse.left',

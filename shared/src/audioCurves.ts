@@ -13,6 +13,12 @@ export const CHANNEL_FADER_TOE_OUT = 0.1;
 /** Factory "smooth" preset (docs/03). Legacy was 35 before bottom-toe + quieter default. */
 export const CHANNEL_FADER_SMOOTH_SHAPE = 55;
 export const LEGACY_CHANNEL_FADER_SMOOTH_SHAPE = 35;
+/** Named shape presets for Settings / mockup 06 (docs/03). */
+export const CHANNEL_FADER_SHAPE_PRESETS = {
+  linear: 0,
+  smooth: CHANNEL_FADER_SMOOTH_SHAPE,
+  sharp: -45,
+} as const;
 
 /** Soft-migrate old factory smooth shape so saved settings pick up the quieter default. */
 export function migrateLegacyChannelFaderShape(shape: number): number {

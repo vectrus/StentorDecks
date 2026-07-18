@@ -1,4 +1,5 @@
 import {
+  CHANNEL_FADER_SMOOTH_SHAPE,
   channelFaderGain,
   eqKnobDb,
   filterFromAmount,
@@ -134,7 +135,7 @@ export class DeckGraph {
       eqMaxDb: 12,
       kills: { low: false, mid: false, high: false },
       faderPos: 1,
-      faderShape: 35,
+      faderShape: CHANNEL_FADER_SMOOTH_SHAPE,
       filterOn: false,
       filterAmount: 0.5,
       flangerOn: false,

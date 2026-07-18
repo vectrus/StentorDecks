@@ -43,6 +43,7 @@ const BUTTON_CONTROL_IDS = new Set<ControlId>([
   'deckB.killLow',
   'deckB.filterPad',
   'deckB.flangerPad',
+  'mixer.vinyl',
   'browse.up',
   'browse.down',
   'browse.left',

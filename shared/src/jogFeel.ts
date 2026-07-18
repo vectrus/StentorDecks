@@ -1,20 +1,22 @@
 /**
- * Dual-zone jog feel (R2.2 / docs/03):
- * - Fine: quiet sticky **phase** (seek-primary) — SL-1200 fingertip on a small wheel.
- *   Flood compression + impulse cap so a short push ≠ vinyl slip.
- * - Spin: fast twist / spinback — larger sticky seek + stronger temp rate
+ * Jog feel (R2.2 / docs/03) — Vinyl button toggles modes:
  *
- * Tunables live in settings.mixer.jog (docs/07). Constants below are the defaults.
+ * - **Single-zone** (Vinyl OFF, default): playing = tempo nudge only (CDJ jog).
+ *   No sticky seeks while playing — phase rides smoothly via temporary rate.
+ * - **Dual-zone** (Vinyl ON): fine sticky phase seek + spinback boost
+ *   (flood compression + impulse cap so a short push ≠ vinyl slip).
  *
- * RMX2 relative jogs flood ±1 CCs (~50–150 msg/s on a light turn). Spin thresholds
- * must sit above that flood. Fine rate stays ~0 so light turns do not warble tempo.
+ * Tunables live in settings.mixer.jog (docs/07). RMX2 relative jogs flood ±1 CCs
+ * (~50–150 msg/s on a light turn); spin thresholds must sit above that flood.
  */
 
-/** Default engine units (matches defaultJogSettings) — tests / docs. */
+/** Dual-zone Soft engine units (Vinyl ON / Balanced baseline) — tests / docs. */
 export const JOG_FINE_SEEK_SEC = 0.00005;
 export const JOG_SPIN_SEEK_SEC = 0.012;
-/** Negligible — fine zone is seek-primary (no tempo warble). */
+/** Dual-zone fine is seek-primary (no tempo warble). */
 export const JOG_FINE_RATE = 0;
+/** Single-zone Soft playing bend (fraction; matches fineRatePercent 0.22). */
+export const JOG_SINGLE_ZONE_FINE_RATE = 0.0022;
 export const JOG_SPIN_RATE = 0.04;
 export const JOG_RATE_DECAY_MS = 280;
 export const JOG_PAUSED_FINE_SEEK_SEC = 0.001;
@@ -40,9 +42,25 @@ export type JogSettings = {
 };
 
 /**
- * Default = quiet sticky phase (seek-primary). Light push stays fine; whip opens spin.
+ * Default = Vinyl OFF → single-zone (R2.2 tempo nudge while playing).
+ * Vinyl ON → dual-zone sticky seek + spinback.
  */
 export const defaultJogSettings: JogSettings = {
+  dualZone: false,
+  fineSeekMs: 0.06,
+  spinSeekMs: 10,
+  /** Single-zone playing bend (~0.22% at full tick unit) — smooth CDJ phase ride. */
+  fineRatePercent: 0.22,
+  spinRatePercent: 4,
+  rateDecayMs: 280,
+  pausedFineSeekMs: 0.8,
+  pausedSpinSeekMs: 10,
+  spinStartsAtTps: 160,
+  spinFullAtTps: 340,
+};
+
+/** Dual-zone Soft numbers for Vinyl ON tests / Balanced-ish seek-primary. */
+export const dualZoneSoftJogSettings: JogSettings = {
   dualZone: true,
   fineSeekMs: 0.05,
   spinSeekMs: 12,
@@ -57,6 +75,32 @@ export const defaultJogSettings: JogSettings = {
 
 /** Previous factory defaults — migrate once so saved itchy settings quiet down. */
 export const LEGACY_ITCHY_JOG_DEFAULTS: readonly JogSettings[] = [
+  // First Vinyl-off Soft (rate a touch shy) → current CDJ nudge default
+  {
+    dualZone: false,
+    fineSeekMs: 0.06,
+    spinSeekMs: 10,
+    fineRatePercent: 0.15,
+    spinRatePercent: 4,
+    rateDecayMs: 220,
+    pausedFineSeekMs: 0.8,
+    pausedSpinSeekMs: 10,
+    spinStartsAtTps: 160,
+    spinFullAtTps: 340,
+  },
+  // Pre-Vinyl Soft (seek-primary dual) — migrate to CDJ nudge default
+  {
+    dualZone: true,
+    fineSeekMs: 0.05,
+    spinSeekMs: 12,
+    fineRatePercent: 0,
+    spinRatePercent: 4,
+    rateDecayMs: 280,
+    pausedFineSeekMs: 1,
+    pausedSpinSeekMs: 12,
+    spinStartsAtTps: 140,
+    spinFullAtTps: 320,
+  },
   // 2026-07-18 rate-primary Soft — dead / warbly (reverted)
   {
     dualZone: true,
@@ -161,37 +205,37 @@ export function migrateItchyJogSettings(jog: JogSettings): JogSettings {
 /** Named bundles for Settings UI — values only; stored state is always the numbers. */
 export const JOG_PRESETS = {
   soft: {
-    label: 'Soft (quiet phase)',
+    label: 'Soft (CDJ nudge)',
     jog: { ...defaultJogSettings } satisfies JogSettings,
   },
   balanced: {
-    label: 'Balanced',
+    label: 'Balanced (Vinyl dual)',
     jog: {
       dualZone: true,
-      fineSeekMs: 0.35,
-      spinSeekMs: 18,
-      fineRatePercent: 0.08,
-      spinRatePercent: 7,
-      rateDecayMs: 340,
-      pausedFineSeekMs: 2,
-      pausedSpinSeekMs: 18,
-      spinStartsAtTps: 90,
-      spinFullAtTps: 240,
+      fineSeekMs: 0.2,
+      spinSeekMs: 14,
+      fineRatePercent: 0.12,
+      spinRatePercent: 6,
+      rateDecayMs: 280,
+      pausedFineSeekMs: 1.5,
+      pausedSpinSeekMs: 14,
+      spinStartsAtTps: 150,
+      spinFullAtTps: 320,
     } satisfies JogSettings,
   },
   spinny: {
     label: 'Spinny',
     jog: {
       dualZone: true,
-      fineSeekMs: 0.7,
-      spinSeekMs: 28,
-      fineRatePercent: 0.18,
-      spinRatePercent: 12,
-      rateDecayMs: 280,
-      pausedFineSeekMs: 3.5,
-      pausedSpinSeekMs: 32,
-      spinStartsAtTps: 60,
-      spinFullAtTps: 180,
+      fineSeekMs: 0.5,
+      spinSeekMs: 22,
+      fineRatePercent: 0.15,
+      spinRatePercent: 10,
+      rateDecayMs: 260,
+      pausedFineSeekMs: 2.5,
+      pausedSpinSeekMs: 24,
+      spinStartsAtTps: 100,
+      spinFullAtTps: 260,
     } satisfies JogSettings,
   },
 } as const;
@@ -218,11 +262,13 @@ export type JogFeelParams = {
 export function jogFeelFromSettings(jog: JogSettings): JogFeelParams {
   const start = jog.spinStartsAtTps;
   const full = Math.max(start + 1, jog.spinFullAtTps);
+  const fineRateFrac = Math.max(0, jog.fineRatePercent) / 100;
   return {
     dualZone: jog.dualZone,
     fineSeekSec: Math.max(0, jog.fineSeekMs) / 1000,
     spinSeekSec: Math.max(0, jog.spinSeekMs) / 1000,
-    fineRate: Math.max(0, jog.fineRatePercent) / 100,
+    // Dual-zone fine stays seek-primary (no tempo warble); single-zone uses rate nudge.
+    fineRate: jog.dualZone ? 0 : fineRateFrac,
     spinRate: Math.max(0, jog.spinRatePercent) / 100,
     rateDecayMs: Math.max(50, jog.rateDecayMs),
     pausedFineSeekSec: Math.max(0, jog.pausedFineSeekMs) / 1000,
@@ -248,8 +294,9 @@ export function createJogActivity(): JogActivity {
  * Update tick-rate EMA from one relative message.
  * Pure — caller replaces stored state with the return value.
  *
- * Attack is intentionally soft: RMX2 sends bursty ±1 floods; a hard attack
- * would open the spin zone on every fingertip nudge.
+ * Each MIDI message counts as **one** tick for the rate EMA. RMX2 packs larger
+ * |delta| on short fast bursts; weighting by mag made those look like a second
+ * “high gear” and opened spin/rate boosts too early.
  */
 export function updateJogActivity(
   prev: JogActivity,
@@ -265,9 +312,10 @@ export function updateJogActivity(
     return { lastTickMs: nowMs, ticksPerSec: 0 };
   }
   const dt = Math.max(1, nowMs - prev.lastTickMs);
-  const inst = (mag * 1000) / dt;
+  // One message = one tick (ignore packed magnitude for speed estimate).
+  const inst = 1000 / dt;
   // Soft attack / faster release — spin needs sustained high rate, not a burst.
-  const alpha = inst > prev.ticksPerSec ? 0.28 : 0.18;
+  const alpha = inst > prev.ticksPerSec ? 0.22 : 0.16;
   const ticksPerSec = prev.ticksPerSec + alpha * (inst - prev.ticksPerSec);
   return { lastTickMs: nowMs, ticksPerSec };
 }
@@ -280,8 +328,8 @@ export function jogSmoothstep(edge0: number, edge1: number, x: number): number {
 }
 
 /**
- * Spin intensity 0..1 from message |delta| and recent tick rate.
- * Light fingertip ≈ 0; hard spinback ≈ 1. Forced 0 when dualZone is off.
+ * Spin intensity 0..1 from recent message **rate** (dual-zone only).
+ * Packed |delta| alone must not open spin — RMX2 uses larger packs on short nudges.
  */
 export function jogSpinIntensity(
   absDelta: number,
@@ -289,11 +337,8 @@ export function jogSpinIntensity(
   params: Pick<JogFeelParams, 'dualZone' | 'spinStartsAtTps' | 'spinFullAtTps'>,
 ): number {
   if (!params.dualZone) return 0;
-  const mag = Number.isFinite(absDelta) ? Math.max(0, absDelta) : 0;
-  const fromRate = jogSmoothstep(params.spinStartsAtTps, params.spinFullAtTps, ticksPerSec);
-  // Only large packed deltas open spin early (ignore ±1…±4 RMX2 noise packs).
-  const fromDelta = jogSmoothstep(5, 12, mag);
-  return Math.min(1, Math.max(fromRate, fromDelta));
+  void absDelta;
+  return jogSmoothstep(params.spinStartsAtTps, params.spinFullAtTps, ticksPerSec);
 }
 
 export type JogScaled = {
@@ -326,16 +371,23 @@ export function scaleJogTick(
   const sign = Math.sign(v) || 1;
   const mag = Math.min(8, Math.abs(v));
   const intensity = jogSpinIntensity(mag, ticksPerSec, params);
-  const unit = Math.min(1, mag);
+  // Playing bend/seek: one MIDI message = one unit (packed |delta| ≠ second gear).
+  const unit = 1;
   const mix = (fine: number, spin: number) => fine + (spin - fine) * intensity;
   const flood = fineFloodGain(ticksPerSec, intensity);
+  // Single-zone: constant temp bend per message — flood rate only keeps it held.
+  const playingRateAmount = params.dualZone
+    ? mix(params.fineRate, params.spinRate) * unit
+    : params.fineRate;
   return {
     sign,
     intensity,
     playingSeekSec: mix(params.fineSeekSec, params.spinSeekSec) * unit * flood,
-    playingRateAmount: mix(params.fineRate, params.spinRate) * unit,
+    playingRateAmount,
+    // Paused scrub may use pack size lightly so a fast whip still jumps farther.
     pausedSeekSec:
-      mix(params.pausedFineSeekSec, params.pausedSpinSeekSec) * Math.max(unit, 0.35),
+      mix(params.pausedFineSeekSec, params.pausedSpinSeekSec) *
+      Math.max(0.35, Math.min(1, mag)),
     rateDecayMs: params.rateDecayMs,
   };
 }

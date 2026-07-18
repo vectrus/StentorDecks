@@ -259,8 +259,15 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     expect(deck.syncStatusLine).toMatch(/phase glue/i);
   });
 
-  it('nudge while playing micro-seeks phase and mutes assist (fine zone)', () => {
-    const deck = new DeckStore('A', () => defaultSettings);
+  it('single-zone playing nudge is rate-only (no seek zipper)', () => {
+    const settings: Settings = {
+      ...defaultSettings,
+      mixer: {
+        ...defaultSettings.mixer,
+        jog: { ...defaultSettings.mixer.jog, dualZone: false, fineRatePercent: 0.22 },
+      },
+    };
+    const deck = new DeckStore('A', () => settings);
     deck.state = 'playing';
     deck.duration = 120;
     deck.position = 10;
@@ -268,28 +275,65 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     deck.phaseGlueTargetSec = 0;
     deck.nudge(1);
     deck.flushJogSeek();
-    // Seek-primary Soft: tiny sticky phase, no fine rate warble
-    expect(deck.nudgeFactor).toBe(1);
-    expect(deck.position).toBeGreaterThan(10);
-    expect(deck.position).toBeLessThan(10.001);
+    expect(deck.nudgeFactor).toBeGreaterThan(1);
+    expect(deck.position).toBe(10); // no sticky seek
     expect(deck.phaseGlueRetarget).toBe(true);
     expect(deck.phaseAssistMuteUntil).toBeGreaterThan(0);
   });
 
-  it('nudge with high tick-rate EMA opens spin zone', () => {
-    const deck = new DeckStore('A', () => defaultSettings);
+  it('dual-zone playing nudge micro-seeks phase (Vinyl on)', () => {
+    const settings: Settings = {
+      ...defaultSettings,
+      mixer: {
+        ...defaultSettings.mixer,
+        jog: {
+          ...defaultSettings.mixer.jog,
+          dualZone: true,
+          fineSeekMs: 0.05,
+          fineRatePercent: 0,
+          spinStartsAtTps: 140,
+          spinFullAtTps: 320,
+        },
+      },
+    };
+    const deck = new DeckStore('A', () => settings);
     deck.state = 'playing';
     deck.duration = 120;
     deck.position = 10;
-    // Pretend the wheel is already spinning hard (dual-zone open).
+    deck.nudge(1);
+    deck.flushJogSeek();
+    expect(deck.nudgeFactor).toBe(1);
+    expect(deck.position).toBeGreaterThan(10);
+    expect(deck.position).toBeLessThan(10.001);
+  });
+
+  it('nudge with high tick-rate EMA opens spin zone when dual-zone', () => {
+    const settings: Settings = {
+      ...defaultSettings,
+      mixer: {
+        ...defaultSettings.mixer,
+        jog: {
+          ...defaultSettings.mixer.jog,
+          dualZone: true,
+          spinSeekMs: 12,
+          spinRatePercent: 4,
+          spinStartsAtTps: 140,
+          spinFullAtTps: 320,
+        },
+      },
+    };
+    const deck = new DeckStore('A', () => settings);
+    deck.state = 'playing';
+    deck.duration = 120;
+    deck.position = 10;
     (deck as unknown as { jogActivity: { lastTickMs: number; ticksPerSec: number } }).jogActivity = {
       lastTickMs: 1000,
       ticksPerSec: 340,
     };
     deck.nudge(-1);
     deck.flushJogSeek();
-    expect(deck.position).toBeLessThan(10 - 0.008); // spin seek ~12 ms
-    expect(deck.nudgeFactor).toBeLessThan(0.97); // ~−4 % temp rate
+    expect(deck.position).toBeLessThan(10 - 0.008);
+    expect(deck.nudgeFactor).toBeLessThan(0.97);
   });
 
   it('toggleSync is mutually exclusive — Sync A clears Sync B', () => {
