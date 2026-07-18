@@ -43,8 +43,8 @@ E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW ✓]
 | E3 | DONE | E2 actions | `[HW]` pads + takeover + OOTB sweep + LEDs **PASS** — owner Julius 2026-07-18. Checklist: [`E3-HW-CHECKLIST.md`](./E3-HW-CHECKLIST.md) |
 | E4 | DOING | E1 + E3 | Core library + MIDI browse + watcher + root picker + Prep UI + Perf 3-row strip. Remaining: large-library soak ACs. |
 | E5 | DOING | E1 + E4 schema | Queue + pipeline + idle backfill + resilient MP3 decode + **beatgrid offset (v3)** for SYNC; accuracy harness later |
-| E6 | DOING | E2–E5; mockups | Perf v2 + AMT/EOT/load toast. Remaining: pitch dead-zone viz, settings curve editor surface, `[HW]` mix |
-| E7 | TODO | E1–E6 | backlog issues |
+| E6 | DOING | E2–E5; mockups | Perf v2 (7-col mixer, jog settings, load reconcile, MST 30%). Remaining: pitch dead-zone viz, curve editor surface, `[HW]` mix |
+| E7 | DOING | E1–E6 | Splash + graceful quit + NSIS shortcuts + in-app Help (`docs/guides/`). Remaining: soak, drills, owner MANUAL |
 
 ### Mockup map (authoritative layouts)
 

@@ -19,11 +19,13 @@ Authoritative HTML mockups and PNGs — see [`docs/mockups/MOCKUPS.md`](docs/moc
 
 ![Performance mode](docs/mockups/screenshots/01-performance-mode.png)
 
+Header MST / CUE / PHN · waveform well · decks with pitch strip & FX · **7-column mixer** (GAIN · kill LEDs · EQ/faders · labels) · library fill.
+
 ### Prep
 
 ![Prep mode](docs/mockups/screenshots/02-prep-mode.png)
 
-**How to use the Prep library** (plain-language guide): [`docs/guides/prep-library.md`](docs/guides/prep-library.md)
+**In-app Help** (topbar **Help** or **F1**) searches the operator guides in [`docs/guides/`](docs/guides/). Prep walkthrough: [`docs/guides/prep-library.md`](docs/guides/prep-library.md).
 
 ### Audio setup
 
@@ -47,18 +49,28 @@ Electron · React 18 · TypeScript strict · MobX · better-sqlite3 · Web Audio
 
 ## Start the app
 
-**Easiest (Windows):** double-click [`Start StentorDeck.bat`](./Start%20StentorDeck.bat) in the project folder.  
-It installs deps on first run, rebuilds the Electron native module, then launches the app.
+### Production-style (Explorer icon, no command window)
 
-Or from a terminal in this folder:
+```bash
+npm run dist          # NSIS installer — Desktop + Start Menu shortcuts with app icon
+# or quick unpacked build:
+npm run dist:dir
+npm run shortcut      # Desktop StentorDeck.lnk → release/win-unpacked/StentorDeck.exe
+```
+
+Double-click **StentorDeck** on the Desktop. Closing the window shuts down analysis, DB, and MIDI cleanly. Boot shows a short branded splash.
+
+Silent helper (same targets): [`scripts/Launch-StentorDeck.vbs`](scripts/Launch-StentorDeck.vbs).
+
+[`Start StentorDeck.bat`](./Start%20StentorDeck.bat) also prefers a packaged `.exe` when present (no console); otherwise falls back to dev mode.
+
+### Development
 
 ```bash
 npm start
 ```
 
-(`npm run dev` is the same command.)
-
-Dev starts windowed (`STENTOR_WINDOWED=1`). For fullscreen like production, set `STENTOR_WINDOWED=0`.
+(`npm run dev` is the same command.) Dev starts windowed (`STENTOR_WINDOWED=1`). For fullscreen like production, set `STENTOR_WINDOWED=0`.
 
 If you see `NODE_MODULE_VERSION` errors for better-sqlite3, run `npm run rebuild:native` again (fetches the Electron prebuild; no VS Build Tools required when a prebuild exists).
 
@@ -81,7 +93,7 @@ See [`docs/TESTING.md`](docs/TESTING.md).
 | Package | Role |
 |---|---|
 | `shared` | IPC contract, settings zod, MIDI/audio pure logic, analysis contract |
-| `app/main` | Electron main, SQLite, scanner/watcher, analysis supervisor, IPC |
+| `app/main` | Electron main, SQLite, scanner/watcher, analysis supervisor, IPC, splash |
 | `app/renderer` | React/MobX UI + audio/MIDI engines + Prep browser |
 | `app/analysis` | Hidden BrowserWindow — decode / waveform / BPM / key / loudness (E5) |
 
@@ -104,45 +116,36 @@ E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW ✓]
 | Epic | Status | When | What landed / what’s left |
 |---|---|---|---|
 | **E1** Skeleton | DONE | 2026-07-18 | Shell, typed IPC, settings, SQLite, workspaces |
-| **E2** Audio engine | DONE | 2026-07-18 | Dual-deck engine, Plan A/B, cue/PFL, USB rebuild. **`[HW]` PASS** (owner Julius). Checklist: [`docs/E2-HW-CHECKLIST.md`](docs/E2-HW-CHECKLIST.md) |
-| **E3** MIDI layer | DONE | 2026-07-18 | Decode/map/dispatch/learn/persist/takeover/LEDs + FX pads + Load pending. **`[HW]` PASS** (owner Julius) — pads, Sync takeover, OOTB sweep, LEDs. Checklist: [`docs/E3-HW-CHECKLIST.md`](docs/E3-HW-CHECKLIST.md) |
-| **E4** Library | DOING | 2026-07-18 | Schema/scan/watcher, IPC/read/load, MIDI browse, root picker, Prep UI, **Perf 3-row strip** + analyzing counter. Left: large-library soak ACs |
-| **E5** Analysis | DOING | 2026-07-18 | Queue + pipeline + idle backfill + **beatgrid offset (v3)** for SYNC. Prep Detect wired. Left: accuracy harness |
-| **E6** Decks/mixer UI | DOING | 2026-07-18 | Perf **v2** handoff (header MST/CUE/PHN, GAIN/FX/pitch decks, slim mixer). Left: polish + `[HW]` mix |
-| **E7** Polish | TODO | — | Packaging, soak, failure drills |
+| **E2** Audio engine | DONE | 2026-07-18 | Dual-deck engine, Plan A/B, cue/PFL, USB rebuild. **`[HW]` PASS**. Checklist: [`docs/E2-HW-CHECKLIST.md`](docs/E2-HW-CHECKLIST.md) |
+| **E3** MIDI layer | DONE | 2026-07-18 | Decode/map/dispatch/learn/persist/takeover/LEDs. **`[HW]` PASS**. Checklist: [`docs/E3-HW-CHECKLIST.md`](docs/E3-HW-CHECKLIST.md) |
+| **E4** Library | DOING | 2026-07-18 | Scan/watcher, Prep + Perf browse, roots. Left: large-library soak ACs |
+| **E5** Analysis | DOING | 2026-07-18 | Pipeline + idle backfill + **beatgrid (v3)** for SYNC. Left: accuracy harness |
+| **E6** Decks/mixer UI | DOING | 2026-07-18 | Perf v2: 7-col mixer, dual-zone jog (settings), load reconcile, MST default 30%. Left: curve editor UI, `[HW]` mix |
+| **E7** Polish | DOING | 2026-07-18 | Splash + graceful quit + NSIS Desktop/Start shortcuts started. Left: soak, failure drills, MANUAL |
 
 ### Same-day milestones (2026-07-18)
 
 | Time context | Milestone |
 |---|---|
 | Spec lock | Requirements + docs/01–07; Sync stays SYNC; library sort/duplicates |
-| E1 | Greenfield app shell shipped |
-| E2 software | Load/play, Plan A/B probe, CDJ cue, auto-gain, reconnect fixes |
-| E2 `[HW]` | Owner verified on physical RMX2 — **gate cleared for E4+ audio** |
-| E3 scaffold | MIDI decode/map/dispatch/monitor/LEDs |
-| E3 persist + learn | SQLite `midi_map`, export/import/reset, learn SM + harness UI |
-| E3 takeover polish | Raw-space pickup refresh, gain↔trim inverse, UI re-arm, harness pickup table |
-| E3 pads + load | FX pad notes + dispatch/LEDs; MIDI Load → harness file picker (then E4 paths) |
-| E3 `[HW]` | Owner PASS — [`docs/E3-HW-CHECKLIST.md`](docs/E3-HW-CHECKLIST.md) |
-| E4 library core | Scan, SQLite tracks, select/load, chokidar, root picker, MIDI browse merge |
-| E4 Prep UI | Folder tree + virtualized list + R6.6 correction strip; settings drawer |
-| E5 pipeline start | Analysis window + Detect→commit (waveform/BPM/key/loudness) |
-| E4 Perf strip | 3-row browser + search summary + analyzing counter (mockup 01) |
-| E5 idle backfill | Auto-enqueue unanalyzed tracks at `backfill` priority when queue idle |
-| E6 overview well | Canvas overview from DB blobs; cue marker, EOT tint, click-seek |
-| E6 detail + overview layout | Stacked scrolling detail (±4s) + overview in each deck panel |
-| MP3 truncate fix | Resilient decode past Chromium early-stop (~32s); analysis v2 re-backfill |
-| Testing | Vitest unit/component + Playwright e2e (`docs/TESTING.md`) |
+| E1–E3 | Shell → audio `[HW]` → MIDI `[HW]` |
+| E4–E5 | Library + analysis pipeline + beatgrid SYNC |
+| E6 Perf v2 | Header outs, deck chrome, 7-col mixer, blue kill LEDs |
+| Jog feel | Dual-zone SL-1200 / spinback; live Settings sliders + presets |
+| Load / takeover | Pitch/EQ stay live on load; filter/wet adopt hardware; gain after auto-gain |
+| Booth safety | MST default **30%**; safety limiter threshold −3 dB |
+| Packaging start | Branded splash, clean shutdown, `npm run dist` / `shortcut` |
 
 ### In progress right now
 
-- **E4** — large-library soak against E4 ACs (scan/watch/search timing).
+- **E4** — large-library soak against E4 ACs.
 - **E5** — Accuracy harness + confidence tuning.
-- **E6** — Full deck/mixer chrome from mockups; `[HW]` mix.
+- **E6** — `[HW]` full manual mix; pitch dead-zone viz; fader-curve settings surface.
+- **E7** — Installer polish, soak, failure drills, MANUAL.
 
 ### Next up
 
-- E6 `[HW]` full manual mix; E7 polish / installer / failure drills
+- Owner `[HW]` mix pass on RMX2; finish E7 packaging / drills.
 
 ### Parked (not v1)
 

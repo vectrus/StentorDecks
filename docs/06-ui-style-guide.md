@@ -45,6 +45,8 @@ UI scale (R7.2) multiplies a root `rem`; everything is rem-based. Minimum post-s
 
 ## Layout
 
+**App topbar** — brand, Performance / Prep, **MST / CUE / PHN**, Audio, **Help** (searchable operator guides from `docs/guides/`; **F1** toggles), optional harness/MIDI, fullscreen. Settings remains the floating FAB.
+
 **Performance mode** (mockup `01` v2) — **MST / CUE / PHN** knobs in the app topbar (left of Audio). Rows: waveform well / deck A · slim mixer · deck B / library that **fills remaining height** (≥3 × 42 px rows).
 
 Deck panel: title/artist + phones PFL; BPM · pitch% · key chip · remaining (EOT → clip color / pulse); overview waveform; pitch strip (zero + cap + soft-takeover ghost); play · CUE · SYNC · **FILTER · AMT · FLANGER · WET** · LOAD (lock + flash toast when playing). Tap/half/double chrome remains Prep / nice-to-have.

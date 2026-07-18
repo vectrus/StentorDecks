@@ -33,6 +33,18 @@ Stored as `settings.json` in `app.getPath('userData')`, written atomically (temp
     },
     "eq": {
       "maxDb": 12                                    // settable; default ±12 dB (R2.12)
+    },
+    "jog": {                                         // R2.2 dual-zone feel — live in Settings
+      "dualZone": true,                              // false = fine-only (no spinback boost)
+      "fineSeekMs": 0.4,                             // phase ms/tick when gentle (very subtle)
+      "spinSeekMs": 16,                              // phase ms/tick at full spin
+      "fineRatePercent": 0.08,                       // temp rate bend % (fine)
+      "spinRatePercent": 6,                          // temp rate bend % (spin)
+      "rateDecayMs": 480,                            // how long temp rate holds
+      "pausedFineSeekMs": 2,                         // stopped scrub (fine)
+      "pausedSpinSeekMs": 20,                        // stopped scrub (spin)
+      "spinStartsAtTps": 45,                         // tick-rate EMA where spin opens
+      "spinFullAtTps": 130                           // tick-rate EMA for full spin
     }
   },
 

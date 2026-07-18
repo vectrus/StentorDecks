@@ -1,12 +1,13 @@
 import { makeAutoObservable } from 'mobx';
-import type { ControlId } from '@stentordeck/shared';
+import { DEFAULT_MASTER_GAIN, type ControlId } from '@stentordeck/shared';
 import { audioEngine } from '../audio/AudioEngine';
 import { setMixerFaderPositions, type DeckStore } from './DeckStore';
 
 export class MixerStore {
   faderA = 1;
   faderB = 1;
-  master = 1;
+  /** Linear 0..1 — default 30% so cold-start isn't PA-wide open. */
+  master = DEFAULT_MASTER_GAIN;
   /** 0 = cue/PFL only, 1 = master only. Default cue-only for headphone pre-listen. */
   headMix = 0;
   phones = 1;

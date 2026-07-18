@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "tsup && node ../../scripts/copy-migrations.mjs",
+    "build": "tsup && node ../../scripts/copy-main-static.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

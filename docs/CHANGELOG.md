@@ -5,6 +5,18 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — In-app Help (searchable guides)
+
+Topbar **Help** button + **F1** opens a searchable panel fed by `docs/guides/` (get-started, Prep, Performance/mixer, SYNC/jog, soft takeover, audio). Spec-link tails are stripped for operators. E7, docs/06.
+
+---
+
+## 2026-07-18 — README + mockup screenshots refresh
+
+Mockups `01`/`04`/`05` updated to 7-col mixer (GAIN · blue kill LEDs · outside VUs); GAIN off decks. Regenerated `docs/mockups/screenshots/*.png` via `npm run docs:screenshots`. Root README: packaging path, E6/E7 status, booth MST default 30%. R2.4, R2.7, R3.3, docs/06, E6, E7.
+
+---
+
 ## 2026-07-18 — MST/CUE/PHN in app topbar
 
 Owner placement: master / cue-mix / phones knobs sit in the shell topbar immediately left of **Audio** (not in the Perf content header), freeing waveform/deck vertical space. docs/06.

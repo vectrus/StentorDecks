@@ -99,8 +99,10 @@ tr.sel td:first-child{border-radius:6px 0 0 6px;} tr.sel td:last-child{border-ra
       <div class="knob" style="width:30px;height:30px;"></div>
       <div class="knob" style="width:30px;height:30px;"></div>
       <div class="knob" style="width:30px;height:30px;"></div>
-      <div class="fw"><div class="ft"><span class="groove"></span><span class="cap" style="top:30%;"></span></div>
-        <div class="vu"><div style="height:46%;background:var(--ok);"></div><div style="height:12%;background:var(--a);"></div></div></div>
+      <div class="fw" style="display:grid;grid-template-columns:11px 30px 11px;column-gap:6px;justify-content:center;width:100%;height:100%;">
+        <div class="vu" style="grid-column:1;"><div style="height:46%;background:var(--ok);"></div><div style="height:12%;background:var(--a);"></div></div>
+        <div class="ft" style="grid-column:2;width:100%;"><span class="groove"></span><span class="cap" style="top:30%;"></span></div>
+      </div>
       <div class="kl" style="color:var(--a);">A</div>
     </div>
     <div class="mxcol"><div class="mxlab">HI</div><div class="mxlab">MID</div><div class="mxlab">LOW</div><div></div><div></div></div>
@@ -108,8 +110,10 @@ tr.sel td:first-child{border-radius:6px 0 0 6px;} tr.sel td:last-child{border-ra
       <div class="knob" style="width:30px;height:30px;"></div>
       <div class="knob" style="width:30px;height:30px;"></div>
       <div class="knob" style="width:30px;height:30px;"></div>
-      <div class="fw"><div class="ft"><span class="groove"></span><span class="cap" style="top:60%;"></span></div>
-        <div class="vu"><div style="height:30%;background:var(--ok);"></div></div></div>
+      <div class="fw" style="display:grid;grid-template-columns:11px 30px 11px;column-gap:6px;justify-content:center;width:100%;height:100%;">
+        <div class="ft" style="grid-column:2;width:100%;"><span class="groove"></span><span class="cap" style="top:60%;"></span></div>
+        <div class="vu" style="grid-column:3;"><div style="height:30%;background:var(--ok);"></div></div>
+      </div>
       <div class="kl" style="color:var(--b);">B</div>
     </div>
     <div class="mxcol"><span class="eqled"></span><span class="eqled"></span><span class="eqled"></span><div></div><div></div></div>

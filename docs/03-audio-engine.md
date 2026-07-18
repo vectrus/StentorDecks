@@ -19,7 +19,7 @@ AudioBufferSourceNode (playbackRate = pitch × nudge)
   → master bus
 ```
 
-Master bus → masterGain (hardware master volume CC) → DynamicsCompressor as safety limiter (threshold -1 dB, ratio 20, knee 0) → merger ch 0/1.
+Master bus → masterGain (hardware master volume CC; **software default 0.3 / 30%** so cold-start is booth-safe) → DynamicsCompressor as **safety limiter** (threshold −3 dB, ratio 20, knee 0, attack 1 ms, release 250 ms) → merger ch 0/1. Limiter is a last-resort clip guard, not a loudness maximizer; gain staging is trim + channel faders + MST.
 
 Cue bus: per-deck pflTap gains (0/1, 15 ms ramp) → cueSum; headphone output = blend(cueSum, master bus) via equal-power cue/mix crossfade (hardware HeadMix CC) → headphoneGain (hardware phones volume) → merger ch 2/3.
 
@@ -27,12 +27,12 @@ Cue bus: per-deck pflTap gains (0/1, 15 ms ramp) → cueSum; headphone output = 
 
 - Play: create a fresh `AudioBufferSourceNode` at `ctx.currentTime`, remember `(startCtxTime, startOffset)`. Pause: stop node, compute offset. Seek/cue: same mechanism. Sources are throwaway; the decoded `AudioBuffer` is deck state.
 - Position for UI/waveform derived each rAF: `offset + (ctx.currentTime - startCtxTime) × playbackRate` (integrate across rate changes: accumulate on every rate change).
-- Nudge (jog while playing): rate multiplier 1 ± 0.02 × velocityFactor (decays over 250 ms) **plus** sticky micro-seek so phase offset remains after the rate nudge ends. Jog while paused: seek ±20 ms per tick. Jog mutes soft phase assist ~300 ms and retargets post-SYNC phase glue to the new offset.
+- Nudge (jog) — **dual-zone** (`shared/jogFeel`, tunables in `settings.mixer.jog` / docs/07): **fine** fingertip vs **spin** (high tick-rate EMA or large packed `|delta|`). Defaults are **very subtle** (~0.4→16 ms seek, 0.08→6 % rate, spin opens ~45→130 t/s). `dualZone: false` forces fine-only. Settings UI: Soft / Balanced / Spinny + sliders; live apply. Jog mutes soft phase assist ~300 ms and retargets post-SYNC phase glue to the new offset.
 - Pitch: `rate = 1 + pitchFaderNormalized × pitchRange` where `pitchRange` is `0.08` or `0.16` from settings (R2.6). Effective BPM = fileBPM × rate (drives the big readout). Changing range re-maps the current fader position into the new domain and re-arms soft takeover.
 - SYNC: latching on/off, **one slave at a time** — engage clears SYNC on the partner, then matches tempo so pitchOnlyBPM(this) = pitchOnlyBPM(other) (fileBPM × pitch-fader rate; partner jog/bend ignored) or pitch-% match if file BPM unknown, then **one-shot phase snap** onto analyzed beatgrids (period = 60/pitchOnlyBPM; phase = `(position − beatGridOffset) mod period` per deck). While armed: tempo follow + **soft phase assist** toward zero phase error. **On release:** pitch stays frozen and **phase glue** keeps holding the current phase error (jogged musical offset) with the same soft assist; further jogs retarget the glue. Glue clears on pitch-fader move, load (R3.3), or re-engaging SYNC. Soft-takeover re-arms the pitch fader on engage. Factory Sync buttons only — never aliased to tap tempo. Phase snap/assist/glue skipped when BPM or beat-grid offset unknown (tempo-only / pitch-% mode; status line honest).
 - Brake (optional, default off): on stop, ramp playbackRate → 0 over 400 ms, then stop.
 - Load interlock: `DeckStore.load()` throws `DeckPlayingError` if `state === playing`; every input path routes through this one method (R4.2).
-- Deck reset on load: FX off + filter amount → 0.5 + wet → 0, kills released, nudge cleared, sync released, cue point → 0:00 on the new buffer, pitch **value** kept at fader's logical value but re-armed for takeover, then **auto-gain trim** applied (R2.13) unless disabled. Click-free via 15 ms gain ramps.
+- Deck reset on load: FX **pads** off, kills released, nudge cleared, sync released, cue point → 0:00 on the new buffer. Filter amount / wet **adopt last hardware** when known (else → 0.5 / 0 + arm). Pitch + EQ values kept and **stay live** if already live (no blanket re-arm). Then **auto-gain trim** (R2.13) re-arms **gain only**. Click-free via 15 ms gain ramps.
 
 ### Cue — classic CDJ (R2.10)
 
@@ -69,7 +69,7 @@ On load, after deck reset: if `audio.autoGain` is true and the track has `loudne
 ## Soft takeover (R2.7)
 
 Applies to: channel faders, pitch faders, gain, EQ ×3 ×2, filter amount ×2, wet knobs, master, headMix, phones.
-State per control: `armed` (bool) + last hardware raw. Armed on: app start, MIDI reconnect, any software-side change of the value (sync, load-reset, UI drag, preset). While armed, incoming hardware values are ignored until hardware crosses the software value (or comes within 1/128); then control goes live. `MidiStore` exposes `{softwareValue, hardwareValue, armed}` per control; UI renders the hollow pickup marker from this (R7 / style guide).
+State per control: `armed` (bool) + last hardware raw. Armed on: app start, MIDI reconnect, software-side change of **that** value (sync, UI drag, preset, auto-gain). **Deck load** is special (R3.3): do not blanket-rearm unchanged pitch/EQ; adopt hardware for filter/wet when known; arm gain after auto-gain only. While armed, incoming hardware values are ignored until hardware crosses the software value (or comes within 1/128); then control goes live. `MidiStore` exposes `{softwareValue, hardwareValue, armed}` per control; UI renders the hollow pickup marker from this (R7 / style guide).
 
 ## Effects (R3)
 

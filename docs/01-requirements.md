@@ -31,7 +31,7 @@ Source: design sessions with the owner (DJ, 54, declining eyesight, RMX2 hardwar
 ## R3 Effects
 - R3.1 Exactly two effects per deck: resonant filter and flanger. **Pad activates** (latching on/off) from RMX2 and UI; **knob defines amount** — filter AMT (LP left of center / HP right), flanger WET (plus rate/depth/feedback in settings). Filter AMT and flanger WET are separate ControlIds (not mode-shared). Neither has a factory RMX2 knob — unmapped until MIDI-learn; UI knobs always work. See docs/04.
 - R3.2 An active effect is visually loud in the UI (lit accent + wet/filter amount).
-- R3.3 Deck reset on load (hard rule): loading a track switches all FX off and resets filter amount + wet/dry, releases EQ kills, releases pitch bend, releases sync, clears the cue point (resets to 0:00 on the new track after load). Physical knob positions are reconciled via soft takeover. Auto-gain from R2.13 applies after reset.
+- R3.3 Deck reset on load (hard rule): loading a track switches all FX **pads** off, releases EQ kills, releases pitch bend, releases sync, clears the cue point (resets to 0:00 on the new track after load). **Filter amount / wet** adopt the last known hardware knob positions when available (so the operator does not relearn knobs); if no hardware sample yet, they reset to center/0 and soft-takeover arms. **Pitch and EQ** keep their software values and stay live if already live — load must not force a full soft-takeover relearn on unchanged knobs. Auto-gain from R2.13 applies after reset and re-arms **gain only**.
 
 ## R4 Loading & interlocks
 - R4.1 Load into a deck via: hardware load buttons, per-deck UI Load button, double-click in browser.

@@ -1,4 +1,4 @@
-import { equalPowerCrossfade, type Settings } from '@stentordeck/shared';
+import { DEFAULT_MASTER_GAIN, equalPowerCrossfade, type Settings } from '@stentordeck/shared';
 import {
   type AudioDeviceInfo,
   type RoutingPlan,
@@ -155,12 +155,13 @@ export class AudioEngine {
 
     this.masterBus = masterCtx.createGain();
     this.masterGain = masterCtx.createGain();
+    // Safety brickwall (docs/03) — not a loudness maximizer; catches overs after MST.
     this.limiter = masterCtx.createDynamicsCompressor();
-    this.limiter.threshold.value = -1;
+    this.limiter.threshold.value = -3; // dB — leave a little PA headroom
     this.limiter.knee.value = 0;
     this.limiter.ratio.value = 20;
-    this.limiter.attack.value = 0.003;
-    this.limiter.release.value = 0.1;
+    this.limiter.attack.value = 0.001;
+    this.limiter.release.value = 0.25;
     this.masterMeter = masterCtx.createAnalyser();
     this.masterMeter.fftSize = 2048;
 
@@ -187,8 +188,9 @@ export class AudioEngine {
     this.cueSum.connect(this.headGain);
 
     // Default cue-only so PFL isn't drowned by the master bus (HeadMix 0 = cue, 1 = master).
+    // Master starts booth-safe — MixerStore.applyToEngine() re-applies after hydrate.
     this.setHeadMix(0);
-    this.setMasterGain(1);
+    this.setMasterGain(DEFAULT_MASTER_GAIN);
     this.setPhonesGain(1);
 
     if (this.plan === 'A') {

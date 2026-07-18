@@ -1,5 +1,6 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import {
+  adoptHardwareTakeover,
   applyLearnCommit,
   armTakeover,
   cc14PairsFromMapping,
@@ -17,6 +18,7 @@ import {
   lookupControlId,
   norm14,
   norm7,
+  preserveTakeoverAfterLoad,
   processTakeoverInput,
   refreshTakeoverSoftware,
   relativeCcsFromMapping,
@@ -518,7 +520,12 @@ export class MidiStore {
     this.arm(id);
   }
 
-  /** After deck load — re-arm continuous deck controls (R2.7 / R3.3). */
+  /**
+   * After deck load — reconcile takeovers without forcing a full relearn (R2.7 / R3.3).
+   * - pitch / EQ: keep live if already live (software unchanged)
+   * - filter / wet: adopt last hardware position (pads already forced off); else arm at reset
+   * - gain: arm after auto-gain (software moved — R2.13)
+   */
   noteDeckLoaded(deckId: 'A' | 'B'): void {
     if (this.applyingFromMidi) return;
     const prefix = deckId === 'A' ? 'deckA' : 'deckB';
@@ -531,7 +538,83 @@ export class MidiStore {
       'filter',
       'wet',
     ] as const) {
-      this.arm(`${prefix}.${suffix}` as ControlId);
+      const id = `${prefix}.${suffix}` as ControlId;
+      const soft = this.softwareRaw(id);
+      const cur = this.takeovers.get(id) ?? createTakeover(soft);
+
+      if (suffix === 'gain') {
+        this.takeovers.set(id, armTakeover(cur, soft));
+        continue;
+      }
+
+      if (suffix === 'filter' || suffix === 'wet') {
+        const adopted = adoptHardwareTakeover(cur);
+        if (adopted) {
+          this.applyContinuousSilent(id, adopted.softwareValue);
+          this.takeovers.set(id, adopted);
+        } else {
+          this.takeovers.set(id, armTakeover(cur, soft));
+        }
+        continue;
+      }
+
+      // pitch + EQ — do not blanket re-arm
+      this.takeovers.set(id, preserveTakeoverAfterLoad(cur, soft));
+    }
+  }
+
+  /** Write a continuous control from reconcile paths without re-arming takeover. */
+  private applyContinuousSilent(id: ControlId, raw: number): void {
+    this.applyingFromMidi = true;
+    try {
+      switch (id) {
+        case 'deckA.pitch':
+          this.deckA.setPitchPos(raw);
+          break;
+        case 'deckB.pitch':
+          this.deckB.setPitchPos(raw);
+          break;
+        case 'deckA.gain':
+          this.deckA.setTrimDb(trimDbFromGainKnob(raw));
+          break;
+        case 'deckB.gain':
+          this.deckB.setTrimDb(trimDbFromGainKnob(raw));
+          break;
+        case 'deckA.eqHigh':
+          this.deckA.setEq('high', raw);
+          break;
+        case 'deckA.eqMid':
+          this.deckA.setEq('mid', raw);
+          break;
+        case 'deckA.eqLow':
+          this.deckA.setEq('low', raw);
+          break;
+        case 'deckB.eqHigh':
+          this.deckB.setEq('high', raw);
+          break;
+        case 'deckB.eqMid':
+          this.deckB.setEq('mid', raw);
+          break;
+        case 'deckB.eqLow':
+          this.deckB.setEq('low', raw);
+          break;
+        case 'deckA.filter':
+          this.deckA.setFilterAmount(raw);
+          break;
+        case 'deckB.filter':
+          this.deckB.setFilterAmount(raw);
+          break;
+        case 'deckA.wet':
+          this.deckA.setFlangerWet(raw);
+          break;
+        case 'deckB.wet':
+          this.deckB.setFlangerWet(raw);
+          break;
+        default:
+          break;
+      }
+    } finally {
+      this.applyingFromMidi = false;
     }
   }
 

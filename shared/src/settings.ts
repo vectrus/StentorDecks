@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { defaultJogSettings, type JogSettings } from './jogFeel.js';
 
 export type Settings = {
   version: 1;
@@ -27,6 +28,8 @@ export type Settings = {
       centerDeadZone: number;
     };
     eq: { maxDb: number };
+    /** Dual-zone jog feel (R2.2) — human units for Settings UI. */
+    jog: JogSettings;
   };
   fx: {
     flanger: { rateHz: number; depthMs: number; feedback: number };
@@ -79,6 +82,7 @@ export const defaultSettings: Settings = {
       centerDeadZone: 0.04,
     },
     eq: { maxDb: 12 },
+    jog: { ...defaultJogSettings },
   },
   fx: {
     flanger: { rateHz: 0.25, depthMs: 1.5, feedback: 0.5 },
@@ -132,6 +136,22 @@ export const settingsSchema = z.object({
       centerDeadZone: z.number().min(0).max(0.1),
     }),
     eq: z.object({ maxDb: z.number().positive() }),
+    jog: z
+      .object({
+        dualZone: z.boolean(),
+        fineSeekMs: z.number().min(0.15).max(30),
+        spinSeekMs: z.number().min(1).max(100),
+        fineRatePercent: z.number().min(0).max(5),
+        spinRatePercent: z.number().min(0).max(50),
+        rateDecayMs: z.number().min(50).max(1500),
+        pausedFineSeekMs: z.number().min(0.5).max(50),
+        pausedSpinSeekMs: z.number().min(1).max(150),
+        spinStartsAtTps: z.number().min(1).max(120),
+        spinFullAtTps: z.number().min(10).max(250),
+      })
+      .refine((j) => j.spinFullAtTps > j.spinStartsAtTps, {
+        message: 'spinFullAtTps must be greater than spinStartsAtTps',
+      }),
   }),
   fx: z.object({
     flanger: z.object({

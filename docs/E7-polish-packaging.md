@@ -9,7 +9,7 @@ Reads: everything. Depends on E1–E6. This epic turns a working app into one yo
 3. Performance hardening: 3-hour two-deck soak with FX + background analysis; renderer < 500 MB stable, no rAF long-tasks > 8 ms sustained, no handle leaks (Windows Performance Monitor evidence).
 4. Booth safety details: confirm-on-quit while any deck is playing; screen-sleep/display-off inhibited while a deck is playing (powerSaveBlocker); audio continues when window is minimized/unfocused (backgroundThrottling off, verified).
 5. Error reporting: rotating local log file (main + renderer), crash dumps to userData, "open logs folder" in settings. No telemetry — offline app.
-6. Installer polish: proper icon, version stamping from package.json, per-user install, upgrade-in-place preserving DB + settings, uninstaller leaves userData unless checkbox.
+6. Installer polish: proper icon, version stamping from package.json, per-user install, Desktop + Start Menu shortcuts (no console), branded splash on boot, graceful shutdown on window close (analysis + DB + IPC), upgrade-in-place preserving DB + settings, uninstaller leaves userData unless checkbox.
 7. Docs: `MANUAL.md` for the owner (setup, MIDI learn, curve editor, fault behaviors) and `DEVELOPMENT.md` (build, fixture recording, release checklist).
 8. Backlog seeding: file issues for the parked v2 items (inputs/mic routing, hotcues, loops, keylock via worklet, recording, gater, crossfader UI, second-screen, split-cue, performance-console tap/half/double chrome, transport session restore after renderer crash) so scope cut in v1 isn't scope forgotten.
 

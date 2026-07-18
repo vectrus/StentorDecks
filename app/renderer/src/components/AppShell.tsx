@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { audioDeviceStore, libraryStore, settingsStore } from '../stores/root';
 import { invoke } from '../ipc/client';
@@ -11,12 +11,24 @@ import { PerformanceMode } from './perf/PerformanceMode';
 import { PerfHeaderOuts } from './perf/PerfHeaderOuts';
 import { BrandMark } from './BrandMark';
 import { MidiMonitor } from './MidiMonitor';
+import { HelpPanel } from './HelpPanel';
 import { midiStore } from '../stores/root';
 
 export const AppShell = observer(function AppShell() {
   const [setupOpen, setSetupOpen] = useState(() => audioDeviceStore.needsSetup);
   const [showHarness, setShowHarness] = useState(false);
   const [showMidi, setShowMidi] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'F1') return;
+      e.preventDefault();
+      setShowHelp((v) => !v);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   if (setupOpen) {
     return (
@@ -65,6 +77,14 @@ export const AppShell = observer(function AppShell() {
           <PerfHeaderOuts />
           <button type="button" className="mode" onClick={() => setSetupOpen(true)}>
             Audio
+          </button>
+          <button
+            type="button"
+            className={showHelp ? 'mode on' : 'mode'}
+            title="Help (F1)"
+            onClick={() => setShowHelp(true)}
+          >
+            Help
           </button>
           <button
             type="button"
@@ -144,6 +164,7 @@ export const AppShell = observer(function AppShell() {
       </main>
 
       <TempSettingsPanel />
+      <HelpPanel open={showHelp} onClose={() => setShowHelp(false)} />
     </div>
   );
 });

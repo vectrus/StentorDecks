@@ -2,9 +2,19 @@
 setlocal
 cd /d "%~dp0"
 
+REM Prefer packaged exe (no console after launch) when available.
+if exist "%LOCALAPPDATA%\Programs\StentorDeck\StentorDeck.exe" (
+  start "" "%LOCALAPPDATA%\Programs\StentorDeck\StentorDeck.exe"
+  exit /b 0
+)
+if exist "%~dp0release\win-unpacked\StentorDeck.exe" (
+  start "" "%~dp0release\win-unpacked\StentorDeck.exe"
+  exit /b 0
+)
+
 title StentorDeck
 echo.
-echo  StentorDeck — starting...
+echo  StentorDeck — starting ^(dev^)...
 echo.
 
 where npm >nul 2>&1

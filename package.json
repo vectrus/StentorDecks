@@ -17,6 +17,7 @@
     "build": "npm run build -w @stentordeck/shared && npm run build -w @stentordeck/main && npm run build -w @stentordeck/renderer && npm run build -w @stentordeck/analysis",
     "dist": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64",
     "dist:dir": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64 --dir",
+    "shortcut": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Create-DesktopShortcut.ps1",
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "npm run typecheck -w @stentordeck/shared && npm run typecheck -w @stentordeck/main && npm run typecheck -w @stentordeck/renderer && npm run typecheck -w @stentordeck/analysis",
     "test": "vitest run",
@@ -45,6 +46,12 @@
       "shared/dist/**/*",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      }
+    ],
     "win": {
       "icon": "build/icon.png",
       "target": [
@@ -62,7 +69,12 @@
     "nsis": {
       "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "StentorDeck",
+      "uninstallDisplayName": "StentorDeck",
+      "runAfterFinish": true
     },
     "extraMetadata": {
       "main": "app/main/dist/index.js"

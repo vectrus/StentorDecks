@@ -1,9 +1,11 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
 import { createAnalysisSupervisor } from './analysisSupervisor';
-import { closeDatabase, getSchemaVersion, openDatabase } from './db/database';
-import { disposeIpc, registerIpcHandlers } from './ipcHandlers';
+import { getSchemaVersion, openDatabase } from './db/database';
+import { registerIpcHandlers } from './ipcHandlers';
+import { gracefulShutdown, registerLifecycleHandlers } from './lifecycle';
 import { loadSettings, type SettingsFileState } from './settingsFile';
+import { closeSplash, showSplash } from './splash';
 import { createMainWindow, preloadPathFromDist } from './windows';
 import type { AppModeState, Settings } from '@stentordeck/shared';
 
@@ -14,6 +16,8 @@ if (!gotLock) {
 } else {
   void boot().catch((err) => {
     console.error('[app] boot failed', err);
+    closeSplash();
+    gracefulShutdown('boot-failed');
     app.exit(1);
   });
 }
@@ -23,14 +27,18 @@ async function boot(): Promise<void> {
   let mode: AppModeState;
 
   app.on('second-instance', () => {
-    const win = BrowserWindow.getAllWindows()[0];
-    if (win) {
-      if (win.isMinimized()) win.restore();
-      win.focus();
+    const win = BrowserWindow.getAllWindows().find((w) => !w.isDestroyed() && w.isVisible());
+    const main = BrowserWindow.getAllWindows()[0];
+    const focus = win ?? main;
+    if (focus) {
+      if (focus.isMinimized()) focus.restore();
+      focus.focus();
     }
   });
 
   await app.whenReady();
+  registerLifecycleHandlers();
+  showSplash();
 
   const userDataPath = app.getPath('userData');
   settingsState = loadSettings(userDataPath);
@@ -54,7 +62,6 @@ async function boot(): Promise<void> {
       settingsState = {
         ...settingsState,
         settings: s,
-        // clear one-shot corruption notice after first successful set
         recoveredFromCorruption: false,
         corruptionNotice: null,
       };
@@ -65,7 +72,6 @@ async function boot(): Promise<void> {
     },
   });
 
-  // Keep supervisor constructible; E5 creates the window.
   createAnalysisSupervisor();
 
   const startWindowedDev = process.env.STENTOR_WINDOWED === '1' || !app.isPackaged;
@@ -84,6 +90,7 @@ async function boot(): Promise<void> {
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
+      showSplash();
       createMainWindow({
         preloadPath: preloadPathFromDist(),
         rendererUrl,
@@ -91,14 +98,6 @@ async function boot(): Promise<void> {
         startFullscreen: settingsState.settings.ui.startInFullscreen,
         startWindowedDev,
       });
-    }
-  });
-
-  app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-      disposeIpc();
-      closeDatabase();
-      app.quit();
     }
   });
 }

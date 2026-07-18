@@ -70,4 +70,42 @@ describe('MidiStore ingest (fixture traffic)', () => {
     store.ingest(FIXTURE_PITCH_BEND_PLUS_A[0]!, 0);
     expect(deckA.bendFactor).toBeCloseTo(1.005, 5);
   });
+
+  it('noteDeckLoaded keeps live pitch/EQ live (no full relearn)', () => {
+    const { store, deckA } = makeStore();
+    // Pick up EQ mid at 0.7
+    store.takeovers.set('deckA.eqMid', {
+      armed: false,
+      softwareValue: 0.7,
+      hardwareValue: 0.7,
+    });
+    deckA.eq = { ...deckA.eq, mid: 0.7 };
+    // Pick up pitch
+    store.takeovers.set('deckA.pitch', {
+      armed: false,
+      softwareValue: 0.55,
+      hardwareValue: 0.55,
+    });
+    deckA.pitchPos = 0.55;
+    // Filter HW at 0.8 while software will reset then adopt
+    store.takeovers.set('deckA.filter', {
+      armed: false,
+      softwareValue: 0.8,
+      hardwareValue: 0.8,
+    });
+    deckA.filterAmount = 0.8;
+    deckA.filterOn = true;
+
+    deckA.resetOnLoad();
+    expect(deckA.filterOn).toBe(false);
+    expect(deckA.filterAmount).toBe(0.5);
+
+    store.noteDeckLoaded('A');
+
+    expect(store.takeoverView('deckA.eqMid')?.armed).toBe(false);
+    expect(store.takeoverView('deckA.pitch')?.armed).toBe(false);
+    expect(store.takeoverView('deckA.filter')?.armed).toBe(false);
+    expect(deckA.filterAmount).toBeCloseTo(0.8); // adopted HW
+    expect(store.takeoverView('deckA.gain')?.armed).toBe(true); // auto-gain path
+  });
 });

@@ -1,6 +1,12 @@
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
-import type { Settings } from '@stentordeck/shared';
+import {
+  defaultJogSettings,
+  JOG_PRESETS,
+  type JogPresetId,
+  type JogSettings,
+  type Settings,
+} from '@stentordeck/shared';
 import { invoke } from '../ipc/client';
 import { libraryStore, settingsStore } from '../stores/root';
 
@@ -13,6 +19,39 @@ const SORTS: Settings['library']['sort'][] = [
   'key',
   'duration',
 ];
+
+const JOG_PRESET_IDS = Object.keys(JOG_PRESETS) as JogPresetId[];
+
+function JogSlider(props: {
+  label: string;
+  hint: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  unit: string;
+  format?: (v: number) => string;
+  onChange: (v: number) => void;
+}) {
+  const { label, hint, value, min, max, step, unit, format, onChange } = props;
+  const shown = format ? format(value) : `${value}${unit}`;
+  return (
+    <label className="temp-jog-slider" title={hint}>
+      <span className="temp-jog-slider-hd">
+        <span>{label}</span>
+        <span className="mono">{shown}</span>
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+    </label>
+  );
+}
 
 /** Collapsed by default — opens as a drawer so it doesn’t cover Prep/browser. */
 export const TempSettingsPanel = observer(function TempSettingsPanel() {
@@ -146,6 +185,8 @@ export const TempSettingsPanel = observer(function TempSettingsPanel() {
       <div className="temp-meta mono">
         {libraryStore.entries.length} browse entries · {libraryStore.tracks.length} tracks
       </div>
+
+      <JogFeelSection />
     </aside>
   );
 
@@ -169,4 +210,161 @@ export const TempSettingsPanel = observer(function TempSettingsPanel() {
     await settingsStore.set({ library: { roots: [...current, p] } });
     setRootDraft('');
   }
+});
+
+const JogFeelSection = observer(function JogFeelSection() {
+  const jog = settingsStore.settings.mixer.jog;
+
+  const patchJog = (partial: Partial<JogSettings>) => {
+    let next: JogSettings = { ...jog, ...partial };
+    // Keep spin thresholds ordered when dragging either end.
+    if (next.spinFullAtTps <= next.spinStartsAtTps) {
+      if (partial.spinStartsAtTps != null) {
+        next = { ...next, spinFullAtTps: next.spinStartsAtTps + 5 };
+      } else {
+        next = { ...next, spinStartsAtTps: Math.max(1, next.spinFullAtTps - 5) };
+      }
+    }
+    void settingsStore.set({ mixer: { jog: next } });
+  };
+
+  return (
+    <div className="temp-jog">
+      <div className="temp-title" style={{ marginTop: 14 }}>
+        Jog feel (live)
+      </div>
+      <div className="temp-meta" style={{ marginBottom: 8 }}>
+        Fine nudge vs fast spinback — tweak while turning the wheel.
+      </div>
+
+      <div className="temp-jog-presets">
+        {JOG_PRESET_IDS.map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => void settingsStore.set({ mixer: { jog: { ...JOG_PRESETS[id].jog } } })}
+          >
+            {JOG_PRESETS[id].label}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => void settingsStore.set({ mixer: { jog: { ...defaultJogSettings } } })}
+        >
+          Reset
+        </button>
+      </div>
+
+      <label className="temp-jog-switch">
+        <input
+          type="checkbox"
+          checked={jog.dualZone}
+          onChange={(e) => patchJog({ dualZone: e.target.checked })}
+        />
+        <span>
+          Dual zone
+          <span className="temp-jog-hint">Off = fine only (no spinback boost)</span>
+        </span>
+      </label>
+
+      <div className="temp-jog-group">Fine (fingertip)</div>
+      <JogSlider
+        label="Fine seek"
+        hint="Phase step per tick when nudging gently — keep low for SL-1200 feel"
+        value={jog.fineSeekMs}
+        min={0.15}
+        max={8}
+        step={0.05}
+        unit=" ms"
+        format={(v) => `${v.toFixed(2)} ms`}
+        onChange={(v) => patchJog({ fineSeekMs: v })}
+      />
+      <JogSlider
+        label="Fine rate bend"
+        hint="Temporary speed change while light-nudging"
+        value={jog.fineRatePercent}
+        min={0}
+        max={1}
+        step={0.01}
+        unit="%"
+        format={(v) => `${v.toFixed(2)}%`}
+        onChange={(v) => patchJog({ fineRatePercent: v })}
+      />
+
+      <div className="temp-jog-group">Spin (fast twist / spinback)</div>
+      <JogSlider
+        label="Spin seek"
+        hint="Phase throw per tick at full spin intensity"
+        value={jog.spinSeekMs}
+        min={5}
+        max={80}
+        step={1}
+        unit=" ms"
+        onChange={(v) => patchJog({ spinSeekMs: v })}
+      />
+      <JogSlider
+        label="Spin rate bend"
+        hint="Temp speed drag at full spin (audible platter feel)"
+        value={jog.spinRatePercent}
+        min={0}
+        max={40}
+        step={0.5}
+        unit="%"
+        format={(v) => `${v.toFixed(1)}%`}
+        onChange={(v) => patchJog({ spinRatePercent: v })}
+      />
+      <JogSlider
+        label="Spin starts at"
+        hint="Tick-rate where the spin zone begins to open"
+        value={jog.spinStartsAtTps}
+        min={5}
+        max={80}
+        step={1}
+        unit=" t/s"
+        onChange={(v) => patchJog({ spinStartsAtTps: v })}
+      />
+      <JogSlider
+        label="Full spin at"
+        hint="Tick-rate for maximum spinback throw"
+        value={jog.spinFullAtTps}
+        min={30}
+        max={200}
+        step={1}
+        unit=" t/s"
+        onChange={(v) => patchJog({ spinFullAtTps: v })}
+      />
+
+      <div className="temp-jog-group">Shared</div>
+      <JogSlider
+        label="Rate decay"
+        hint="How long temp rate bend holds after the last tick"
+        value={jog.rateDecayMs}
+        min={100}
+        max={800}
+        step={10}
+        unit=" ms"
+        onChange={(v) => patchJog({ rateDecayMs: v })}
+      />
+      <JogSlider
+        label="Paused fine scrub"
+        hint="Seek per tick while stopped (gentle)"
+        value={jog.pausedFineSeekMs}
+        min={1}
+        max={30}
+        step={0.5}
+        unit=" ms"
+        onChange={(v) => patchJog({ pausedFineSeekMs: v })}
+      />
+      <JogSlider
+        label="Paused spin scrub"
+        hint="Seek per tick while stopped (fast twist)"
+        value={jog.pausedSpinSeekMs}
+        min={5}
+        max={100}
+        step={1}
+        unit=" ms"
+        onChange={(v) => patchJog({ pausedSpinSeekMs: v })}
+      />
+    </div>
+  );
 });

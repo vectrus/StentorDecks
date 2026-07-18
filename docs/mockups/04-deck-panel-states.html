@@ -13,6 +13,7 @@ body{background:var(--bg);color:var(--tx);font-family:Bahnschrift,"Segoe UI",san
 .knob:after{content:"";position:absolute;left:50%;top:4px;width:3px;height:11px;background:var(--tx);transform:translateX(-50%);}
 .kl{font-size:11px;color:var(--dim);letter-spacing:1px;text-align:center;}
 .big{display:flex;align-items:baseline;gap:10px;margin:2px 0 8px;}
+.pct{font-size:15px;color:var(--dim);}
 .prog{height:7px;background:var(--raised);border-radius:4px;margin-bottom:10px;}
 .fx{display:flex;gap:8px;align-items:center;margin-bottom:10px;}
 .pad{border:1px solid var(--bds);border-radius:8px;padding:8px 12px;font-size:14px;color:#D5DCE5;}
@@ -26,8 +27,9 @@ body{background:var(--bg);color:var(--tx);font-family:Bahnschrift,"Segoe UI",san
   <div>
     <div class="deck" style="border-top:3px solid var(--a);">
       <div class="hd"><div style="flex:1;"><div class="tt">Amsterdam Nights</div><div class="ar">De Sluwe Vos</div></div>
-        <div><div class="knob"></div><div class="kl">GAIN</div></div></div>
+        <i class="ti ti-headphones" style="color:var(--a);font-size:18px;margin-top:4px;"></i></div>
       <div class="big"><span class="mono" style="font-size:46px;color:var(--a);">126.4</span>
+        <span class="mono pct">+0.8%</span>
         <span class="mono" style="font-size:20px;background:var(--raised);border-radius:6px;padding:2px 9px;">8A</span>
         <span class="mono" style="font-size:24px;margin-left:auto;">-3:52</span></div>
       <div class="prog"><div style="height:7px;width:41%;background:var(--a);border-radius:4px;"></div></div>
@@ -39,13 +41,14 @@ body{background:var(--bg);color:var(--tx);font-family:Bahnschrift,"Segoe UI",san
         <span class="btn">CUE</span><span class="btn">SYNC</span>
         <span class="btn" style="margin-left:auto;color:var(--faint);display:flex;align-items:center;gap:6px;"><i class="ti ti-lock"></i>LOAD</span></div>
     </div>
-    <div class="cap">Playing: FILTER pad on + AMT knob (LP/HP) · LOAD locked (R4.3)</div>
+    <div class="cap">Playing: PFL on · FILTER + AMT · LOAD locked (R4.3). GAIN lives in the mixer.</div>
   </div>
   <div>
     <div class="deck" style="border-top:3px solid var(--b);">
       <div class="hd"><div style="flex:1;"><div class="tt" style="color:var(--dist);">— empty —</div><div class="ar" style="color:var(--dist);">Load a track</div></div>
-        <div><div class="knob"></div><div class="kl">GAIN</div></div></div>
+        <i class="ti ti-headphones" style="color:var(--dis);font-size:18px;margin-top:4px;"></i></div>
       <div class="big"><span class="mono" style="font-size:46px;color:var(--dis);">---.-</span>
+        <span class="mono pct" style="color:var(--dis);">0.0%</span>
         <span class="mono" style="font-size:24px;margin-left:auto;color:var(--dis);">-:--</span></div>
       <div class="prog"></div>
       <div class="fx"><span class="pad" style="border-color:var(--dis);color:var(--dist);">FILTER</span>

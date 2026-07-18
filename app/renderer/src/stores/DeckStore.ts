@@ -3,7 +3,8 @@ import {
   autoGainTrimDb,
   beatPeriodSec,
   endOfTrackWarnLevel,
-  JOG_PLAYING_SEEK_SEC,
+  createJogActivity,
+  jogFeelFromSettings,
   PHASE_ASSIST_DEADBAND_SEC,
   PHASE_ASSIST_JOG_MUTE_MS,
   PHASE_ASSIST_MAX_SEEK_SEC,
@@ -15,6 +16,8 @@ import {
   resolveCueHoldEnd,
   resolveCueHoldStart,
   resolveCuePress,
+  scaleJogTick,
+  updateJogActivity,
   type ControlId,
   type Settings,
 } from '@stentordeck/shared';
@@ -103,6 +106,8 @@ export class DeckStore {
 
   private nudgeTimer: number | null = null;
   private seekHoldTimer: number | null = null;
+  /** Tick-rate EMA for dual-zone jog (fine vs spinback). */
+  private jogActivity = createJogActivity();
   /** Temporary pitch bend while held (docs/04: ±0.5%). */
   bendFactor = 1;
   private getSettings: () => Settings;
@@ -650,31 +655,34 @@ export class DeckStore {
   }
 
   nudge(velocity: number): void {
+    const now =
+      typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now();
     // Don't fight the wheel with soft assist / glue for a moment.
-    if (typeof performance !== 'undefined') {
-      this.phaseAssistMuteUntil = performance.now() + PHASE_ASSIST_JOG_MUTE_MS;
-    }
+    this.phaseAssistMuteUntil = now + PHASE_ASSIST_JOG_MUTE_MS;
     if (this.phaseGluePartner != null) {
       this.phaseGlueRetarget = true;
     }
 
     const v = Number.isFinite(velocity) ? velocity : 0;
-    const sign = Math.sign(v) || 1;
-    const mag = Math.min(1, Math.abs(v));
+    this.jogActivity = updateJogActivity(this.jogActivity, Math.abs(v), now);
+    const feel = jogFeelFromSettings(this.getSettings().mixer.jog);
+    const scaled = scaleJogTick(v, this.jogActivity.ticksPerSec, feel);
 
     if (this.state === 'playing') {
-      // Sticky phase: micro-seek so the offset stays after the rate nudge decays.
+      // Fine = SL-1200 phase; high tick-rate / packed delta = spinback throw.
       const pos = audioEngine.transport(this.id)?.position() ?? this.position;
-      this.seek(pos + JOG_PLAYING_SEEK_SEC * sign * Math.max(0.35, mag));
-      this.nudgeFactor = 1 + 0.02 * v;
+      this.seek(pos + scaled.playingSeekSec * scaled.sign);
+      this.nudgeFactor = 1 + scaled.playingRateAmount * scaled.sign;
       audioEngine.transport(this.id)?.setRate(this.effectiveRate);
       if (this.nudgeTimer != null) globalThis.clearTimeout(this.nudgeTimer);
       this.nudgeTimer = globalThis.setTimeout(() => {
         this.nudgeFactor = 1;
         audioEngine.transport(this.id)?.setRate(this.effectiveRate);
-      }, 250) as unknown as number;
+      }, scaled.rateDecayMs) as unknown as number;
     } else {
-      this.seek(this.position + 0.02 * sign);
+      this.seek(this.position + scaled.pausedSeekSec * scaled.sign);
     }
   }
 

@@ -86,8 +86,6 @@ export const PHASE_ASSIST_DEADBAND_SEC = 0.006;
 export const PHASE_ASSIST_MAX_SEEK_SEC = 0.012;
 /** After jog: pause assist so we don't fight the wheel. */
 export const PHASE_ASSIST_JOG_MUTE_MS = 300;
-/** Playing jog: sticky phase micro-seek per tick (seconds × |velocity|). */
-export const JOG_PLAYING_SEEK_SEC = 0.014;
 
 /**
  * Correction to apply to `this` so phase error becomes `targetErr`

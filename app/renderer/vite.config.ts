@@ -18,5 +18,9 @@ export default defineConfig({
   server: {
     port: Number(process.env.VITE_PORT || 5173),
     strictPort: true,
+    fs: {
+      // End-user Help imports markdown from repo `docs/guides/`.
+      allow: [path.resolve(__dirname, '../..')],
+    },
   },
 });

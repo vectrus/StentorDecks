@@ -3,6 +3,7 @@ import path from 'node:path';
 import {
   defaultSettings,
   mergeSettings,
+  migrateItchyJogSettings,
   parseSettings,
   type DeepPartial,
   type Settings,
@@ -18,6 +19,13 @@ export function settingsPath(userDataPath: string): string {
   return path.join(userDataPath, 'settings.json');
 }
 
+function jogSettingsSame(
+  a: Settings['mixer']['jog'],
+  b: Settings['mixer']['jog'],
+): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 export function loadSettings(userDataPath: string): SettingsFileState {
   const file = settingsPath(userDataPath);
   if (!fs.existsSync(file)) {
@@ -31,9 +39,25 @@ export function loadSettings(userDataPath: string): SettingsFileState {
 
   try {
     const raw = JSON.parse(fs.readFileSync(file, 'utf8')) as unknown;
-    const parsed = parseSettings(raw);
+    // Soft-migrate: fill new nested keys (e.g. mixer.jog) from defaults.
+    const merged = mergeSettings(
+      defaultSettings,
+      raw && typeof raw === 'object' ? (raw as DeepPartial<Settings>) : {},
+    );
+    const withJog = {
+      ...merged,
+      mixer: {
+        ...merged.mixer,
+        jog: migrateItchyJogSettings(merged.mixer.jog),
+      },
+    };
+    const parsed = parseSettings(withJog);
     if (!parsed.ok) {
       return recoverCorrupt(userDataPath, file, parsed.error);
+    }
+    // Persist migration so Soft defaults stick across restarts.
+    if (!jogSettingsSame(merged.mixer.jog, parsed.settings.mixer.jog)) {
+      writeSettingsAtomic(userDataPath, parsed.settings);
     }
     return {
       settings: parsed.settings,

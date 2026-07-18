@@ -1,6 +1,6 @@
-import { app, BrowserWindow, screen } from 'electron';
+import { BrowserWindow, screen } from 'electron';
 import path from 'node:path';
-import fs from 'node:fs';
+import { closeSplash, resolveAppIcon } from './splash';
 
 export type WindowHandles = {
   main: BrowserWindow | null;
@@ -20,9 +20,7 @@ export function createMainWindow(opts: {
   startWindowedDev: boolean;
 }): BrowserWindow {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  // Dev: custom mark. Packaged builds use the exe icon from electron-builder.
-  const iconCandidate = path.join(app.getAppPath(), 'build', 'icon.png');
-  const icon = !app.isPackaged && fs.existsSync(iconCandidate) ? iconCandidate : undefined;
+  const icon = resolveAppIcon();
 
   const win = new BrowserWindow({
     width: Math.min(1440, width),
@@ -43,6 +41,7 @@ export function createMainWindow(opts: {
   handles.main = win;
 
   win.on('ready-to-show', () => {
+    closeSplash();
     win.show();
     const wantFullscreen = opts.startFullscreen && !opts.startWindowedDev;
     if (wantFullscreen) {

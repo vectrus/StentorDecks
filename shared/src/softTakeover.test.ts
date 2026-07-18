@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { gainKnobFromTrimDb, trimDbFromGainKnob } from './audioCurves.js';
 import {
+  adoptHardwareTakeover,
   armTakeover,
   createTakeover,
+  preserveTakeoverAfterLoad,
   processTakeoverInput,
   refreshTakeoverSoftware,
 } from './softTakeover.js';
@@ -57,5 +59,31 @@ describe('soft takeover (R2.7)', () => {
       const db = trimDbFromGainKnob(raw);
       expect(gainKnobFromTrimDb(db)).toBeCloseTo(raw, 5);
     }
+  });
+
+  it('adoptHardwareTakeover goes live at last HW', () => {
+    let s = createTakeover(0.5);
+    s = processTakeoverInput(s, 0.2).state;
+    expect(s.armed).toBe(true);
+    const adopted = adoptHardwareTakeover(s);
+    expect(adopted).not.toBeNull();
+    expect(adopted!.armed).toBe(false);
+    expect(adopted!.softwareValue).toBeCloseTo(0.2);
+  });
+
+  it('preserveTakeoverAfterLoad keeps live controls live', () => {
+    let s = createTakeover(0.5);
+    s = processTakeoverInput(s, 0.5).state;
+    expect(s.armed).toBe(false);
+    s = preserveTakeoverAfterLoad(s, 0.5);
+    expect(s.armed).toBe(false);
+    expect(s.softwareValue).toBeCloseTo(0.5);
+  });
+
+  it('preserveTakeoverAfterLoad auto-picks up when HW already matches', () => {
+    let s = createTakeover(0.5);
+    s = { ...s, hardwareValue: 0.5, armed: true };
+    s = preserveTakeoverAfterLoad(s, 0.5);
+    expect(s.armed).toBe(false);
   });
 });

@@ -1,5 +1,8 @@
 /** Pure audio mapping math — docs/03. No Web Audio dependency. */
 
+/** Booth-safe MST default (linear 0..1). Full throw overloads many PAs. */
+export const DEFAULT_MASTER_GAIN = 0.3;
+
 export function channelFaderGain(pos: number, shape: number): number {
   const p = clamp01(pos);
   if (p <= 0) return 0;
