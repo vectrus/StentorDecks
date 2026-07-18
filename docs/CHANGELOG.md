@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Jog Soft: ride (slow) + chunk nudge (fast)
+
+Owner contract: slow outer rim (&lt;~1 cm/s) **rides** — forward speeds up / phase creeps forward, back slows; faster rim **nudges** a sticky chunk (“push the record”). Message-rate EMA is the rim-speed proxy (tune in Settings). Vinyl dual unchanged. R2.2, docs/03, docs/07.
+
+---
+
 ## 2026-07-18 — Jog: kill the slow→fast gear change
 
 RMX2 packs larger |delta| on short fast bursts; we were treating that as higher tick-rate / spin, so steady turns and nudges felt like two gears. Activity EMA counts one tick per MIDI message; single-zone bend is constant per message; spin opens only on sustained message rate (not packed delta); scratch CCs `32`/`33` alias to the turn jogs. R2.2, docs/03, docs/04.

@@ -259,12 +259,19 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     expect(deck.syncStatusLine).toMatch(/phase glue/i);
   });
 
-  it('single-zone playing nudge is rate-only (no seek zipper)', () => {
+  it('Soft slow rim rides with rate only (no chunk seek)', () => {
     const settings: Settings = {
       ...defaultSettings,
       mixer: {
         ...defaultSettings.mixer,
-        jog: { ...defaultSettings.mixer.jog, dualZone: false, fineRatePercent: 0.22 },
+        jog: {
+          ...defaultSettings.mixer.jog,
+          dualZone: false,
+          fineRatePercent: 0.45,
+          fineSeekMs: 3,
+          spinStartsAtTps: 42,
+          spinFullAtTps: 90,
+        },
       },
     };
     const deck = new DeckStore('A', () => settings);
@@ -273,12 +280,47 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     deck.position = 10;
     deck.phaseGluePartner = 'B';
     deck.phaseGlueTargetSec = 0;
+    // lastTickMs must be near performance.now() or EMA spikes on huge/negative dt
+    const now = performance.now();
+    (deck as unknown as { jogActivity: { lastTickMs: number; ticksPerSec: number } }).jogActivity = {
+      lastTickMs: now - 80,
+      ticksPerSec: 12,
+    };
     deck.nudge(1);
     deck.flushJogSeek();
     expect(deck.nudgeFactor).toBeGreaterThan(1);
-    expect(deck.position).toBe(10); // no sticky seek
+    expect(deck.position).toBe(10);
     expect(deck.phaseGlueRetarget).toBe(true);
-    expect(deck.phaseAssistMuteUntil).toBeGreaterThan(0);
+  });
+
+  it('Soft fast rim applies sticky nudge chunk', () => {
+    const settings: Settings = {
+      ...defaultSettings,
+      mixer: {
+        ...defaultSettings.mixer,
+        jog: {
+          ...defaultSettings.mixer.jog,
+          dualZone: false,
+          fineRatePercent: 0.45,
+          fineSeekMs: 3,
+          spinStartsAtTps: 42,
+          spinFullAtTps: 90,
+        },
+      },
+    };
+    const deck = new DeckStore('A', () => settings);
+    deck.state = 'playing';
+    deck.duration = 120;
+    deck.position = 10;
+    const now = performance.now();
+    (deck as unknown as { jogActivity: { lastTickMs: number; ticksPerSec: number } }).jogActivity = {
+      lastTickMs: now - 8,
+      ticksPerSec: 100,
+    };
+    deck.nudge(1);
+    deck.flushJogSeek();
+    expect(deck.position).toBeGreaterThan(10.002);
+    expect(deck.position).toBeLessThan(10.015);
   });
 
   it('dual-zone playing nudge micro-seeks phase (Vinyl on)', () => {

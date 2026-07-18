@@ -633,8 +633,9 @@ const JogFeelSection = observer(function JogFeelSection() {
     <div className="settings-section">
       <h3 className="settings-section-title">Jog feel</h3>
       <p className="settings-section-lead">
-        Soft / Vinyl OFF = CDJ tempo nudge. Vinyl ON = dual-zone sticky phase + spin. RMX2 Vinyl
-        button toggles dual-zone.
+        Soft: slow rim rides (speeds up / slows down); faster rim pushes a sticky chunk. Vinyl ON =
+        dual-zone fine + spinback. Vinyl button toggles dual-zone. Thresholds are message-rate
+        proxies for ~1 cm/s on the RMX2 outer rim — tune if your wheel feels early/late.
       </p>
 
       <div className="temp-jog-presets">
@@ -664,74 +665,98 @@ const JogFeelSection = observer(function JogFeelSection() {
         <span>
           Dual zone (Vinyl)
           <span className="temp-jog-hint">
-            Off = CDJ rate nudge while playing · On = sticky phase + spin
+            Off = Soft ride + chunk · On = Vinyl fine seek + spin
           </span>
         </span>
       </label>
 
-      <div className="temp-jog-group">Fine (fingertip)</div>
+      <div className="temp-jog-group">
+        {jog.dualZone ? 'Fine (Vinyl fingertip)' : 'Ride (slow rim)'}
+      </div>
       <JogSlider
-        label="Fine seek"
-        hint="Vinyl ON sticky phase per tick"
+        label={jog.dualZone ? 'Fine seek' : 'Nudge chunk'}
+        hint={
+          jog.dualZone
+            ? 'Sticky phase per tick when gentle'
+            : 'Sticky phase push when rim is faster (~chunk size)'
+        }
         value={jog.fineSeekMs}
-        min={0.01}
-        max={8}
-        step={0.005}
+        min={jog.dualZone ? 0.01 : 0.5}
+        max={jog.dualZone ? 8 : 20}
+        step={jog.dualZone ? 0.005 : 0.25}
         unit=" ms"
-        format={(v) => `${v.toFixed(3)} ms`}
+        format={(v) => `${v.toFixed(jog.dualZone ? 3 : 2)} ms`}
         onChange={(v) => patchJog({ fineSeekMs: v })}
       />
       <JogSlider
-        label="Fine rate bend"
-        hint="Vinyl OFF main feel — temporary pitch % while the wheel moves"
+        label={jog.dualZone ? 'Fine rate bend' : 'Ride bend'}
+        hint={
+          jog.dualZone
+            ? 'Usually 0 on Vinyl — seek-primary'
+            : 'Temporary pitch % while riding slowly (forward = faster)'
+        }
         value={jog.fineRatePercent}
         min={0}
-        max={1}
+        max={jog.dualZone ? 1 : 2}
         step={0.01}
         unit="%"
         format={(v) => `${v.toFixed(2)}%`}
         onChange={(v) => patchJog({ fineRatePercent: v })}
       />
 
-      <div className="temp-jog-group">Spin (fast twist / spinback)</div>
+      <div className="temp-jog-group">
+        {jog.dualZone ? 'Spin (fast twist)' : 'Nudge threshold (rim speed)'}
+      </div>
+      {jog.dualZone ? (
+        <>
+          <JogSlider
+            label="Spin seek"
+            hint="Phase throw per tick at full spin"
+            value={jog.spinSeekMs}
+            min={4}
+            max={80}
+            step={1}
+            unit=" ms"
+            onChange={(v) => patchJog({ spinSeekMs: v })}
+          />
+          <JogSlider
+            label="Spin rate bend"
+            hint="Temp speed drag at full spin"
+            value={jog.spinRatePercent}
+            min={0}
+            max={40}
+            step={0.5}
+            unit="%"
+            format={(v) => `${v.toFixed(1)}%`}
+            onChange={(v) => patchJog({ spinRatePercent: v })}
+          />
+        </>
+      ) : null}
       <JogSlider
-        label="Spin seek"
-        hint="Phase throw per tick at full spin intensity"
-        value={jog.spinSeekMs}
-        min={4}
-        max={80}
-        step={1}
-        unit=" ms"
-        onChange={(v) => patchJog({ spinSeekMs: v })}
-      />
-      <JogSlider
-        label="Spin rate bend"
-        hint="Temp speed drag at full spin"
-        value={jog.spinRatePercent}
-        min={0}
-        max={40}
-        step={0.5}
-        unit="%"
-        format={(v) => `${v.toFixed(1)}%`}
-        onChange={(v) => patchJog({ spinRatePercent: v })}
-      />
-      <JogSlider
-        label="Spin starts at"
-        hint="Tick-rate where spin opens"
+        label={jog.dualZone ? 'Spin starts at' : 'Chunk starts at'}
+        hint={
+          jog.dualZone
+            ? 'Tick-rate where spin opens'
+            : 'Msg/s proxy for ~1 cm/s outer rim — lower = chunks sooner'
+        }
         value={jog.spinStartsAtTps}
-        min={20}
+        min={15}
         max={350}
-        step={5}
+        step={1}
         unit=" t/s"
         onChange={(v) => patchJog({ spinStartsAtTps: v })}
       />
       <JogSlider
-        label="Full spin at"
-        hint="Tick-rate for maximum spinback throw"
+        label={jog.dualZone ? 'Full spin at' : 'Full chunk at'}
+        hint={
+          jog.dualZone
+            ? 'Tick-rate for maximum spinback'
+            : 'Msg/s for full nudge chunk size'
+        }
         value={jog.spinFullAtTps}
-        min={60}
+        min={40}
         max={500}
-        step={5}
+        step={1}
         unit=" t/s"
         onChange={(v) => patchJog({ spinFullAtTps: v })}
       />
@@ -739,9 +764,9 @@ const JogFeelSection = observer(function JogFeelSection() {
       <div className="temp-jog-group">Shared</div>
       <JogSlider
         label="Rate decay"
-        hint="How long temp rate bend holds after the last tick"
+        hint="How long ride bend holds after the last tick"
         value={jog.rateDecayMs}
-        min={100}
+        min={60}
         max={800}
         step={10}
         unit=" ms"

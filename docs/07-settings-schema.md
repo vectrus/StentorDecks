@@ -35,16 +35,16 @@ Stored as `settings.json` in `app.getPath('userData')`, written atomically (temp
       "maxDb": 12                                    // settable; default ±12 dB (R2.12)
     },
     "jog": {                                         // R2.2 jog feel — live in Settings / Vinyl btn
-      "dualZone": false,                             // false = CDJ rate nudge; true = Vinyl dual
-      "fineSeekMs": 0.06,                            // Vinyl ON sticky phase ms/tick (impulse-capped)
-      "spinSeekMs": 10,                              // phase ms/tick at full spin (Vinyl ON)
-      "fineRatePercent": 0.22,                       // Vinyl OFF main feel (temp pitch %); dual forces 0
-      "spinRatePercent": 4,                          // temp rate bend % (spin)
-      "rateDecayMs": 280,                            // how long temp rate holds after ticks stop
+      "dualZone": false,                             // false = Soft ride+chunk; true = Vinyl dual
+      "fineSeekMs": 3,                               // Soft: nudge chunk ms · Vinyl: fine seek ms
+      "spinSeekMs": 10,                              // Vinyl spin seek ms/tick
+      "fineRatePercent": 0.45,                       // Soft: ride bend % · Vinyl dual forces 0
+      "spinRatePercent": 4,                          // Vinyl spin rate %
+      "rateDecayMs": 140,                            // ride bend hold after last tick
       "pausedFineSeekMs": 0.8,                       // stopped scrub (fine)
       "pausedSpinSeekMs": 10,                        // stopped scrub (spin)
-      "spinStartsAtTps": 160,                        // above light RMX2 ±1 flood (Vinyl ON)
-      "spinFullAtTps": 340                           // tick-rate EMA for full spin
+      "spinStartsAtTps": 42,                         // Soft: chunk opens (~1 cm/s rim proxy) · Vinyl: spin
+      "spinFullAtTps": 90                            // Soft: full chunk · Vinyl: full spin
     }
   },
 

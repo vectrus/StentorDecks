@@ -69,6 +69,7 @@ describe('settings schema', () => {
     };
     const next = migrateItchyJogSettings(itchy);
     expect(next.fineSeekMs).toBe(defaultSettings.mixer.jog.fineSeekMs);
-    expect(next.fineSeekMs).toBeLessThan(1);
+    expect(next.dualZone).toBe(false);
+    expect(next.spinStartsAtTps).toBe(defaultSettings.mixer.jog.spinStartsAtTps);
   });
 });

@@ -19,15 +19,19 @@ Phase math uses each track’s **file BPM** grid (same ticks you see on the deta
 
 ## Jog (RMX2 platter)
 
-The RMX2 jog is a relative MIDI stream (lots of tiny ±1 messages) — not a heavy SL-1200 platter. Feel is simulated in software. Short nudges often send **packed** deltas (bigger than ±1); those are **not** treated as a second high-speed gear.
+The RMX2 jog is a relative MIDI stream — not a heavy SL-1200. Soft feel is simulated from **rim speed** (message rate).
 
-**Vinyl button** (or Settings → Dual zone) switches modes:
+**Soft / Vinyl OFF** (default):
 
-| Mode | Vinyl LED | Playing feel |
-|------|-----------|--------------|
-| **Single-zone** (default Soft) | Off | Smooth **tempo nudge** — same bend per MIDI message while you turn; no sticky seeks (CDJ-style phase ride) |
-| **Dual-zone** | On | Sticky **phase** seek on light turns + **spin** only on a sustained fast whip |
+| Rim speed | Feel |
+|-----------|------|
+| **Slow** (~&lt;1 cm/s on the outer edge) | **Ride** — forward speeds the track up a bit (phase creeps forward); back slows it (phase the other way) |
+| **Faster** (a deliberate push / flick) | **Nudge chunk** — sticky push of the record by a small amount |
 
-Paused jog always seeks through the track (scrub).
+When you stop turning, tempo returns to the pitch fader; the phase offset you rode or nudged **stays**.
 
-Presets: **Soft (CDJ nudge) · Balanced (Vinyl dual) · Spinny**. Changes apply live. Fine rate bend is the main Soft control; fine seek matters when Vinyl / dual-zone is on.
+**Vinyl ON** (button / dual-zone): fine sticky phase + spinback on a hard whip.
+
+Presets in Settings: **Soft (ride + chunk) · Balanced · Spinny**. If chunks come too early/late, tune **Chunk starts at** / **Full chunk at** (msg/s proxy for rim speed on your RMX2).
+
+Paused jog always scrubs through the track.
