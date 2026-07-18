@@ -5,6 +5,7 @@ import { bootAudio, settingsStore, uiStore } from './stores/root';
 import './styles/tokens.css';
 import './styles/shell.css';
 import './styles/audio.css';
+import './styles/prep.css';
 
 async function boot(): Promise<void> {
   await settingsStore.hydrate();

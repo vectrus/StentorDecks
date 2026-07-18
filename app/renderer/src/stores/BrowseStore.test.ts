@@ -30,4 +30,12 @@ describe('BrowseStore fixture (R5.3)', () => {
     b.clearPendingLoad();
     expect(b.pendingLoad).toBeNull();
   });
+
+  it('selectIndex sets cursor for mouse selection', () => {
+    const b = new BrowseStore();
+    b.selectIndex(3);
+    expect(b.selected?.name).toBe('Chill');
+    b.selectIndex(99);
+    expect(b.cursor).toBe(b.entries.length - 1);
+  });
 });

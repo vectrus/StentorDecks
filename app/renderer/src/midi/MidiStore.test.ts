@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultSettings } from '@stentordeck/shared';
-import { BrowseStore } from '../stores/BrowseStore';
 import { DeckStore } from '../stores/DeckStore';
+import { LibraryStore } from '../stores/LibraryStore';
 import { MixerStore } from '../stores/MixerStore';
 import { MidiStore } from './MidiStore';
 import {
@@ -13,18 +13,28 @@ import {
 } from './MidiStore.fixture';
 
 describe('MidiStore ingest (fixture traffic)', () => {
-  function makeStore() {
+  function makeLibrary(): LibraryStore {
+    const lib = new LibraryStore();
+    lib.folders = [
+      { path: 'C:\\Music\\a', name: 'a', children: [] },
+      { path: 'C:\\Music\\b', name: 'b', children: [] },
+    ];
+    lib.tracks = [];
+    lib.cursor = 0;
+    return lib;
+  }
+
+  function makeStore(library = makeLibrary()) {
     const deckA = new DeckStore('A', () => defaultSettings);
     const deckB = new DeckStore('B', () => defaultSettings);
     deckA.state = 'stopped';
     deckA.duration = 10;
     const mixer = new MixerStore(deckA, deckB);
-    const browse = new BrowseStore();
-    return new MidiStore(deckA, deckB, mixer, browse, () => false);
+    return { store: new MidiStore(deckA, deckB, mixer, library, () => false), library, deckA };
   }
 
   it('decodes pitch A cc14 into monitor with control id', () => {
-    const store = makeStore();
+    const { store } = makeStore();
     let t = 0;
     for (const msg of FIXTURE_PITCH_A_CC14) {
       store.ingest(msg, t);
@@ -34,36 +44,29 @@ describe('MidiStore ingest (fixture traffic)', () => {
   });
 
   it('annotates play note', () => {
-    const store = makeStore();
+    const { store } = makeStore();
     store.ingest(FIXTURE_PLAY_A[0]!, 0);
     expect(store.monitor[0]?.controlId).toBe('deckA.play');
   });
 
   it('annotates jog relative', () => {
-    const store = makeStore();
+    const { store } = makeStore();
     store.ingest(FIXTURE_JOG_A[0]!, 0);
     expect(store.monitor[0]?.controlId).toBe('deckA.jog');
     expect(store.monitor[0]?.annotation).toContain('ccRel');
   });
 
-  it('browse down moves fixture cursor', () => {
-    const deckA = new DeckStore('A', () => defaultSettings);
-    const deckB = new DeckStore('B', () => defaultSettings);
-    const mixer = new MixerStore(deckA, deckB);
-    const browse = new BrowseStore();
-    const store = new MidiStore(deckA, deckB, mixer, browse, () => false);
-    const before = browse.selected?.name;
+  it('browse down moves LibraryStore cursor', () => {
+    const library = makeLibrary();
+    const { store } = makeStore(library);
+    expect(library.selected?.name).toBe('a');
     store.ingest(FIXTURE_BROWSE_DOWN[0]!, 0);
-    expect(browse.selected?.name).not.toBe(before);
+    expect(library.selected?.name).toBe('b');
     expect(store.monitor[0]?.controlId).toBe('browse.down');
   });
 
   it('pitch bend + arms temporary +0.5% rate', () => {
-    const deckA = new DeckStore('A', () => defaultSettings);
-    const deckB = new DeckStore('B', () => defaultSettings);
-    deckA.state = 'stopped';
-    const mixer = new MixerStore(deckA, deckB);
-    const store = new MidiStore(deckA, deckB, mixer, new BrowseStore(), () => false);
+    const { store, deckA } = makeStore();
     store.ingest(FIXTURE_PITCH_BEND_PLUS_A[0]!, 0);
     expect(deckA.bendFactor).toBeCloseTo(1.005, 5);
   });

@@ -25,7 +25,7 @@ npm run docs:screenshots # mockup PNGs
 - **Unit first** for pure logic (docs/03–04 math, decode, takeover) — before UI wiring.
 - **Component tests** use `*.component.test.tsx` and jsdom; mock `stores/root` when a component reads singletons.
 - **E2E** must not depend on RMX2, WASAPI, or real MIDI. App smoke injects `window.stentor` and fakes `mediaDevices`.
-- **`[HW]` criteria** stay owner-only (`docs/E2-HW-CHECKLIST.md`); automation marks READY FOR HW VERIFICATION, never self-passes.
+- **`[HW]` criteria** stay owner-only (`docs/E2-HW-CHECKLIST.md`, `docs/E3-HW-CHECKLIST.md`); automation marks READY FOR HW VERIFICATION, never self-passes.
 - Human-comprehensible errors (`.cursorrules` §5b) should be covered when adding `formatUserError` branches.
 
 ## CI

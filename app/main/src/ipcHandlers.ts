@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from 'electron';
+import { BrowserWindow, dialog, ipcMain } from 'electron';
 import type {
   AppModeState,
   DeepPartial,
@@ -16,10 +16,14 @@ import {
   saveMidiMapping,
 } from './db/midiMapRepo';
 import {
-  FIXTURE_FOLDERS,
-  FIXTURE_TRACKS,
-  fixtureTrackDetail,
-} from './fixtures';
+  buildFolderTree,
+  getTrackDetail,
+  queryTracks,
+  readTrackFile,
+  updateManualMeta,
+} from './db/tracksRepo';
+import { createLibraryWatcher, type LibraryWatcher } from './scanner/libraryWatcher';
+import { scanLibraryRoots } from './scanner/scanLibrary';
 import { applySettingsPatch, type SettingsFileState } from './settingsFile';
 import { getMainWindow, toggleFullscreen } from './windows';
 
@@ -32,6 +36,7 @@ type Ctx = {
 };
 
 const analysis = createAnalysisSupervisor();
+let libraryWatcher: LibraryWatcher | null = null;
 
 export function broadcast<K extends keyof IpcEventMap>(channel: K, payload: IpcEventMap[K]): void {
   for (const win of BrowserWindow.getAllWindows()) {
@@ -49,11 +54,54 @@ function handle<K extends keyof IpcInvokeMap>(
 }
 
 export function registerIpcHandlers(ctx: Ctx): void {
-  handle('library:query', () => FIXTURE_TRACKS);
-  handle('library:folders', () => FIXTURE_FOLDERS);
-  handle('library:track', (req) => fixtureTrackDetail(req.id));
-  handle('library:rescan', () => {
-    broadcast('library:progress', { phase: 'scan', scanned: 0, total: 3 });
+  libraryWatcher = createLibraryWatcher(getDb, (p) => broadcast('library:progress', p));
+  libraryWatcher.setRoots(ctx.getSettingsState().settings.library.roots);
+
+  handle('library:query', (req) => {
+    const sort = req?.sort ?? ctx.getSettingsState().settings.library.sort;
+    return queryTracks(getDb(), { ...req, sort });
+  });
+  handle('library:folders', () => {
+    const roots = ctx.getSettingsState().settings.library.roots;
+    return buildFolderTree(getDb(), roots);
+  });
+  handle('library:track', (req) => getTrackDetail(getDb(), req.id));
+  handle('library:read', (req) => {
+    const roots = ctx.getSettingsState().settings.library.roots;
+    return readTrackFile(getDb(), req.id, roots);
+  });
+  handle('library:pickRoot', async () => {
+    const win = getMainWindow();
+    const opts = {
+      title: 'Choose music folder',
+      properties: ['openDirectory' as const],
+    };
+    const result = win
+      ? await dialog.showOpenDialog(win, opts)
+      : await dialog.showOpenDialog(opts);
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return { path: result.filePaths[0]! };
+  });
+  handle('library:updateManual', (req) =>
+    updateManualMeta(getDb(), req.id, {
+      bpm: req.bpm,
+      keyCamelot: req.keyCamelot,
+      keyName: req.keyName,
+    }),
+  );
+  handle('library:rescan', async (req) => {
+    const settings = ctx.getSettingsState().settings;
+    const partial = req.path != null && req.path !== '';
+    const roots = partial ? [req.path!] : settings.library.roots;
+    if (roots.length === 0) {
+      broadcast('library:progress', { phase: 'scan', scanned: 0, total: 0 });
+      return { ok: true as const };
+    }
+    // Partial path rescan must not mark tracks outside that tree as missing.
+    await scanLibraryRoots(getDb(), roots, (p) => broadcast('library:progress', p), {
+      markMissing: !partial,
+    });
+    libraryWatcher?.setRoots(settings.library.roots);
     return { ok: true as const };
   });
 
@@ -80,6 +128,7 @@ export function registerIpcHandlers(ctx: Ctx): void {
     const current = ctx.getSettingsState().settings;
     const next = applySettingsPatch(ctx.userDataPath, current, patch as DeepPartial<Settings>);
     ctx.setSettings(next);
+    libraryWatcher?.setRoots(next.library.roots);
     broadcast('settings:changed', next);
     return next;
   });
@@ -115,5 +164,7 @@ export function registerIpcHandlers(ctx: Ctx): void {
 }
 
 export function disposeIpc(): void {
+  void libraryWatcher?.close();
+  libraryWatcher = null;
   analysis.destroy();
 }

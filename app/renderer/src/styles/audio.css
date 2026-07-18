@@ -187,9 +187,19 @@
 .browse-list li {
   padding: 0.35rem 0.5rem;
   border-radius: 0.3rem;
+  cursor: pointer;
+}
+
+.browse-list li.hint {
+  cursor: default;
 }
 
 .browse-list li.sel {
   background: var(--sel, #243041);
   color: var(--text);
+  outline: 1px solid var(--accent, #e87a3a);
+}
+
+.browse-list li:hover:not(.hint) {
+  background: var(--bg-raised, #1a222e);
 }

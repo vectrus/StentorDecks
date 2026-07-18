@@ -23,7 +23,7 @@ export const RMX2_FACTORY_MAP: MidiMapping = {
   'deckA.eqHigh': { kind: 'cc7', ch: 0, cc: 0x3c },
   'deckA.eqMid': { kind: 'cc7', ch: 0, cc: 0x3e },
   'deckA.eqLow': { kind: 'cc7', ch: 0, cc: 0x40 },
-  // FX pads — Hercules RMX2 MIDI Commands PDF (FX mode). Confirm on owner unit [HW].
+  // FX pads — Hercules PDF + owner [HW] PASS 2026-07-18 (FX mode).
   'deckA.filterPad': { kind: 'button', ch: 0, note: 0x01 },
   'deckA.flangerPad': { kind: 'button', ch: 0, note: 0x02 },
 
@@ -61,13 +61,12 @@ export const RMX2_FACTORY_MAP: MidiMapping = {
 };
 
 /**
- * Provisional FX pad notes from Hercules RMX2 MIDI Commands PDF (FX mode):
- * A pad1=0x01 filter, pad2=0x02 flanger; B pad1=0x11, pad2=0x12.
- * Owner must confirm in FX pad mode via MIDI monitor — see docs/E3-HW-CHECKLIST.md.
+ * FX pad notes — Hercules RMX2 MIDI Commands PDF + owner [HW] PASS 2026-07-18.
+ * A pad1=0x01 filter, pad2=0x02 flanger; B pad1=0x11, pad2=0x12 (FX mode).
  */
 export const RMX2_PAD_NOTES_STATUS = {
-  source: 'Hercules RMX2_MIDI_Commands.pdf',
-  status: 'READY FOR HW VERIFICATION',
+  source: 'Hercules RMX2_MIDI_Commands.pdf + owner HW 2026-07-18',
+  status: 'HW VERIFIED',
   deckA: { filterPad: 0x01, flangerPad: 0x02 },
   deckB: { filterPad: 0x11, flangerPad: 0x12 },
 } as const;

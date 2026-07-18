@@ -31,7 +31,7 @@ import {
   normalizeMidiBytes,
 } from '@stentordeck/shared';
 import { invoke } from '../ipc/client';
-import type { BrowseStore } from '../stores/BrowseStore';
+import type { LibraryStore } from '../stores/LibraryStore';
 import type { DeckStore } from '../stores/DeckStore';
 import type { MixerStore } from '../stores/MixerStore';
 
@@ -64,7 +64,7 @@ export class MidiStore {
     private readonly deckA: DeckStore,
     private readonly deckB: DeckStore,
     private readonly mixer: MixerStore,
-    private readonly browse: BrowseStore,
+    private readonly library: LibraryStore,
     private readonly getCrossfaderEnabled: () => boolean,
   ) {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -364,22 +364,22 @@ export class MidiStore {
         this.deckB.setPitchBend(-1);
         break;
       case 'browse.up':
-        this.browse.up();
+        this.library.up();
         break;
       case 'browse.down':
-        this.browse.down();
+        this.library.down();
         break;
       case 'browse.right':
-        this.browse.enter();
+        this.library.enter();
         break;
       case 'browse.left':
-        this.browse.parent();
+        this.library.parent();
         break;
       case 'deckA.load':
-        this.browse.requestLoad('A');
+        this.library.requestLoad(this.deckA);
         break;
       case 'deckB.load':
-        this.browse.requestLoad('B');
+        this.library.requestLoad(this.deckB);
         break;
       case 'deckA.filterPad':
         this.deckA.toggleFilter();

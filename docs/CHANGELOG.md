@@ -5,11 +5,53 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — E4 Prep browser UI
+
+Prep mode: deck strips, folder tree, virtualized 42 px browse list (same cursor as MIDI), search, BPM/key correction strip (tap / ½ / ×2 / Camelot / numeric) via `library:updateManual` (R6.6). R-IDs: R5.*, R6.6, docs/06, mockup 02.
+
+---
+
+## 2026-07-18 — E4 root picker (`library:pickRoot`)
+
+Native folder dialog for library roots; Settings **Browse…** + first-run banner when roots empty (auto-rescan after pick). R-IDs: E4 first-run / settings roots.
+
+---
+
+## 2026-07-18 — E4 chokidar library watcher
+
+Debounced (2 s) `chokidar` watch on library roots: add/change → re-index file; unlink → `missing_since`. Restarts when roots change. UI refreshes on `library:progress` watch flush. R-IDs: R5.*, docs/05, E4 watcher AC.
+
+---
+
+## 2026-07-18 — E4 MIDI browse → LibraryStore
+
+RMX2 browse cluster (up/down/left/right) and Load A/B drive `LibraryStore` (real scanned roots/folders/tracks). Fixture `BrowseStore` unwired. Harness shows one shared cursor list. R-IDs: R5.3, E3/E4 browse merge.
+
+---
+
+## 2026-07-18 — E4 library selection + `library:read`
+
+Mouse row selection (library + browse fixture), Load → A/B, double-click load. New IPC `library:read` (id → bytes, root-gated) for deck load from DB. R-IDs: R5.3, R4.2, E4 load pathway.
+
+---
+
+## 2026-07-18 — E4 library foundation (start)
+
+Migration `002_tracks` (tracks + waveforms), partial-hash identity + tag BPM/key validation, one-shot `scanLibraryRoots` (`music-metadata`), `tracksRepo` queries/folder tree/upsert/move/missing, real `library:*` IPC (fixtures retired), `LibraryStore` + settings roots/rescan/sort in temp panel + harness. Watcher, Prep UI next. R-IDs: R5.*, docs/05, E4.
+
+---
+
+## 2026-07-18 — E3 `[HW]` PASS (owner)
+
+Julius verified FX pads (`01`/`02`/`11`/`12`), soft takeover after Sync, OOTB control sweep, and LEDs on the physical RMX2. Sign-off in [`E3-HW-CHECKLIST.md`](./E3-HW-CHECKLIST.md). E3 epic **DONE**. Next: E4 library + E5 analysis. R-IDs: R1.5, R2.7, R8.2, docs/04.
+
+---
+
 ## 2026-07-18 — E3 FX pads + Load pending + HW checklist
 
-- ControlIds `filterPad` / `flangerPad`; factory provisional notes from Hercules PDF (`01`/`02` / `11`/`12`); dispatch + LEDs.
+- ControlIds `filterPad` / `flangerPad`; factory notes from Hercules PDF (`01`/`02` / `11`/`12`); dispatch + LEDs.
 - MIDI Load → `BrowseStore.pendingLoad` + harness file picker (until E4 paths).
-- Owner checklist [`E3-HW-CHECKLIST.md`](./E3-HW-CHECKLIST.md) — READY FOR HW VERIFICATION (do not self-pass). R8.2, docs/04, E3 `[HW]`.
+- Owner checklist [`E3-HW-CHECKLIST.md`](./E3-HW-CHECKLIST.md) — later **PASS** same day (see entry above).
 
 ---
 
@@ -39,7 +81,7 @@ Pure learn state machine (`shared/midiLearn`): button note-on, continuous ≥3 d
 
 ## 2026-07-18 — E2 `[HW]` PASS (owner)
 
-Julius verified Plan A (dual out + PFL + HeadMix), Plan B (forced dual stereo), and unplug/replug mid-playback on the physical RMX2. Sign-off in [`E2-HW-CHECKLIST.md`](./E2-HW-CHECKLIST.md). E2 epic **DONE**; audio-routing gate cleared for E4+. E3 MIDI `[HW]` still outstanding. R-IDs: R1.3, R1.4, R2.8, docs/02 failure stance.
+Julius verified Plan A (dual out + PFL + HeadMix), Plan B (forced dual stereo), and unplug/replug mid-playback on the physical RMX2. Sign-off in [`E2-HW-CHECKLIST.md`](./E2-HW-CHECKLIST.md). E2 epic **DONE**; audio-routing gate cleared. (E3 `[HW]` also PASS same day — see above.) R-IDs: R1.3, R1.4, R2.8, docs/02 failure stance.
 
 ---
 

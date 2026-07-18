@@ -3,14 +3,22 @@ import { useEffect } from 'react';
 import { CONTROL_IDS, type ControlId } from '@stentordeck/shared';
 import {
   audioDeviceStore,
-  browseStore,
   deckA,
   deckB,
+  libraryStore,
   midiStore,
   mixerStore,
   settingsStore,
 } from '../stores/root';
 import { formatUserError } from '../util/formatUserError';
+
+function fmtDur(ms: number | null): string {
+  if (ms == null) return '…';
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${r.toString().padStart(2, '0')}`;
+}
 
 export const DevHarness = observer(function DevHarness() {
   useEffect(() => {
@@ -24,58 +32,107 @@ export const DevHarness = observer(function DevHarness() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  const entries = libraryStore.entries;
+
   return (
     <div className="harness">
       <header className="harness-hd">
-        <h1>E2/E3 Dev harness</h1>
+        <h1>E2–E4 Dev harness</h1>
         <span className="mono">
           Plan {audioDeviceStore.activePlan} · {audioDeviceStore.planReason}
         </span>
       </header>
       <section className="sec">
-        <div className="hd">Browse (MIDI cluster / fixture until E4)</div>
-        <div className="mono hint">{browseStore.breadcrumb}</div>
-        <ul className="browse-list">
-          {browseStore.entries.map((e, i) => (
-            <li key={e.id} className={i === browseStore.cursor ? 'sel' : ''}>
-              {e.kind === 'folder' ? '[dir] ' : ''}
-              {e.name}
+        <div className="hd">Library + MIDI browse (same cursor)</div>
+        <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+          <input
+            type="search"
+            placeholder="Search artist / title…"
+            value={libraryStore.search}
+            onChange={(e) => libraryStore.setSearch(e.target.value)}
+            style={{ flex: 1 }}
+          />
+          <button
+            type="button"
+            disabled={libraryStore.scanning || settingsStore.settings.library.roots.length === 0}
+            onClick={() => void libraryStore.rescan()}
+          >
+            {libraryStore.scanning ? 'Scanning…' : 'Rescan'}
+          </button>
+        </div>
+        <div className="mono hint">{libraryStore.breadcrumb}</div>
+        <div className="mono hint">
+          roots {settingsStore.settings.library.roots.length} · entries {entries.length}
+          {libraryStore.progress
+            ? ` · scan ${libraryStore.progress.scanned}/${libraryStore.progress.total ?? '?'}`
+            : ''}
+          {libraryStore.loadError ? ` · load: ${libraryStore.loadError}` : ''}
+        </div>
+        <ul className="browse-list" style={{ maxHeight: 280 }}>
+          {entries.slice(0, 120).map((e, i) => (
+            <li
+              key={e.kind === 'folder' ? e.path : e.track.id}
+              className={`mono${i === libraryStore.cursor ? ' sel' : ''}`}
+              title={e.kind === 'folder' ? e.path : e.track.path}
+              role="option"
+              aria-selected={i === libraryStore.cursor}
+              onClick={() => libraryStore.selectIndex(i)}
+              onDoubleClick={() => {
+                libraryStore.selectIndex(i);
+                if (e.kind === 'folder') libraryStore.enter();
+                else libraryStore.requestLoad(deckA);
+              }}
+            >
+              {e.kind === 'folder' ? (
+                <>[dir] {e.name}</>
+              ) : (
+                <>
+                  {e.name} · {e.track.bpm ?? '…'} · {e.track.keyCamelot ?? '…'} ·{' '}
+                  {fmtDur(e.track.durationMs)}
+                  {e.track.bpmSource === 'tag' ? ' [tag]' : ''}
+                </>
+              )}
             </li>
           ))}
+          {entries.length === 0 && (
+            <li className="hint">Add a library root in Settings → Rescan (then Enter the root)</li>
+          )}
+          {entries.length > 120 && (
+            <li className="hint">… {entries.length - 120} more (Prep UI virtualizes)</li>
+          )}
         </ul>
-        {browseStore.pendingLoad && (
-          <div className="row" style={{ marginTop: 8 }}>
-            <span className="mono">
-              MIDI Load → Deck {browseStore.pendingLoad.deckId}:{' '}
-              {browseStore.pendingLoad.entry.name}
-            </span>
-            <label className="row">
-              Pick audio file
-              <input
-                type="file"
-                accept="audio/*,.mp3,.flac,.wav"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  const pending = browseStore.pendingLoad;
-                  if (!f || !pending) return;
-                  const deck = pending.deckId === 'A' ? deckA : deckB;
-                  browseStore.clearPendingLoad();
-                  void deck.load(f).catch((err: unknown) => {
-                    alert(formatUserError(err, `Couldn’t load on Deck ${pending.deckId}`));
-                  });
-                }}
-              />
-            </label>
-            <button type="button" onClick={() => browseStore.clearPendingLoad()}>
-              Dismiss
-            </button>
-          </div>
-        )}
+        <div className="row" style={{ marginTop: 8, gap: 8 }}>
+          <button type="button" onClick={() => libraryStore.parent()}>
+            Parent / Left
+          </button>
+          <button type="button" onClick={() => libraryStore.enter()}>
+            Enter / Right
+          </button>
+          <button
+            type="button"
+            disabled={!libraryStore.selectedTrack}
+            onClick={() => libraryStore.requestLoad(deckA)}
+          >
+            Load → A
+          </button>
+          <button
+            type="button"
+            disabled={!libraryStore.selectedTrack}
+            onClick={() => libraryStore.requestLoad(deckB)}
+          >
+            Load → B
+          </button>
+          <span className="mono hint">
+            RMX2 browse + Load use this list ·{' '}
+            {libraryStore.selected
+              ? `sel: ${libraryStore.selected.name}`
+              : 'select a row'}
+          </span>
+        </div>
       </section>
       <p className="hint">
         Manual soak (not CI): 30 min two-deck + FX toggles; renderer working set &lt; ~400 MB;
-        heap snapshot after rebuilds should not accumulate nodes. E2 HW done · E3 HW:{' '}
-        <code>docs/E3-HW-CHECKLIST.md</code>
+        heap snapshot after rebuilds should not accumulate nodes. E2+E3 HW done · E4 browse merged.
       </p>
 
       <div className="harness-grid">

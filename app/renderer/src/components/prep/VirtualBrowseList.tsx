@@ -1,0 +1,131 @@
+import { observer } from 'mobx-react-lite';
+import { useEffect, useRef, useState } from 'react';
+import type { LibraryBrowseEntry } from '../../stores/LibraryStore';
+import { deckA, libraryStore } from '../../stores/root';
+import { fmtBpm, fmtDur } from './fmt';
+
+/** docs/06 — browser row 42 px at 16 px type */
+const ROW_H = 42;
+const OVERSCAN = 8;
+
+export const VirtualBrowseList = observer(function VirtualBrowseList() {
+  const entries = libraryStore.entries;
+  const cursor = libraryStore.cursor;
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewH, setViewH] = useState(400);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setViewH(el.clientHeight));
+    ro.observe(el);
+    setViewH(el.clientHeight);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const top = cursor * ROW_H;
+    const bottom = top + ROW_H;
+    if (top < el.scrollTop) el.scrollTop = top;
+    else if (bottom > el.scrollTop + el.clientHeight) {
+      el.scrollTop = bottom - el.clientHeight;
+    }
+  }, [cursor, entries.length]);
+
+  const totalH = entries.length * ROW_H;
+  const start = Math.max(0, Math.floor(scrollTop / ROW_H) - OVERSCAN);
+  const visible = Math.ceil(viewH / ROW_H) + OVERSCAN * 2;
+  const end = Math.min(entries.length, start + visible);
+  const slice = entries.slice(start, end);
+
+  return (
+    <div
+      className="prep-virt"
+      ref={scrollerRef}
+      onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+      role="listbox"
+      aria-label="Tracks"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          libraryStore.down();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          libraryStore.up();
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          libraryStore.enter();
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          libraryStore.parent();
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          libraryStore.requestLoad(deckA);
+        }
+      }}
+    >
+      <div className="prep-virt-inner" style={{ height: totalH }}>
+        {slice.map((entry, i) => {
+          const index = start + i;
+          return (
+            <BrowseRow
+              key={entry.kind === 'folder' ? entry.path : entry.track.id}
+              entry={entry}
+              index={index}
+              selected={index === cursor}
+              offsetY={index * ROW_H}
+            />
+          );
+        })}
+      </div>
+      {entries.length === 0 && (
+        <div className="prep-empty">Select a folder or add a library root</div>
+      )}
+    </div>
+  );
+});
+
+const BrowseRow = observer(function BrowseRow(props: {
+  entry: LibraryBrowseEntry;
+  index: number;
+  selected: boolean;
+  offsetY: number;
+}) {
+  const { entry, index, selected, offsetY } = props;
+  return (
+    <div
+      className={`prep-row${selected ? ' sel' : ''}${entry.kind === 'track' && entry.track.lowConfidence ? ' low' : ''}`}
+      style={{ top: offsetY, height: ROW_H }}
+      role="option"
+      aria-selected={selected}
+      onClick={() => libraryStore.selectIndex(index)}
+      onDoubleClick={() => {
+        libraryStore.selectIndex(index);
+        if (entry.kind === 'folder') libraryStore.enter();
+        else libraryStore.requestLoad(deckA);
+      }}
+    >
+      {entry.kind === 'folder' ? (
+        <>
+          <span className="prep-col track">[dir] {entry.name}</span>
+          <span className="prep-col bpm mono">…</span>
+          <span className="prep-col key mono">…</span>
+          <span className="prep-col time mono">…</span>
+        </>
+      ) : (
+        <>
+          <span className="prep-col track">{entry.name}</span>
+          <span className="prep-col bpm mono">
+            {fmtBpm(entry.track.bpm, entry.track.lowConfidence)}
+          </span>
+          <span className="prep-col key mono">{entry.track.keyCamelot ?? '…'}</span>
+          <span className="prep-col time mono">{fmtDur(entry.track.durationMs)}</span>
+        </>
+      )}
+    </div>
+  );
+});

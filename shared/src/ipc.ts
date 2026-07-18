@@ -1,6 +1,6 @@
 import type { DeepPartial, Settings } from './settings.js';
 
-/** Fixture track row until E4. */
+/** Library track row (docs/05 / E4). */
 export type TrackRow = {
   id: number;
   path: string;
@@ -45,6 +45,16 @@ export type LibraryProgress = {
   total?: number;
 };
 
+/** Bytes for deck load from library id (E4 load pathway; only paths under configured roots). */
+export type LibraryReadResult = {
+  id: number;
+  path: string;
+  title: string | null;
+  artist: string | null;
+  bpm: number | null;
+  bytes: Uint8Array;
+};
+
 export type AppModeState = {
   fullscreen: boolean;
   mode: 'performance' | 'prep';
@@ -71,6 +81,19 @@ export type IpcInvokeMap = {
   'library:folders': { req: void; res: FolderNode[] };
   'library:track': { req: { id: number }; res: TrackDetail | null };
   'library:rescan': { req: { path?: string }; res: { ok: true } };
+  'library:read': { req: { id: number }; res: LibraryReadResult | null };
+  /** Native folder dialog for library roots (E4 first-run / settings). */
+  'library:pickRoot': { req: void; res: { path: string } | null };
+  /** Prep manual BPM/key (R6.6) — source becomes `manual`. */
+  'library:updateManual': {
+    req: {
+      id: number;
+      bpm?: number | null;
+      keyCamelot?: string | null;
+      keyName?: string | null;
+    };
+    res: TrackRow | null;
+  };
   'analysis:enqueue': {
     req: { trackIds: number[]; priority: 'deck' | 'new' | 'backfill' };
     res: { ok: true; queueDepth: number };
@@ -103,6 +126,9 @@ export const IPC_INVOKE_CHANNELS = [
   'library:folders',
   'library:track',
   'library:rescan',
+  'library:read',
+  'library:pickRoot',
+  'library:updateManual',
   'analysis:enqueue',
   'settings:get',
   'settings:set',

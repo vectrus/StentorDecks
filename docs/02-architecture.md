@@ -35,6 +35,9 @@ library:query            (filter, folder, search, sort) → TrackRow[]
 library:folders          () → FolderNode[]
 library:track            (id) → TrackDetail (incl. waveform blob refs)
 library:rescan           (path?) → ack            (progress via library:progress events)
+library:read             (id) → { path, bytes, tags… } | null   (deck load; path must be under a library root)
+library:pickRoot         () → { path } | null                   (native folder dialog for roots)
+library:updateManual     (id, bpm?, key…) → TrackRow | null     (Prep R6.6; sources → manual)
 analysis:enqueue         (trackIds[], priority)   main → analysis window internally
 analysis:progress        event → { trackId, stage, queueDepth }
 settings:get / settings:set / settings:changed event

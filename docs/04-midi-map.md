@@ -2,7 +2,7 @@
 
 Factory defaults below are taken from the Mixxx project's RMX2 mapping (community-verified against real hardware). All on MIDI channel 1. Notes are `0x90` (on) / `0x80` (off); CCs are `0xB0`. Values hex.
 
-**Trust level:** faders/knobs/transport/browse are verified; pad note numbers vary by the RMX2's pad *mode* (sample/cue/fx/loop) — verify FX pad numbers with the MIDI monitor (E7 tool, built early in E3 precisely for this) on the owner's unit before finalizing defaults.
+**Trust level:** faders/knobs/transport/browse verified; FX pad notes **owner-confirmed 2026-07-18** on Julius’s RMX2 in FX mode (`01`/`02` / `11`/`12` — see `E3-HW-CHECKLIST.md`). Other pad modes (sample/cue/loop) still unused in v1.
 
 ## Buttons (note messages)
 
@@ -21,7 +21,7 @@ Factory defaults below are taken from the Mixxx project's RMX2 mapping (communit
 | Kill mid | 29 | 3A | toggle EQ mid kill |
 | Kill low | 2A | 3B | toggle EQ low kill |
 | Jog press | 2F | 40 | (reserved; no-op v1) |
-| Pads 1–4 (fx mode) | `01` / `02`* | `11` / `12`* | pad1 = `filterPad` (filter toggle), pad2 = `flangerPad` (flanger toggle). *Provisional from Hercules MIDI Commands PDF — confirm in FX mode on owner RMX2 (`docs/E3-HW-CHECKLIST.md`) |
+| Pads 1–4 (fx mode) | `01` / `02` | `11` / `12` | pad1 = `filterPad` (filter toggle), pad2 = `flangerPad` (flanger toggle). Owner-confirmed FX mode 2026-07-18 |
 
 Browse cluster (shared): up `45` prev row, down `46` next row, left `44` parent folder, right `43` enter folder. Mic button `48`: reserved, no-op v1.
 

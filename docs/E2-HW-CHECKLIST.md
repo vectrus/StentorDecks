@@ -67,7 +67,7 @@ Notes: Owner confirmed 2026-07-18 (full checklist).
 | Plan B | **PASS** |
 | Unplug/replug | **PASS** |
 
-E2 `[HW]` is **DONE** in `ROADMAP.md`. E4+ merges are unblocked for the audio-routing gate (E3 MIDI `[HW]` remains separate).
+E2 `[HW]` is **DONE** in `ROADMAP.md`. E3 MIDI `[HW]` also **PASS** 2026-07-18 — see [`E3-HW-CHECKLIST.md`](./E3-HW-CHECKLIST.md).
 
 ---
 

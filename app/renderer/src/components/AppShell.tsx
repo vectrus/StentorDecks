@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { audioDeviceStore, settingsStore } from '../stores/root';
+import { audioDeviceStore, libraryStore, settingsStore } from '../stores/root';
+import { invoke } from '../ipc/client';
 import { uiStore } from '../stores/UiStore';
 import { TempSettingsPanel } from './TempSettingsPanel';
 import { AudioSetupScreen } from './AudioSetupScreen';
 import { DevHarness } from './DevHarness';
+import { PrepMode } from './prep/PrepMode';
 import { BrandMark } from './BrandMark';
 import { MidiMonitor } from './MidiMonitor';
 import { midiStore } from '../stores/root';
@@ -46,7 +48,10 @@ export const AppShell = observer(function AppShell() {
           <button
             type="button"
             className={uiStore.mode === 'prep' ? 'mode on' : 'mode'}
-            onClick={() => void uiStore.setMode('prep')}
+            onClick={() => {
+              setShowHarness(false);
+              void uiStore.setMode('prep');
+            }}
           >
             Prep
           </button>
@@ -100,18 +105,36 @@ export const AppShell = observer(function AppShell() {
         </div>
       ) : null}
 
+      {settingsStore.settings.library.roots.length === 0 ? (
+        <div className="banner" role="status">
+          <span>Choose a music folder to build your library.</span>
+          <button
+            type="button"
+            onClick={() => {
+              void (async () => {
+                const picked = await invoke('library:pickRoot');
+                if (!picked) return;
+                await settingsStore.set({
+                  library: { roots: [picked.path] },
+                });
+                void libraryStore.rescan();
+              })();
+            }}
+          >
+            Browse…
+          </button>
+        </div>
+      ) : null}
+
       <main className="stage">
         {showHarness ? (
           <DevHarness />
-        ) : uiStore.mode === 'performance' ? (
-          <Placeholder
-            title="Performance mode"
-            body="Waveforms · decks · mixer · browser land in E6. Use E2 Harness for audio now."
-          />
+        ) : uiStore.mode === 'prep' ? (
+          <PrepMode />
         ) : (
           <Placeholder
-            title="Prep mode"
-            body="Folder tree · large browser · BPM/key corrections (E4/E6)."
+            title="Performance mode"
+            body="Waveforms · decks · mixer · 3-row browser land in E6. Use Prep for library; E2 Harness for audio soak."
           />
         )}
         {showMidi ? <MidiMonitor /> : null}

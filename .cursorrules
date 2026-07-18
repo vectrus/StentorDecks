@@ -16,7 +16,7 @@ Every non-trivial change must cite the R-ID or epic criterion it serves in the c
 - v1 exclusions stand (README): no scratching, keylock, recording, hotcues, loops, echo, playlists, streaming. Park ideas as backlog issues, never as code.
 - Accessibility floors (R7.1) are hard: never shrink type/rows/targets below spec to "fit more in".
 - Epic gating: E2's [HW] routing criteria must be owner-confirmed before any E4+ work merges.
-  (Confirmed PASS 2026-07-18 — see `docs/E2-HW-CHECKLIST.md`. E3/E6/E7 `[HW]` items still owner-only.)
+  (E2 + E3 `[HW]` PASS 2026-07-18 — see `docs/E2-HW-CHECKLIST.md`, `docs/E3-HW-CHECKLIST.md`. E6/E7 `[HW]` still owner-only.)
 - [HW] acceptance criteria are verified by the owner on the physical RMX2. Never simulate, mock, or self-declare them passed. Mark them "READY FOR HW VERIFICATION" and stop.
 
 ## 2. Workflow per task

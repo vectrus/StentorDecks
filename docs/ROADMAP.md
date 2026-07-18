@@ -26,10 +26,10 @@ Living tracker for spec work and build order. Update when decisions land (also l
 
 ## Build order (implementation)
 
-Gating rule: **E2 `[HW]` Plan A/B on real RMX2** — **PASSED 2026-07-18** (owner). E4+ no longer blocked by audio routing. E3 MIDI `[HW]` remains owner-verified separately.
+Gating: **E2 `[HW]`** and **E3 `[HW]`** both **PASSED 2026-07-18** (owner Julius). E4/E5 unblocked.
 
 ```
-E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW]
+E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW ✓]
                 → E4 library  ⎤
                 → E5 analysis ⎦ parallel
                 → E6 UI [HW mix]
@@ -40,9 +40,9 @@ E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW]
 |---|---|---|---|
 | E1 | DONE | — | Shell + IPC + settings + DB (2026-07-18) |
 | E2 | DONE | E1; **RMX2** | `[HW]` Plan A/B + unplug/replug **PASS** — owner Julius 2026-07-18. Checklist: [`E2-HW-CHECKLIST.md`](./E2-HW-CHECKLIST.md) |
-| E3 | DOING | E2 actions | Software close 2026-07-18 (pads provisional + load pending + takeover + learn + persist). **READY FOR HW VERIFICATION** — [`E3-HW-CHECKLIST.md`](./E3-HW-CHECKLIST.md) |
-| E4 | TODO | E1; after E3 per README | Prep corrections; R5.6/R5.7 |
-| E5 | TODO | E1 + schema | loudness stage |
+| E3 | DONE | E2 actions | `[HW]` pads + takeover + OOTB sweep + LEDs **PASS** — owner Julius 2026-07-18. Checklist: [`E3-HW-CHECKLIST.md`](./E3-HW-CHECKLIST.md) |
+| E4 | DOING | E1 + E3 | Core library + MIDI browse + watcher + root picker + Prep UI. Remaining: Perf 3-row strip, large-library soak ACs. |
+| E5 | TODO | E1 + schema | loudness stage (schema ready via E4 migration 002) |
 | E6 | TODO | E2–E5; mockups | beat ticks, cue marker, EOT; filter knob (S10) |
 | E7 | TODO | E1–E6 | backlog issues |
 

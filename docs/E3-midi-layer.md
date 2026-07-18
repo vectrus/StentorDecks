@@ -1,6 +1,7 @@
 # E3 — MIDI layer
 
-Reads: docs/04 (map, learn), docs/03 (soft takeover, curves). Depends on E2 (actions to drive).
+Reads: docs/04 (map, learn), docs/03 (soft takeover, curves). Depends on E2 (actions to drive).  
+**`[HW]` PASS (owner Julius, 2026-07-18)** — see `E3-HW-CHECKLIST.md`.
 
 ## Scope
 

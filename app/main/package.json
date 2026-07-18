@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "@stentordeck/shared": "*",
-    "better-sqlite3": "^11.7.0"
+    "better-sqlite3": "^11.7.0",
+    "chokidar": "^4.0.3",
+    "music-metadata": "^11.14.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

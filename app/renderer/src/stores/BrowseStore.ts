@@ -1,8 +1,8 @@
 import { makeAutoObservable } from 'mobx';
 
 /**
- * Browse cursor fixture until E4 LibraryStore merges (E3 / R5.3).
- * Same actions MIDI and keyboard will share.
+ * @deprecated E4: MIDI browse targets `LibraryStore`. Kept for unit tests of the
+ * original fixture semantics (R5.3) only — not wired in `root.ts`.
  */
 
 export type BrowseEntry = {
@@ -67,6 +67,15 @@ export class BrowseStore {
 
   down(): void {
     this.cursor = Math.min(this.entries.length - 1, this.cursor + 1);
+  }
+
+  /** Mouse / keyboard absolute select (same cursor MIDI browse uses). */
+  selectIndex(index: number): void {
+    if (this.entries.length === 0) {
+      this.cursor = 0;
+      return;
+    }
+    this.cursor = Math.max(0, Math.min(this.entries.length - 1, index));
   }
 
   /** Right / enter folder (R5.3). */
