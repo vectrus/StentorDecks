@@ -10,6 +10,7 @@
     "@stentordeck/shared": "*",
     "better-sqlite3": "^11.7.0",
     "chokidar": "^4.0.3",
+    "electron-updater": "^6.6.2",
     "music-metadata": "^11.14.0"
   },
   "devDependencies": {

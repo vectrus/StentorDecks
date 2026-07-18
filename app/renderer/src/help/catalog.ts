@@ -5,6 +5,7 @@ import performance from '../../../../docs/guides/performance-and-mixer.md?raw';
 import syncJog from '../../../../docs/guides/sync-and-jog.md?raw';
 import knobs from '../../../../docs/guides/knobs-and-takeover.md?raw';
 import audio from '../../../../docs/guides/audio-and-volume.md?raw';
+import updating from '../../../../docs/guides/updating.md?raw';
 
 /** Curated end-user topics — same files as `docs/guides/`. */
 export const HELP_TOPICS: readonly HelpTopic[] = [
@@ -43,5 +44,11 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
     title: 'Audio routing & volume',
     tags: ['audio', 'plan', 'a', 'b', 'cue', 'phones', 'pfl', 'routing', 'master'],
     body: audio,
+  },
+  {
+    id: 'updating',
+    title: 'Updating the app',
+    tags: ['update', 'upgrade', 'release', 'github', 'install', 'setup'],
+    body: updating,
   },
 ];

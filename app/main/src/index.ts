@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog } from 'electron';
 import path from 'node:path';
+import { startAutoUpdater } from './autoUpdate';
 import { createAnalysisSupervisor } from './analysisSupervisor';
 import { getSchemaVersion, openDatabase } from './db/database';
 import { registerIpcHandlers } from './ipcHandlers';
@@ -88,6 +89,7 @@ async function boot(): Promise<void> {
       mode = m;
     },
   });
+  startAutoUpdater();
 
   createAnalysisSupervisor();
 

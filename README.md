@@ -64,6 +64,7 @@ If it fails: close anything locking `node_modules`, delete that folder, run `INS
 
 ```bash
 npm run dist          # NSIS installer — Desktop + Start Menu shortcuts with brand icon
+npm run release       # same + publish GitHub Release (needs GH_TOKEN) for auto-update
 # or quick unpacked build:
 npm run dist:dir
 npm run shortcut      # Desktop StentorDeck.lnk → exe (or Launch-StentorDeck.vbs)
@@ -74,6 +75,15 @@ Windows packaging embeds `build/icon.ico` via an `afterPack` rcedit hook (avoids
 Double-click **StentorDeck** on the Desktop. Closing the window shuts down analysis, DB, and MIDI cleanly. Boot shows a short branded splash.
 
 Silent helper: [`scripts/Launch-StentorDeck.vbs`](scripts/Launch-StentorDeck.vbs).
+
+### Updating
+
+| How you run | How you update |
+|-------------|----------------|
+| Installed `.exe` (booth) | Settings → **Check for updates** (GitHub Releases), or run a new Setup.exe |
+| Source / `npm start` | [`UPDATE.bat`](./UPDATE.bat) — not GitHub Desktop |
+
+Details: [`docs/guides/updating.md`](docs/guides/updating.md).
 
 ### Development (already installed)
 

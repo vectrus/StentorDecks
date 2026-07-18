@@ -48,6 +48,10 @@ if not %EXITCODE%==0 (
 echo.
 echo Done. Desktop shortcut: StentorDeck
 echo If the window flashed and closed, another copy may already be running — check the taskbar.
-echo For a branded installer: npm run dist
+echo.
+echo Updates later:
+echo   Installed app  - Settings - Check for updates  ^(after npm run release^)
+echo   Source tree    - UPDATE.bat
+echo   Fresh installer - npm run dist  then run release\StentorDeck-Setup-*.exe
 echo.
 exit /b 0

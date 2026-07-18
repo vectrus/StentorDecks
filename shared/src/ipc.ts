@@ -81,6 +81,26 @@ export type AppModeState = {
   mode: 'performance' | 'prep';
 };
 
+/** Packaged-app auto-update (electron-updater / GitHub Releases). */
+export type AppUpdatePhase =
+  | 'disabled'
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'not-available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error';
+
+export type AppUpdateStatus = {
+  phase: AppUpdatePhase;
+  packaged: boolean;
+  currentVersion: string;
+  availableVersion: string | null;
+  percent: number | null;
+  error: string | null;
+};
+
 export type MidiBinding =
   | { kind: 'button'; ch: number; note: number }
   | { kind: 'cc7'; ch: number; cc: number }
@@ -137,6 +157,9 @@ export type IpcInvokeMap = {
   'app:mode:get': { req: void; res: AppModeState };
   'app:mode:set': { req: Partial<AppModeState>; res: AppModeState };
   'app:fullscreen:toggle': { req: void; res: { fullscreen: boolean } };
+  'app:update:status': { req: void; res: AppUpdateStatus };
+  'app:update:check': { req: void; res: AppUpdateStatus };
+  'app:update:install': { req: void; res: { ok: true } | { ok: false; reason: string } };
 };
 
 /** Event channels (main → renderer). */
@@ -145,6 +168,7 @@ export type IpcEventMap = {
   'analysis:progress': AnalysisProgress;
   'library:progress': LibraryProgress;
   'app:mode:changed': AppModeState;
+  'app:update:changed': AppUpdateStatus;
 };
 
 export type IpcChannel = keyof IpcInvokeMap;
@@ -171,6 +195,9 @@ export const IPC_INVOKE_CHANNELS = [
   'app:mode:get',
   'app:mode:set',
   'app:fullscreen:toggle',
+  'app:update:status',
+  'app:update:check',
+  'app:update:install',
 ] as const satisfies readonly IpcChannel[];
 
 export const IPC_EVENT_CHANNELS = [
@@ -178,6 +205,7 @@ export const IPC_EVENT_CHANNELS = [
   'analysis:progress',
   'library:progress',
   'app:mode:changed',
+  'app:update:changed',
 ] as const satisfies readonly IpcEventChannel[];
 
 export function assertNever(x: never): never {

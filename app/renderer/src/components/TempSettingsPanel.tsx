@@ -1,14 +1,15 @@
 import { observer } from 'mobx-react-lite';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   defaultJogSettings,
   JOG_PRESETS,
+  type AppUpdateStatus,
   type JogPresetId,
   type JogSettings,
   type Settings,
 } from '@stentordeck/shared';
-import { invoke } from '../ipc/client';
-import { libraryStore, settingsStore } from '../stores/root';
+import { invoke, onIpc } from '../ipc/client';
+import { deckA, deckB, libraryStore, settingsStore } from '../stores/root';
 
 const SCALES: Settings['ui']['scale'][] = [100, 125, 150];
 const SORTS: Settings['library']['sort'][] = [
@@ -102,6 +103,8 @@ export const TempSettingsPanel = observer(function TempSettingsPanel() {
       <div className="temp-meta mono">
         rem {settingsStore.remPx}px · startMode {settingsStore.settings.ui.startMode}
       </div>
+
+      <UpdateSection />
 
       <div className="temp-title" style={{ marginTop: 12 }}>
         Library roots (E4)
@@ -210,6 +213,96 @@ export const TempSettingsPanel = observer(function TempSettingsPanel() {
     await settingsStore.set({ library: { roots: [...current, p] } });
     setRootDraft('');
   }
+});
+
+function updateStatusLine(s: AppUpdateStatus): string {
+  switch (s.phase) {
+    case 'disabled':
+      return 'Dev / source build — use UPDATE.bat for git sync. Auto-update needs the installed app.';
+    case 'idle':
+      return 'Idle — will check shortly after launch.';
+    case 'checking':
+      return 'Checking GitHub Releases…';
+    case 'available':
+      return `Update ${s.availableVersion ?? ''} available — downloading…`;
+    case 'not-available':
+      return 'You are on the latest release.';
+    case 'downloading':
+      return `Downloading… ${s.percent != null ? `${s.percent}%` : ''}`.trim();
+    case 'downloaded':
+      return `Ready to install ${s.availableVersion ?? 'update'}. Restart when decks are stopped.`;
+    case 'error':
+      return s.error ? `Update error: ${s.error}` : 'Update error.';
+    default:
+      return s.phase;
+  }
+}
+
+const UpdateSection = observer(function UpdateSection() {
+  const [status, setStatus] = useState<AppUpdateStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    void invoke('app:update:status').then(setStatus);
+    return onIpc('app:update:changed', setStatus);
+  }, []);
+
+  const playing = deckA.state === 'playing' || deckB.state === 'playing';
+
+  return (
+    <div className="temp-update">
+      <div className="temp-title" style={{ marginTop: 12 }}>
+        Updates
+      </div>
+      <div className="temp-meta mono">
+        v{status?.currentVersion ?? '…'}
+        {status?.packaged ? ' · installed' : ' · source'}
+      </div>
+      <div className="temp-meta">{status ? updateStatusLine(status) : '…'}</div>
+      <div className="row" style={{ gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          disabled={busy || status?.phase === 'disabled'}
+          onClick={() => {
+            setBusy(true);
+            void invoke('app:update:check')
+              .then(setStatus)
+              .finally(() => setBusy(false));
+          }}
+        >
+          {busy ? 'Checking…' : 'Check for updates'}
+        </button>
+        <button
+          type="button"
+          disabled={busy || status?.phase !== 'downloaded'}
+          onClick={() => {
+            if (playing) {
+              const ok = window.confirm(
+                'A deck is playing. Restart to install the update anyway? Playback will stop.',
+              );
+              if (!ok) return;
+            } else {
+              const ok = window.confirm('Restart StentorDeck to install the update now?');
+              if (!ok) return;
+            }
+            setBusy(true);
+            void invoke('app:update:install')
+              .then((res) => {
+                if (!res.ok) {
+                  window.alert(res.reason);
+                }
+              })
+              .finally(() => setBusy(false));
+          }}
+        >
+          Restart &amp; update
+        </button>
+      </div>
+      <div className="temp-meta" style={{ marginTop: 6 }}>
+        Booth: GitHub Releases auto-update. Source tree: UPDATE.bat (not GitHub Desktop).
+      </div>
+    </div>
+  );
 });
 
 const JogFeelSection = observer(function JogFeelSection() {

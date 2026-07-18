@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — App updates: GitHub Releases + UPDATE.bat
+
+Packaged app uses `electron-updater` against GitHub Releases (`npm run release` + Settings → Check for updates / restart). Source trees use `UPDATE.bat` / `npm run update` (refuse dirty tree; `--stash` optional). NSIS `deleteAppDataOnUninstall: false`. Replaces GitHub Desktop as the booth update path. E7 / R1.1.
+
+---
+
 ## 2026-07-18 — Jog feel: quieter RMX2 defaults
 
 RMX2 relative jogs flood ±1 CCs on a light turn, so prior spin thresholds (~45→130 t/s) opened spinback too early. New Soft defaults: finer seek/rate, spin opens ~120→300 t/s, softer EMA attack; auto-migrate previous factory bundles. Settings sliders widened. R2.2 / R2.3, docs/03, docs/07.

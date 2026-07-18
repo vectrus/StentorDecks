@@ -1,12 +1,16 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron';
+import { dialog, ipcMain } from 'electron';
 import type {
   AppModeState,
   DeepPartial,
-  IpcEventMap,
   IpcInvokeMap,
   Settings,
 } from '@stentordeck/shared';
 import { createAnalysisSupervisor, setAnalysisProgressBroadcast } from './analysisSupervisor';
+import {
+  checkForAppUpdates,
+  getUpdateStatus,
+  installAppUpdate,
+} from './autoUpdate';
 import { getDb } from './db/database';
 import {
   exportMidiMappingJson,
@@ -24,10 +28,13 @@ import {
   readTrackFile,
   updateManualMeta,
 } from './db/tracksRepo';
+import { broadcast } from './ipcBroadcast';
 import { createLibraryWatcher, type LibraryWatcher } from './scanner/libraryWatcher';
 import { scanLibraryRoots } from './scanner/scanLibrary';
 import { applySettingsPatch, type SettingsFileState } from './settingsFile';
 import { getMainWindow, toggleFullscreen } from './windows';
+
+export { broadcast };
 
 type Ctx = {
   userDataPath: string;
@@ -41,12 +48,6 @@ const analysis = createAnalysisSupervisor();
 let libraryWatcher: LibraryWatcher | null = null;
 
 setAnalysisProgressBroadcast((p) => broadcast('analysis:progress', p));
-
-export function broadcast<K extends keyof IpcEventMap>(channel: K, payload: IpcEventMap[K]): void {
-  for (const win of BrowserWindow.getAllWindows()) {
-    win.webContents.send(channel, payload);
-  }
-}
 
 function handle<K extends keyof IpcInvokeMap>(
   channel: K,
@@ -173,6 +174,10 @@ export function registerIpcHandlers(ctx: Ctx): void {
     broadcast('app:mode:changed', next);
     return { fullscreen };
   });
+
+  handle('app:update:status', () => getUpdateStatus());
+  handle('app:update:check', () => checkForAppUpdates());
+  handle('app:update:install', () => installAppUpdate());
 }
 
 export function disposeIpc(): void {
