@@ -42,7 +42,7 @@ Single cue point per deck (`cueOffset` seconds).
 |---|---|---|---|
 | Stopped/paused, playhead ≠ cue (or never set) | Set `cueOffset = playhead`; stay paused | Preview: play from cue | Stop; snap playhead to cue; stay paused |
 | Stopped/paused, playhead == cue | (already set) | Preview from cue | Stop; snap to cue; stay paused |
-| Playing | Jump playhead to cue; keep playing | (no extra) | (no extra) |
+| Playing | Jump playhead to cue and **stop** (Pioneer-style) | (no extra) | (no extra) |
 
 On first load of a track, `cueOffset = 0`. Clearing on load (R3.3) means the new track starts with cue at 0:00.
 

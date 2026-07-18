@@ -5,6 +5,43 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — Cue jump+stop; Sync without file BPM
+
+- **Cue (R2.10):** while playing, Cue jumps to cue point and **stops** (Pioneer-style). Spec table in docs/03 updated. MIDI/UI no longer start cue-preview on the same press after a playing jump (that kept audio running).
+- **Sync:** no longer no-ops when `fileBpm` is missing (pre-E5). Matches the other deck’s playback rate; with BPM, still matches effective BPM.
+
+---
+
+## 2026-07-18 — Fix reconnect rebuild loop + MIDI + short tracks
+
+Follow-up: rebuilding on **every** `devicechange` while healthy was stopping playback, truncating restored audio (~tens of seconds), and stranding MIDI. Now rebuild only on real loss/recovery; decks keep a full PCM snapshot from load; MIDI handler re-binds after audio USB churn.
+
+## 2026-07-18 — Fix audio after USB unplug/replug
+
+After RMX2 disconnect/reconnect, faders still moved but Play left the time at 0:00. Causes: (1) WASAPI `deviceId` changes on replug so the app stayed in “device lost” and never rebuilt; (2) `AudioBuffer`s from the closed `AudioContext` were reused and could not play. Fix: rebind by device label, rebuild, restore from deck PCM stash; decks stay paused — press Play.
+
+---
+
+## 2026-07-18 — v2 backlog: Spotify + AI (decisions locked)
+
+Parked post-v1 work in [`BACKLOG-v2-spotify-ai.md`](./BACKLOG-v2-spotify-ai.md). Locked: Spotify = browse/match only (no stream audio); mixmatch = analysis→embeddings→LLM rerank (OpenAI|Anthropic|Off); autoplay default = Co-pilot (never load playing deck); suggestions = library-only + Spotify wantlist. Rationale in that file. Does not change v1 scope.
+
+---
+
+## 2026-07-18 — Fix load: OfflineAudioContext in worker
+
+Electron DedicatedWorkers often lack `OfflineAudioContext`. Decode falls back to async `AudioContext.decodeAudioData` on the live context so Deck load no longer fails with “OfflineAudioContext is not defined”.
+
+---
+
+## 2026-07-18 — E2 software close + E3 MIDI scaffold
+
+- **E2 (R2.10 / R2.13 / docs/03):** pure CDJ cue state table + tests; auto-gain load tests; off-main-thread decode worker; filter/flanger AudioParam ramps (≥15 ms); cue/PFL soft-edge polish (no fader coupling).
+- **E2 [HW]:** owner checklist [`E2-HW-CHECKLIST.md`](./E2-HW-CHECKLIST.md) — READY FOR HW VERIFICATION (Plan A cue/PFL/HeadMix, Plan B, unplug/replug). Do not self-pass.
+- **E3 scaffold:** `midiDecode` / factory map / soft takeover (shared, fixture-tested); `MidiEngine` + `MidiStore` dispatch into same deck/mixer actions; minimal MIDI monitor in UI.
+
+---
+
 ## 2026-07-18 — Brand mark (for julius)
 
 Replaced all-caps `STENTORDECK` chrome with dual-fader mark + **StentorDeck** / **for julius** (lowercase j). Assets in `brand/`; Windows icon `build/icon.png`; in-app SVG `BrandMark.tsx`.

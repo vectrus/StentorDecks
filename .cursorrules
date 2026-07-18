@@ -83,6 +83,14 @@ Use Cursor's model picker deliberately. Classes, not vibes (update model names a
 - Naming: ControlIds and IPC channels exactly as specced (docs/04, docs/02); inventing parallel names is a defect.
 - Every TODO carries an issue number or it doesn't merge.
 
+## 5b. Human-comprehensible errors (always)
+
+User-facing failures (alerts, banners, toasts, dialogs) must be plain language **and** suggest what to do next.
+Never show raw API/engine text alone (`OfflineAudioContext is not defined`, ABI mismatch dumps, etc.).
+Shape: what failed (product terms) → why in one short clause → try: concrete next step.
+Technical detail may follow as secondary / logged — not as the only line.
+See `.cursor/rules/human-comprehensible-errors.mdc`. Prefer `formatUserError` (or equivalent) over `alert(err.message)`.
+
 ## 6. When stuck or tempted
 
 Scope itch → backlog issue. Spec doubt → ask Julius. Hardware unknown (pad numbers, LED behavior,

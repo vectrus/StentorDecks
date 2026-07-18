@@ -6,10 +6,13 @@ import { TempSettingsPanel } from './TempSettingsPanel';
 import { AudioSetupScreen } from './AudioSetupScreen';
 import { DevHarness } from './DevHarness';
 import { BrandMark } from './BrandMark';
+import { MidiMonitor } from './MidiMonitor';
+import { midiStore } from '../stores/root';
 
 export const AppShell = observer(function AppShell() {
   const [setupOpen, setSetupOpen] = useState(() => audioDeviceStore.needsSetup);
   const [showHarness, setShowHarness] = useState(true);
+  const [showMidi, setShowMidi] = useState(false);
 
   if (setupOpen) {
     return (
@@ -59,8 +62,16 @@ export const AppShell = observer(function AppShell() {
           >
             E2 Harness
           </button>
+          <button
+            type="button"
+            className={showMidi ? 'mode on' : 'mode'}
+            onClick={() => setShowMidi((v) => !v)}
+          >
+            MIDI {midiStore.connected ? '·' : ''}
+          </button>
           <span className="hint mono">
             Plan {audioDeviceStore.activePlan} ·{' '}
+            {midiStore.connected ? midiStore.portName ?? 'MIDI' : 'no MIDI'} ·{' '}
             {uiStore.fullscreen ? 'Fullscreen' : 'Windowed'}
           </span>
           <button
@@ -103,6 +114,7 @@ export const AppShell = observer(function AppShell() {
             body="Folder tree · large browser · BPM/key corrections (E4/E6)."
           />
         )}
+        {showMidi ? <MidiMonitor /> : null}
       </main>
 
       <TempSettingsPanel />

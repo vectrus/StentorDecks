@@ -1,0 +1,108 @@
+import type { ControlId } from './controlIds.js';
+import type { MidiBinding, MidiMapping } from './ipc.js';
+
+export type { MidiBinding, MidiMapping };
+
+/** Hex note/CC numbers from docs/04 (channel 1 → ch index 0). */
+export const RMX2_FACTORY_MAP: MidiMapping = {
+  'deckA.play': { kind: 'button', ch: 0, note: 0x21 },
+  'deckA.cue': { kind: 'button', ch: 0, note: 0x22 },
+  'deckA.sync': { kind: 'button', ch: 0, note: 0x23 },
+  'deckA.load': { kind: 'button', ch: 0, note: 0x24 },
+  'deckA.pfl': { kind: 'button', ch: 0, note: 0x2e },
+  'deckA.rw': { kind: 'button', ch: 0, note: 0x26 },
+  'deckA.ff': { kind: 'button', ch: 0, note: 0x27 },
+  'deckA.pitchBendMinus': { kind: 'button', ch: 0, note: 0x2c },
+  'deckA.pitchBendPlus': { kind: 'button', ch: 0, note: 0x2d },
+  'deckA.killHigh': { kind: 'button', ch: 0, note: 0x28 },
+  'deckA.killMid': { kind: 'button', ch: 0, note: 0x29 },
+  'deckA.killLow': { kind: 'button', ch: 0, note: 0x2a },
+  'deckA.jog': { kind: 'ccRel', ch: 0, cc: 0x30 },
+  'deckA.pitch': { kind: 'cc14', ch: 0, msb: 0x36, lsb: 0x37 },
+  'deckA.gain': { kind: 'cc7', ch: 0, cc: 0x42 },
+  'deckA.eqHigh': { kind: 'cc7', ch: 0, cc: 0x3c },
+  'deckA.eqMid': { kind: 'cc7', ch: 0, cc: 0x3e },
+  'deckA.eqLow': { kind: 'cc7', ch: 0, cc: 0x40 },
+
+  'deckB.play': { kind: 'button', ch: 0, note: 0x32 },
+  'deckB.cue': { kind: 'button', ch: 0, note: 0x33 },
+  'deckB.sync': { kind: 'button', ch: 0, note: 0x34 },
+  'deckB.load': { kind: 'button', ch: 0, note: 0x35 },
+  'deckB.pfl': { kind: 'button', ch: 0, note: 0x3f },
+  'deckB.rw': { kind: 'button', ch: 0, note: 0x37 },
+  'deckB.ff': { kind: 'button', ch: 0, note: 0x38 },
+  'deckB.pitchBendMinus': { kind: 'button', ch: 0, note: 0x3d },
+  'deckB.pitchBendPlus': { kind: 'button', ch: 0, note: 0x3e },
+  'deckB.killHigh': { kind: 'button', ch: 0, note: 0x39 },
+  'deckB.killMid': { kind: 'button', ch: 0, note: 0x3a },
+  'deckB.killLow': { kind: 'button', ch: 0, note: 0x3b },
+  'deckB.jog': { kind: 'ccRel', ch: 0, cc: 0x31 },
+  'deckB.pitch': { kind: 'cc14', ch: 0, msb: 0x38, lsb: 0x39 },
+  'deckB.gain': { kind: 'cc7', ch: 0, cc: 0x52 },
+  'deckB.eqHigh': { kind: 'cc7', ch: 0, cc: 0x4c },
+  'deckB.eqMid': { kind: 'cc7', ch: 0, cc: 0x4e },
+  'deckB.eqLow': { kind: 'cc7', ch: 0, cc: 0x50 },
+
+  'mixer.faderA': { kind: 'cc14', ch: 0, msb: 0x3a, lsb: 0x3b },
+  'mixer.faderB': { kind: 'cc14', ch: 0, msb: 0x4a, lsb: 0x4b },
+  'mixer.master': { kind: 'cc14', ch: 0, msb: 0x44, lsb: 0x45 },
+  'mixer.headMix': { kind: 'cc14', ch: 0, msb: 0x46, lsb: 0x47 },
+  'mixer.crossfader': { kind: 'cc14', ch: 0, msb: 0x48, lsb: 0x49 },
+
+  'browse.up': { kind: 'button', ch: 0, note: 0x45 },
+  'browse.down': { kind: 'button', ch: 0, note: 0x46 },
+  'browse.left': { kind: 'button', ch: 0, note: 0x44 },
+  'browse.right': { kind: 'button', ch: 0, note: 0x43 },
+};
+
+/** Pad filter/flanger notes: verify on owner RMX2 via MIDI monitor before committing. */
+export const RMX2_PAD_NOTES_UNVERIFIED = {
+  note: 'FX pad note numbers vary by pad mode — READY FOR HW VERIFICATION',
+} as const;
+
+export function factoryCc14Pairs(): Array<{ msb: number; lsb: number }> {
+  const pairs: Array<{ msb: number; lsb: number }> = [];
+  for (const b of Object.values(RMX2_FACTORY_MAP)) {
+    if (b?.kind === 'cc14') pairs.push({ msb: b.msb, lsb: b.lsb });
+  }
+  return pairs;
+}
+
+export function factoryRelativeCcs(): Set<number> {
+  const set = new Set<number>();
+  for (const b of Object.values(RMX2_FACTORY_MAP)) {
+    if (b?.kind === 'ccRel') set.add(b.cc);
+  }
+  // Scratch-mode jogs treated same as turn (docs/04)
+  set.add(0x32);
+  set.add(0x33);
+  return set;
+}
+
+export function lookupControlId(
+  mapping: MidiMapping,
+  decoded: {
+    kind: string;
+    channel: number;
+    note?: number;
+    cc?: number;
+    msb?: number;
+  },
+): ControlId | null {
+  for (const [id, binding] of Object.entries(mapping) as [ControlId, MidiBinding][]) {
+    if (!binding) continue;
+    if (binding.kind === 'button' && decoded.kind.startsWith('note')) {
+      if (binding.ch === decoded.channel && binding.note === decoded.note) return id;
+    }
+    if (binding.kind === 'cc7' && decoded.kind === 'cc7') {
+      if (binding.ch === decoded.channel && binding.cc === decoded.cc) return id;
+    }
+    if (binding.kind === 'cc14' && decoded.kind === 'cc14') {
+      if (binding.ch === decoded.channel && binding.msb === decoded.msb) return id;
+    }
+    if (binding.kind === 'ccRel' && decoded.kind === 'ccRel') {
+      if (binding.ch === decoded.channel && binding.cc === decoded.cc) return id;
+    }
+  }
+  return null;
+}

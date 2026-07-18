@@ -7,6 +7,7 @@ import {
   eqKnobDb,
   filterFromAmount,
   pitchFaderNormalized,
+  pitchPosFromRate,
   pitchRate,
 } from './audioCurves.js';
 
@@ -36,6 +37,14 @@ describe('pitch fader', () => {
     expect(pitchRate(0, 0.04, 0.08)).toBeCloseTo(0.92, 5);
     expect(pitchRate(1, 0.04, 0.08)).toBeCloseTo(1.08, 5);
     expect(pitchRate(1, 0.04, 0.16)).toBeCloseTo(1.16, 5);
+  });
+
+  it('pitchPosFromRate round-trips rate at center and extremes', () => {
+    for (const pos of [0, 0.5, 1]) {
+      const rate = pitchRate(pos, 0.04, 0.08);
+      const back = pitchPosFromRate(rate, 0.04, 0.08);
+      expect(pitchRate(back, 0.04, 0.08)).toBeCloseTo(rate, 5);
+    }
   });
 });
 

@@ -39,8 +39,8 @@ E1 skeleton → E2 audio [HW gate] → E3 MIDI [HW]
 | Epic | Status | Blocking deps | Notes |
 |---|---|---|---|
 | E1 | DONE | — | Shell + IPC + settings + DB (2026-07-18) |
-| E2 | DOING | E1; **RMX2** | Owner: load/play + **Plan A** active with VU ✓ (2026-07-18). Remaining [HW]: cue on 3-4 + PFL/HeadMix, force Plan B, unplug/replug |
-| E3 | TODO | E2 `[HW]` | filter/wet learn; Sync ≠ tap; CDJ cue |
+| E2 | DOING | E1; **RMX2** | Software close 2026-07-18. **READY FOR HW VERIFICATION** — [`E2-HW-CHECKLIST.md`](./E2-HW-CHECKLIST.md). Earlier: load/play + Plan A + VU ✓ |
+| E3 | DOING | E2 actions | Scaffold: decoder + factory map + monitor + takeover + dispatch. Full `[HW]` after E2 HW gate |
 | E4 | TODO | E1; after E3 per README | Prep corrections; R5.6/R5.7 |
 | E5 | TODO | E1 + schema | loudness stage |
 | E6 | TODO | E2–E5; mockups | beat ticks, cue marker, EOT; filter knob (S10) |
@@ -67,12 +67,15 @@ E1 skeleton → E2 audio [HW gate] → E3 MIDI [HW]
 - Inputs / mic, hotcues, loops, keylock, recording, gater, crossfader UI, second screen
 - Drive-letter remount identity hardening
 - Windows USB selective suspend guidance / mitigation
+- **v2 Spotify + AI mixmatch/autoplay** — decisions locked in [`BACKLOG-v2-spotify-ai.md`](./BACKLOG-v2-spotify-ai.md) (2026-07-18). Not v1.
 
 ---
 
 ## Open questions for Julius
 
-*(none — Sync, epic path, library policy, FX pad/knob all closed 2026-07-18)*
+*(none for v1 — Sync, epic path, library policy, FX pad/knob closed 2026-07-18)*
+
+v2 Spotify/AI defaults were agent-decided with rationale in `BACKLOG-v2-spotify-ai.md`; override there if needed.
 
 ---
 

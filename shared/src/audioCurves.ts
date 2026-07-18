@@ -38,6 +38,28 @@ export function pitchRate(pos: number, deadZone: number, pitchRange: number): nu
 }
 
 /**
+ * Inverse of pitchRate → fader position 0..1 (approx; dead-zone maps rate 1 → 0.5).
+ */
+export function pitchPosFromRate(
+  rate: number,
+  deadZone: number,
+  pitchRange: number,
+): number {
+  if (pitchRange <= 0) return 0.5;
+  const norm = clamp((rate - 1) / pitchRange, -1, 1);
+  const half = deadZone / 2;
+  if (Math.abs(norm) < 1e-9) return 0.5;
+  if (norm < 0) {
+    const lo = 0.5 - half;
+    if (lo <= 0) return 0;
+    return lo + norm * lo; // norm in [-1,0]
+  }
+  const hi = 0.5 + half;
+  if (hi >= 1) return 1;
+  return hi + norm * (1 - hi);
+}
+
+/**
  * EQ knob 0..1 → dB with γ=1.6 and soft shoulder near extremes (R2.12).
  */
 export function eqKnobDb(t: number, eqMaxDb: number, gamma = 1.6): number {

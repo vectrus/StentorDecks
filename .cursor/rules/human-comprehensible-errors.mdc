@@ -1,0 +1,37 @@
+---
+description: User-facing errors must be plain language and suggest a fix
+alwaysApply: true
+---
+
+# Human-comprehensible errors
+
+Errors shown to Julius (alerts, banners, toasts, dialogs, console copy meant for the owner) must be **human-comprehensible at first glance** — including for a tired DJ at the booth, not only for someone who just read the Web Audio spec.
+
+## Rules
+
+1. **Never surface raw platform/API text alone** (e.g. `OfflineAudioContext is not defined`, `NODE_MODULE_VERSION`, opaque HRESULT/stack dumps).
+2. **Say what failed in product terms** (“Couldn’t load this track”, “Audio device lost”, “MIDI port gone”).
+3. **Point to a next step** the owner can try (reload app, re-pick the file, check RMX2 USB, run `npm run rebuild:native`, open Audio setup).
+4. **Keep the technical detail**, but as secondary (log / “Details” / appended after an em dash) — never as the only line.
+5. Prefer a small `formatUserError(err, context)` (or equivalent) over ad-hoc `alert(err.message)` at every call site.
+
+## Shape
+
+```
+Couldn’t load this track — the audio decoder isn’t available in this window.
+Try: restart StentorDeck, then load the file again. If it keeps failing, use WAV/FLAC.
+```
+
+## Bad vs good
+
+```text
+❌ OfflineAudioContext is not defined
+✅ Couldn’t load this track — decoding failed in the background worker.
+   Try: restart the app. If it persists, the track may be corrupt; try another file.
+
+❌ The module was compiled against a different Node.js version …
+✅ Database engine doesn’t match this Electron build.
+   Try: run npm run rebuild:native, then Start StentorDeck.bat again.
+```
+
+When adding or changing `catch` / rejection handlers that reach the UI, apply this rule in the same change.

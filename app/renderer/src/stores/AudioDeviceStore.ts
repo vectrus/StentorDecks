@@ -19,9 +19,12 @@ export class AudioDeviceStore {
   engineReady = false;
   testing: 'master' | 'cue' | null = null;
 
+  private deviceChangeTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor(
     private readonly settingsStore: SettingsStore,
     private readonly afterRebuild?: () => void,
+    private readonly onDeviceLost?: () => void,
   ) {
     makeAutoObservable(this, {}, { autoBind: true });
   }
@@ -53,7 +56,7 @@ export class AudioDeviceStore {
     await this.ensureValidDeviceSelection();
     if (typeof navigator.mediaDevices?.addEventListener === 'function') {
       navigator.mediaDevices.addEventListener('devicechange', () => {
-        void this.onDeviceChange();
+        this.scheduleDeviceChange();
       });
     }
     this.ready = true;
@@ -121,7 +124,6 @@ export class AudioDeviceStore {
       this.activePlan = audioEngine.plan;
       this.planReason = audioEngine.planReason;
       this.engineReady = true;
-      this.banner = null;
     });
     this.afterRebuild?.();
   }
@@ -144,27 +146,78 @@ export class AudioDeviceStore {
     }
   }
 
-  private async onDeviceChange(): Promise<void> {
-    const before = this.settingsStore.settings.audio.masterDevice;
+  private scheduleDeviceChange(): void {
+    if (this.deviceChangeTimer != null) clearTimeout(this.deviceChangeTimer);
+    this.deviceChangeTimer = setTimeout(() => {
+      this.deviceChangeTimer = null;
+      void this.handleDeviceChange();
+    }, 350);
+  }
+
+  /**
+   * USB unplug/replug: WASAPI deviceIds usually change on return.
+   * Only rebuild on real loss/recovery — NOT on every devicechange (that was
+   * killing playback, truncating buffers, and stranding MIDI).
+   */
+  private async handleDeviceChange(): Promise<void> {
     await this.refreshDevices();
-    const stillThere = this.outputs.some((d) => d.deviceId === before);
-    if (before && !stillThere) {
-      audioEngine.markDeviceLost();
-      runInAction(() => {
-        this.banner = 'Audio device lost — decks paused. Reconnect to continue.';
-        this.engineReady = false;
-      });
+
+    const masterId = this.settingsStore.settings.audio.masterDevice;
+    const masterOk =
+      masterId != null && this.outputs.some((d) => d.deviceId === masterId);
+    const rmxPresent = this.outputs.some((d) =>
+      /rmx|hercules|djconsole/i.test(d.label),
+    );
+
+    if (!masterOk) {
+      if (rmxPresent) {
+        // Replugged with a new deviceId — rebind + rebuild (docs/02).
+        try {
+          await this.applySuggestions();
+          await this.rebuildEngine();
+          runInAction(() => {
+            this.banner =
+              'Audio device reconnected — decks paused at the same position. Press Play to continue.';
+          });
+        } catch (err) {
+          console.error('[audio] rebuild after replug failed', err);
+          runInAction(() => {
+            this.banner =
+              'Audio device came back but the engine failed to rebuild. Try: open Audio setup → Continue.';
+            this.engineReady = false;
+          });
+        }
+        return;
+      }
+
+      // Truly gone — only mark once
+      if (this.engineReady || !audioEngine.deviceLost) {
+        audioEngine.markDeviceLost();
+        this.onDeviceLost?.();
+        runInAction(() => {
+          this.banner =
+            'Audio device lost — decks paused. Reconnect the RMX2 USB; playback will be restorable.';
+          this.engineReady = false;
+        });
+      }
       return;
     }
-    // Replug / change — rebuild within ~1–2 s
-    if (this.settingsStore.settings.audio.masterDevice) {
+
+    // Master id still valid. Rebuild only if we were down.
+    if (!this.engineReady || audioEngine.deviceLost) {
       try {
         await this.rebuildEngine();
         runInAction(() => {
-          this.banner = null;
+          this.banner =
+            'Audio device reconnected — decks paused at the same position. Press Play to continue.';
         });
       } catch (err) {
         console.error('[audio] rebuild after devicechange failed', err);
+        runInAction(() => {
+          this.banner =
+            'Audio device changed but rebuild failed. Try: open Audio setup → Continue.';
+          this.engineReady = false;
+        });
       }
     }
   }

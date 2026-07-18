@@ -2,10 +2,20 @@ import { makeAutoObservable, runInAction } from 'mobx';
 import {
   autoGainTrimDb,
   endOfTrackWarnLevel,
+  pitchPosFromRate,
   pitchRate,
+  resolveCueHoldEnd,
+  resolveCueHoldStart,
+  resolveCuePress,
   type Settings,
 } from '@stentordeck/shared';
 import { audioEngine } from '../audio/AudioEngine';
+import {
+  bufferFromSnapshot,
+  snapshotAudioBuffer,
+  type BufferSnapshot,
+} from '../audio/cloneAudioBuffer';
+import { decodeArrayBufferOffThread } from '../audio/decodeAudio';
 import type { DeckId } from '../audio/DeckGraph';
 
 export class DeckPlayingError extends Error {
@@ -55,11 +65,13 @@ export class DeckStore {
 
   private nudgeTimer: number | null = null;
   private getSettings: () => Settings;
+  /** Full-track PCM for rebuilds — not observable (large). */
+  pcmSnapshot: BufferSnapshot | null = null;
 
   constructor(id: DeckId, getSettings: () => Settings) {
     this.id = id;
     this.getSettings = getSettings;
-    makeAutoObservable(this, {}, { autoBind: true });
+    makeAutoObservable(this, { pcmSnapshot: false }, { autoBind: true });
   }
 
   get effectiveRate(): number {
@@ -86,10 +98,13 @@ export class DeckStore {
       if (!ctx) throw new Error('Audio engine not ready');
       await audioEngine.ensureRunning();
       const ab = await file.arrayBuffer();
-      const buffer = await ctx.decodeAudioData(ab.slice(0));
+      // Decode off main thread so long WAVs don't freeze the UI (E2).
+      const buffer = await decodeArrayBufferOffThread(ctx, ab);
       const transport = audioEngine.transport(this.id);
       if (!transport) throw new Error('No transport');
 
+      // Stash PCM independent of AudioContext lifetime (USB rebuilds).
+      this.pcmSnapshot = snapshotAudioBuffer(buffer);
       transport.setBuffer(buffer);
       this.resetOnLoad(meta);
       runInAction(() => {
@@ -189,53 +204,56 @@ export class DeckStore {
     else this.play();
   }
 
-  /** Classic CDJ cue press (docs/03). */
+  /** Classic CDJ cue press (docs/03 / R2.10) — playing → jump to cue and stop. */
   cuePress(): void {
     const t = audioEngine.transport(this.id);
     if (!t || this.state === 'empty') return;
-    const pos = t.position();
-
-    if (this.state === 'playing') {
-      // Jump-to-cue while playing — soft-start the new buffer source.
-      audioEngine.graph(this.id)?.softStartInput(0.02);
-      t.seek(this.cueOffset);
-      t.setRate(this.effectiveRate);
-      this.position = this.cueOffset;
+    const action = resolveCuePress(this.state, t.position(), this.cueOffset);
+    if (action.kind === 'setCue') {
+      this.cueOffset = action.cueOffset;
       return;
     }
-
-    // stopped/paused
-    if (Math.abs(pos - this.cueOffset) > 0.001) {
-      this.cueOffset = pos;
+    if (action.kind === 'jumpAndStop') {
+      const graph = audioEngine.graph(this.id);
+      graph?.softStopInput(0.02);
+      t.pause();
+      t.seek(action.seekTo);
+      this.position = action.seekTo;
+      this.state = 'stopped';
+      this.cuePreviewing = false;
+      graph?.restoreInputGain();
     }
-    // hold preview starts on cueHold
   }
 
   cueHoldStart(): void {
     const t = audioEngine.transport(this.id);
-    if (!t || this.state === 'playing' || this.state === 'empty') return;
+    if (!t) return;
+    const action = resolveCueHoldStart(this.state, this.cueOffset);
+    if (action.kind !== 'previewFromCue') return;
     this.cuePreviewing = true;
-    t.seek(this.cueOffset);
+    t.seek(action.seekTo);
     t.setRate(this.effectiveRate);
     this.play({ soft: true });
     this.cuePreviewing = true; // play() clears it — restore
   }
 
   cueHoldEnd(): void {
-    if (!this.cuePreviewing) return;
+    const action = resolveCueHoldEnd(this.cuePreviewing, this.cueOffset);
+    if (action.kind !== 'stopSnapCue') return;
     this.cuePreviewing = false;
     const t = audioEngine.transport(this.id);
     const graph = audioEngine.graph(this.id);
-    graph?.softStopInput(0.015);
+    // Longer soft-stop before pause — cue release was the main click source.
+    graph?.softStopInput(0.025);
     window.setTimeout(() => {
       runInAction(() => {
         t?.pause();
-        t?.seek(this.cueOffset);
-        this.position = this.cueOffset;
+        t?.seek(action.seekTo);
+        this.position = action.seekTo;
         this.state = 'stopped';
         graph?.restoreInputGain();
       });
-    }, 18);
+    }, 28);
   }
 
   seek(offset: number): void {
@@ -249,17 +267,27 @@ export class DeckStore {
     audioEngine.transport(this.id)?.setRate(this.effectiveRate);
   }
 
-  /** One-shot SYNC — match other deck effective BPM. */
+  /**
+   * One-shot SYNC — match other deck tempo.
+   * With file BPM (E5): match effective BPM. Without: match playback rate
+   * so Sync works in the E2 harness before analysis lands.
+   */
   syncTo(other: DeckStore): void {
-    if (other.effectiveBpm == null || this.fileBpm == null || this.fileBpm === 0) return;
-    const targetRate = other.effectiveBpm / this.fileBpm;
+    if (this.state === 'empty') return;
     const s = this.getSettings();
     const range = s.mixer.pitchFaders.range;
-    // rate = 1 + norm * range → norm = (rate - 1) / range
-    const norm = (targetRate - 1) / range;
-    const clamped = Math.min(1, Math.max(-1, norm));
-    // invert pitchFaderNormalized approximately via center mapping
-    this.pitchPos = 0.5 + clamped * 0.5;
+    const dead = s.mixer.pitchFaders.centerDeadZone;
+
+    let targetRate: number;
+    if (other.effectiveBpm != null && this.fileBpm != null && this.fileBpm !== 0) {
+      targetRate = other.effectiveBpm / this.fileBpm;
+    } else if (other.state === 'empty') {
+      return;
+    } else {
+      targetRate = other.effectiveRate;
+    }
+
+    this.pitchPos = pitchPosFromRate(targetRate, dead, range);
     this.syncArmed = true;
     audioEngine.transport(this.id)?.setRate(this.effectiveRate);
   }
@@ -315,17 +343,17 @@ export class DeckStore {
 
   togglePfl(): void {
     this.pfl = !this.pfl;
+    // PFL gain ramps in DeckGraph (≥20 ms). Never touch channel fader (pre-fader listen).
     this.pushGraph();
     if (this.pfl) {
-      // Stopped decks have no source — start transport so the pre-fader PFL tap has audio.
-      // Channel fader stays under user control (PFL must not steal/mute the fader).
+      // Stopped decks have no source — soft-start transport for cue bus only.
       if (this.state === 'stopped' && this.duration > 0) {
         this.pflMonitor = true;
         this.play({ soft: true });
       }
       return;
     }
-    // Turning PFL off does not pause or touch the fader — transport stays as the user left it.
+    // Turning PFL off does not pause or steal the fader.
     this.pflMonitor = false;
   }
 
@@ -361,6 +389,37 @@ export class DeckStore {
     if (this.state === 'playing') {
       t.setRate(this.effectiveRate);
     }
+  }
+
+  /** Device lost / engine teardown — stop logical transport; keep cue & metadata. */
+  onEngineInterrupted(): void {
+    if (this.state === 'playing' || this.cuePreviewing) {
+      this.state = 'stopped';
+      this.cuePreviewing = false;
+    }
+    this.pflMonitor = false;
+    const t = audioEngine.transport(this.id);
+    if (t) this.position = t.position();
+  }
+
+  /** After graph rebuild — recreate buffer from load-time PCM stash. */
+  adoptEngineRestore(): void {
+    const ctx = audioEngine.masterCtx;
+    const t = audioEngine.transport(this.id);
+    if (!ctx || !t || !this.pcmSnapshot) {
+      if (this.state !== 'empty' && !this.pcmSnapshot) {
+        this.state = 'stopped';
+      }
+      return;
+    }
+    const keepPos = this.position;
+    t.setBuffer(bufferFromSnapshot(ctx, this.pcmSnapshot));
+    t.seek(keepPos);
+    this.duration = t.duration;
+    this.position = t.position();
+    this.state = 'stopped';
+    this.cuePreviewing = false;
+    this.pushGraph();
   }
 
   pushGraph(): void {

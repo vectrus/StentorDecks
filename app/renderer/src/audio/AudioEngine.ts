@@ -5,7 +5,7 @@ import {
   resolveRoutingPlan,
 } from './devices';
 import { DeckGraph, DeckTransport, type DeckId } from './DeckGraph';
-import { linearRampParam, rampParam } from './ramp';
+import { linearRampParam } from './ramp';
 import { playStereoTestTone } from './testTone';
 
 export type MeterLevels = {
@@ -63,8 +63,9 @@ export class AudioEngine {
     settings: Settings;
     devices: AudioDeviceInfo[];
   }): Promise<void> {
-    const saved = this.captureTransport();
-    this.teardown();
+    // Decks restore PCM from their own snapshots in afterRebuild — do not
+    // clone from a dying AudioContext (that caused ~tens-of-seconds truncations).
+    await this.teardown();
 
     const { settings, devices } = opts;
     const resolved = resolveRoutingPlan({
@@ -148,7 +149,6 @@ export class AudioEngine {
 
     this.deviceLost = false;
     await this.ensureRunning();
-    this.restoreTransport(saved);
   }
 
   private async setSink(ctx: AudioContext, deviceId: string | null): Promise<void> {
@@ -161,13 +161,14 @@ export class AudioEngine {
     }
   }
 
-  teardown(): void {
+  async teardown(): Promise<void> {
     this.transportA?.stopImmediate();
     this.transportB?.stopImmediate();
     this.deckA?.disconnect();
     this.deckB?.disconnect();
-    void this.masterCtx?.close();
-    void this.cueCtx?.close();
+    const closes: Promise<void>[] = [];
+    if (this.masterCtx) closes.push(this.masterCtx.close());
+    if (this.cueCtx) closes.push(this.cueCtx.close());
     this.masterCtx = null;
     this.cueCtx = null;
     this.deckA = null;
@@ -177,6 +178,7 @@ export class AudioEngine {
     this.merger = null;
     this.cueBridgeDest = null;
     this.cueBridgeSrc = null;
+    await Promise.all(closes);
   }
 
   graph(id: DeckId): DeckGraph | null {
@@ -250,36 +252,6 @@ export class AudioEngine {
     this.deviceLost = true;
     this.transportA?.pause();
     this.transportB?.pause();
-  }
-
-  private captureTransport(): {
-    a: { buffer: AudioBuffer | null; offset: number; playing: boolean };
-    b: { buffer: AudioBuffer | null; offset: number; playing: boolean };
-  } {
-    return {
-      a: {
-        buffer: this.transportA?.getBuffer() ?? null,
-        offset: this.transportA?.position() ?? 0,
-        playing: this.transportA?.isPlaying ?? false,
-      },
-      b: {
-        buffer: this.transportB?.getBuffer() ?? null,
-        offset: this.transportB?.position() ?? 0,
-        playing: this.transportB?.isPlaying ?? false,
-      },
-    };
-  }
-
-  private restoreTransport(saved: ReturnType<AudioEngine['captureTransport']>): void {
-    if (saved.a.buffer && this.transportA) {
-      this.transportA.setBuffer(saved.a.buffer);
-      this.transportA.seek(saved.a.offset);
-      // Do not auto-resume after device loss — user presses play (docs/02: decks pause)
-    }
-    if (saved.b.buffer && this.transportB) {
-      this.transportB.setBuffer(saved.b.buffer);
-      this.transportB.seek(saved.b.offset);
-    }
   }
 }
 

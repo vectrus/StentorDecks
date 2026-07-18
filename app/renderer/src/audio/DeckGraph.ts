@@ -157,23 +157,25 @@ export class DeckGraph {
     rampParam(this.eqMid.gain, midDb, ctx);
     rampParam(this.eqHigh.gain, highDb, ctx);
 
-    // Filter bypass crossfade
+    // Filter bypass crossfade — never snap freq/Q mid-playback (docs/03).
     const filt = filterFromAmount(p.filterAmount);
     if (!p.filterOn || filt.mode === 'bypass') {
       rampParam(this.filterDry.gain, 1, ctx);
       rampParam(this.filterWet.gain, 0, ctx);
     } else {
-      this.filter.type = filt.mode;
-      this.filter.frequency.value = filt.frequency;
-      this.filter.Q.value = filt.Q;
+      if (this.filter.type !== filt.mode) {
+        this.filter.type = filt.mode;
+      }
+      rampParam(this.filter.frequency, filt.frequency, ctx);
+      rampParam(this.filter.Q, filt.Q, ctx);
       rampParam(this.filterDry.gain, 0, ctx);
       rampParam(this.filterWet.gain, 1, ctx);
     }
 
-    // Flanger
-    this.lfo.frequency.value = p.flanger.rateHz;
-    this.lfoGain.gain.value = p.flanger.depthMs / 1000;
-    this.feedback.gain.value = p.flanger.feedback;
+    // Flanger — ramp rate/depth/feedback (≥15 ms)
+    rampParam(this.lfo.frequency, p.flanger.rateHz, ctx);
+    rampParam(this.lfoGain.gain, p.flanger.depthMs / 1000, ctx);
+    rampParam(this.feedback.gain, p.flanger.feedback, ctx);
     const wet = p.flangerOn ? p.flangerWet : 0;
     const dry = Math.cos((wet * Math.PI) / 2);
     const wetG = Math.sin((wet * Math.PI) / 2);
@@ -202,25 +204,28 @@ export class DeckGraph {
   }
 
   /** Fade deck input 0→1 so buffer starts / cue jumps don't click. */
-  softStartInput(seconds = 0.02): void {
+  softStartInput(seconds = 0.025): void {
     const t = this.ctx.currentTime;
     this.input.gain.cancelScheduledValues(t);
+    // Always start from digital silence — never ramp from a stale mid-value.
     this.input.gain.setValueAtTime(0, t);
-    this.input.gain.linearRampToValueAtTime(1, t + seconds);
+    this.input.gain.linearRampToValueAtTime(1, t + Math.max(seconds, 0.02));
   }
 
-  /** Fade deck input → 0 before pause/stop (cue release, etc.). */
-  softStopInput(seconds = 0.015): void {
+  /** Fade deck input → 0 before pause/stop (cue release, PFL edge, etc.). */
+  softStopInput(seconds = 0.025): void {
     const t = this.ctx.currentTime;
     this.input.gain.cancelScheduledValues(t);
     this.input.gain.setValueAtTime(this.input.gain.value, t);
-    this.input.gain.linearRampToValueAtTime(0, t + seconds);
+    this.input.gain.linearRampToValueAtTime(0, t + Math.max(seconds, 0.02));
   }
 
+  /** After soft-stop pause: return input to unity without a step click. */
   restoreInputGain(): void {
     const t = this.ctx.currentTime;
     this.input.gain.cancelScheduledValues(t);
-    this.input.gain.setValueAtTime(1, t);
+    this.input.gain.setValueAtTime(this.input.gain.value, t);
+    this.input.gain.linearRampToValueAtTime(1, t + 0.02);
   }
 
   disconnect(): void {

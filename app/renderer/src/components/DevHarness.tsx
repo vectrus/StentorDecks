@@ -6,6 +6,7 @@ import {
   mixerStore,
   settingsStore,
 } from '../stores/root';
+import { formatUserError } from '../util/formatUserError';
 
 export const DevHarness = observer(function DevHarness() {
   return (
@@ -16,6 +17,11 @@ export const DevHarness = observer(function DevHarness() {
           Plan {audioDeviceStore.activePlan} · {audioDeviceStore.planReason}
         </span>
       </header>
+      <p className="hint">
+        Manual soak (not CI): 30 min two-deck + FX toggles; renderer working set &lt; ~400 MB;
+        heap snapshot after rebuilds should not accumulate nodes. HW gate:{' '}
+        <code>docs/E2-HW-CHECKLIST.md</code>
+      </p>
 
       <div className="harness-grid">
         <DeckPanel deck={deckA} other={deckB} label="Deck A" />
@@ -90,7 +96,7 @@ const DeckPanel = observer(function DeckPanel(props: {
           const f = e.target.files?.[0];
           if (!f) return;
           void deck.load(f).catch((err: unknown) => {
-            alert(err instanceof Error ? err.message : String(err));
+            alert(formatUserError(err, `Couldn’t load on ${label}`));
           });
         }}
       />
@@ -108,16 +114,29 @@ const DeckPanel = observer(function DeckPanel(props: {
         <button
           type="button"
           onMouseDown={() => {
-            deck.cuePress();
-            deck.cueHoldStart();
+            if (deck.state === 'playing') {
+              deck.cuePress();
+            } else {
+              deck.cuePress();
+              deck.cueHoldStart();
+            }
           }}
           onMouseUp={() => deck.cueHoldEnd()}
           onMouseLeave={() => deck.cueHoldEnd()}
         >
           CUE
         </button>
-        <button type="button" onClick={() => deck.syncTo(other)}>
-          SYNC
+        <button
+          type="button"
+          className={deck.syncArmed ? 'on' : undefined}
+          onClick={() => deck.syncTo(other)}
+          title={
+            other.state === 'empty'
+              ? 'Load the other deck first'
+              : 'Match tempo to the other deck'
+          }
+        >
+          SYNC{deck.syncArmed ? ' ·' : ''}
         </button>
         <button type="button" className={deck.pfl ? 'on' : ''} onClick={() => deck.togglePfl()}>
           PFL
