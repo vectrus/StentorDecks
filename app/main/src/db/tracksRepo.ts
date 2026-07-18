@@ -158,7 +158,7 @@ export function readTrackFile(
 ): LibraryReadResult | null {
   const r = db
     .prepare(
-      `SELECT id, path, title, artist, bpm, loudness_lufs, duration_ms
+      `SELECT id, path, title, artist, bpm, key_camelot, loudness_lufs, duration_ms
        FROM tracks WHERE id = ? AND missing_since IS NULL`,
     )
     .get(id) as
@@ -168,6 +168,7 @@ export function readTrackFile(
         title: string | null;
         artist: string | null;
         bpm: number | null;
+        key_camelot: string | null;
         loudness_lufs: number | null;
         duration_ms: number | null;
       }
@@ -183,6 +184,7 @@ export function readTrackFile(
     title: r.title,
     artist: r.artist,
     bpm: r.bpm,
+    keyCamelot: r.key_camelot,
     loudnessLufs: r.loudness_lufs,
     durationMs: r.duration_ms,
     bytes: new Uint8Array(buf),

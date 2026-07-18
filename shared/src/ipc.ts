@@ -58,6 +58,7 @@ export type LibraryReadResult = {
   title: string | null;
   artist: string | null;
   bpm: number | null;
+  keyCamelot: string | null;
   loudnessLufs: number | null;
   durationMs: number | null;
   bytes: Uint8Array;

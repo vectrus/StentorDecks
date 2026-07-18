@@ -28,6 +28,7 @@ export type LoadedTrackMeta = {
   title: string;
   artist: string;
   fileBpm: number | null;
+  keyCamelot: string | null;
   loudnessLufs: number | null;
   /** Library row id when loaded via Prep/Perf browse (E4/E6). */
   libraryTrackId: number | null;
@@ -41,6 +42,7 @@ export class DeckStore {
   title = '';
   artist = '';
   fileBpm: number | null = null;
+  keyCamelot: string | null = null;
   loudnessLufs: number | null = null;
   libraryTrackId: number | null = null;
   /** Overview waveform 800×(min,max,rms) u8 — null until analysis / fetch. */
@@ -119,18 +121,29 @@ export class DeckStore {
     this.takeoverSoftwareChange?.(id);
   }
 
-  get effectiveRate(): number {
+  /** Pitch-fader rate only (no jog nudge / pitch-bend). SYNC follow target. */
+  get pitchOnlyRate(): number {
     const s = this.getSettings();
-    return (
-      pitchRate(this.pitchPos, s.mixer.pitchFaders.centerDeadZone, s.mixer.pitchFaders.range) *
-      this.nudgeFactor *
-      this.bendFactor
+    return pitchRate(
+      this.pitchPos,
+      s.mixer.pitchFaders.centerDeadZone,
+      s.mixer.pitchFaders.range,
     );
+  }
+
+  get effectiveRate(): number {
+    return this.pitchOnlyRate * this.nudgeFactor * this.bendFactor;
   }
 
   get effectiveBpm(): number | null {
     if (this.fileBpm == null) return null;
     return this.fileBpm * this.effectiveRate;
+  }
+
+  /** Stable BPM from pitch fader — partner jogs must not yank a SYNC slave. */
+  get pitchOnlyBpm(): number | null {
+    if (this.fileBpm == null) return null;
+    return this.fileBpm * this.pitchOnlyRate;
   }
 
   /** Single choke point for load (R4.2 / R3.3). */
@@ -159,6 +172,7 @@ export class DeckStore {
           this.title = meta?.title ?? file.name;
           this.artist = meta?.artist ?? '';
           this.fileBpm = meta?.fileBpm ?? null;
+          this.keyCamelot = meta?.keyCamelot ?? null;
           this.loudnessLufs = meta?.loudnessLufs ?? null;
           this.libraryTrackId = meta?.libraryTrackId ?? null;
           this.overviewWaveform = null;
@@ -357,10 +371,24 @@ export class DeckStore {
     }
   }
 
-  /** After analysis commit — refresh if this deck holds that track. */
+  /** After analysis commit — refresh waveforms (+ key) if this deck holds that track. */
   refreshOverviewIf(trackId: number): void {
     if (this.libraryTrackId !== trackId) return;
     void this.fetchWaveforms(trackId);
+    void this.refreshKeyFromLibrary(trackId);
+  }
+
+  private async refreshKeyFromLibrary(trackId: number): Promise<void> {
+    try {
+      const row = await invoke('library:track', { id: trackId });
+      if (this.libraryTrackId !== trackId || !row) return;
+      runInAction(() => {
+        this.keyCamelot = row.keyCamelot;
+        if (row.bpm != null) this.fileBpm = row.bpm;
+      });
+    } catch {
+      /* non-fatal */
+    }
   }
 
   seek(offset: number): void {
@@ -386,8 +414,9 @@ export class DeckStore {
 
   /**
    * SYNC is a latching on/off control (docs/06 lit until released).
-   * On → match tempo, one-shot beat phase snap, stay armed (tempo follow while on).
-   * Off → clear armed; leave pitch where it is.
+   * On → this deck becomes the sole slave: clear partner SYNC, match tempo,
+   * one-shot beat phase snap, stay armed (tempo follow while on).
+   * Off → clear armed; leave pitch where it is (manual jogs take over).
    */
   toggleSync(other: DeckStore): void {
     if (this.syncArmed) {
@@ -395,6 +424,8 @@ export class DeckStore {
       return;
     }
     if (this.state === 'empty' || other.state === 'empty') return;
+    // One slave at a time — Sync A and Sync B are mutually exclusive (R2.3).
+    other.clearSync();
     this.syncPartner = other.id;
     this.syncArmed = true;
     this.applySyncTo(other);
@@ -418,15 +449,17 @@ export class DeckStore {
     return 'SYNC: pitch-% only — partner needs File BPM for BPM + phase';
   }
 
-  /** Match tempo to `other` (BPM when known; else pitch fader %). Called while armed too. */
+  /** Match tempo to `other` (pitch-only BPM when known; else pitch %). Called while armed too. */
   applySyncTo(other: DeckStore): void {
     if (this.state === 'empty' || other.state === 'empty') return;
     const s = this.getSettings();
     const range = s.mixer.pitchFaders.range;
     const dead = s.mixer.pitchFaders.centerDeadZone;
 
-    if (other.effectiveBpm != null && this.fileBpm != null && this.fileBpm !== 0) {
-      const targetRate = other.effectiveBpm / this.fileBpm;
+    // Follow partner pitch fader only — ignore their jog nudge / pitch-bend so
+    // temporary master bends don't yank the slave (release SYNC to take over manually).
+    if (other.pitchOnlyBpm != null && this.fileBpm != null && this.fileBpm !== 0) {
+      const targetRate = other.pitchOnlyBpm / this.fileBpm;
       const minRate = 1 - range;
       const maxRate = 1 + range;
       this.syncClamped = targetRate < minRate - 1e-9 || targetRate > maxRate + 1e-9;
@@ -448,7 +481,7 @@ export class DeckStore {
    */
   snapPhaseTo(other: DeckStore): void {
     if (this.syncMode !== 'bpm') return;
-    const bpm = other.effectiveBpm;
+    const bpm = other.pitchOnlyBpm;
     const period = bpm != null ? beatPeriodSec(bpm) : null;
     if (period == null) return;
 

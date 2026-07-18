@@ -5,6 +5,36 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — Park: Prep library as v2 AI queue surface
+
+Owner note: later examine whether Prep’s library UI can host a Co-pilot / Suggest **queue (playlist)** for AI autoplay. Parked in [`BACKLOG-v2-spotify-ai.md`](./BACKLOG-v2-spotify-ai.md) (design spike before V2-E); ROADMAP + Prep guide FAQ pointed. **Not v1** — disk folders remain crates.
+
+---
+
+## 2026-07-18 — Prep library operator guide
+
+Added plain-language how-to [`docs/guides/prep-library.md`](./guides/prep-library.md) (what Prep’s library is, browse/load/BPM-key fix, Hercules + Performance strip). Linked from root README, `docs/README.md`, docs/05, docs/06. R5.*, R6.6, E4.
+
+---
+
+## 2026-07-18 — SYNC sole-slave + pitch-only follow (R2.3)
+
+Engaging SYNC on A clears B (and vice versa). Tempo follow targets the master's pitch-fader BPM only — partner jog/bend no longer yanks the slave. Press SYNC again freezes pitch for manual Hercules jogs (soft takeover already on the fader). Perf deck panels clip overflow so overview waveforms cannot bleed into the mixer. R2.3, docs/03.
+
+---
+
+## 2026-07-18 — Camelot “fits next” library hints
+
+Prep and Perf browse rows show a faint `~` beside tracks whose Camelot key matches the current mix reference (playing deck preferred, else loaded): same key, ±1 same letter, or relative major/minor. Tooltip explains the relation. Pure Camelot helpers in shared; no auto-sort/filter. R5.*, R6.*, E4/E6.
+
+---
+
+## 2026-07-18 — Perf library fills leftover height
+
+Performance browser was flex-growing but only painted 3 rows (empty panel below). List now measures available height and shows as many 42 px rows as fit (≥3), windowed around the cursor; row type bumped to 17 px. docs/06 updated. R7.1, E4/E6 Perf strip.
+
+---
+
 ## 2026-07-18 — SYNC one-shot beat phase snap (R2.3)
 
 Owner change: SYNC still matches tempo and latches for tempo follow, and on **engage** also seeks the synced deck by the shortest delta so playhead beat phases align (0:00-origin grid, same as visual ticks). No continuous phase-lock. Spec updated in R2.3 / R7.5 / docs/03 / docs/05.

@@ -276,3 +276,32 @@
 .midi-monitor-list li.unknown {
   color: var(--warn, #ffb454);
 }
+
+/* Harmonic “fits next” hint — Camelot wheel adjacency (subtle, glanceable) */
+.key-fit {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2em;
+  min-width: 0;
+}
+
+.key-fit-mark {
+  font-size: 0.85em;
+  font-weight: 600;
+  opacity: 0.55;
+  line-height: 1;
+}
+
+.key-fit-same .key-fit-mark {
+  opacity: 0.7;
+  color: var(--ok, #6bcf7f);
+}
+
+.key-fit-adjacent .key-fit-mark {
+  color: var(--accent, #7eb8ff);
+}
+
+.key-fit-relative .key-fit-mark {
+  color: var(--text-dim);
+  opacity: 0.65;
+}

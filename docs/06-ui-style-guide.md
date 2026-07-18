@@ -45,11 +45,11 @@ UI scale (R7.2) multiplies a root `rem`; everything is rem-based. Minimum post-s
 
 ## Layout
 
-**Performance mode** — rows: waveform well (both decks stacked, thick bars, 2 px white center playhead, beat ticks, cue marker) / deck A · mixer · deck B / 3-row browser.
+**Performance mode** — rows: waveform well (both decks stacked, thick bars, 2 px white center playhead, beat ticks, cue marker) / deck A · mixer · deck B / library browser that **fills remaining height** (windowed list, ≥3 rows × 42 px, cursor-centered).
 Deck panel: 3 px accent top border; title+artist left, GAIN knob top-right (auto-gain applied on load; manual override live); BPM + key chip + remaining on one baseline row; progress bar (7 px, seekable); FX row left-to-right: **FILTER pad · AMT knob · FLANGER pad · WET knob** (pad = activate, knob = amount; mockups `01`/`04`); transport row (play 44 px round, CUE, SYNC, LOAD right-aligned). Tap/half/double/key chrome on this panel is nice-to-have.
 Mixer column: EQ knob pairs (HI/MID/LOW) with kill state shown as a struck-through lit label; two channel faders (oversized caps) each with adjacent VU; no crossfader ever rendered.
 
-**Prep mode** — compact deck strips pinned top (accent left border, play state icon, title, BPM, remaining); below: folder tree (~190 px) + large browser with breadcrumb and search; **BPM/key correction strip** (tap, ½, ×2, key picker) required (R6.6); footer hints for encoder navigation.
+**Prep mode** — compact deck strips pinned top (accent left border, play state icon, title, BPM, remaining); below: folder tree (~190 px) + large browser with breadcrumb and search; **BPM/key correction strip** (tap, ½, ×2, key picker) required (R6.6); footer hints for encoder navigation. Operator walkthrough: [`guides/prep-library.md`](./guides/prep-library.md).
 
 ## States & feedback
 

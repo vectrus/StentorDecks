@@ -1,5 +1,7 @@
 # 05 — Library & analysis
 
+> **Operator how-to (plain language):** [`guides/prep-library.md`](./guides/prep-library.md) — what Prep’s library is and how to browse, load, and fix BPM/key.
+
 ## Scanner (main process)
 
 - Watched roots configured in settings (≥1). Initial scan walks each root; `chokidar` watches thereafter (add/change/unlink, debounced 2 s).

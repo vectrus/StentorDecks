@@ -35,6 +35,7 @@ Explicitly out of scope for v1: scratching, keylock/master tempo, recording, hot
 | [TESTING.md](./TESTING.md) | Unit, component, Playwright e2e, doc screenshots |
 | [`mockups/`](./mockups/MOCKUPS.md) | Approved HTML mockups (design contract for E2/E6) |
 | [`playwright/`](./playwright/README.md) | Doc screenshots (`npm run docs:screenshots`) |
+| [`guides/prep-library.md`](./guides/prep-library.md) | **Operator guide** — how to use the Prep library (plain language) |
 
 ## Repository layout (this spec)
 
@@ -48,6 +49,7 @@ README.md                     you are here
 06-ui-style-guide.md          palette, type scale, modes, components
 07-settings-schema.md         settings.json schema and defaults
 ROADMAP.md / CHANGELOG.md     proceedings tracker
+guides/                       operator how-tos (plain language; not agent contracts)
 mockups/                      HTML design contract (see mockups/MOCKUPS.md)
 E1-skeleton.md … E7-…         epics (canonical path: this folder)
 ```

@@ -126,6 +126,37 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     expect(deck.position).toBeCloseTo(10.3, 5);
   });
 
+  it('toggleSync is mutually exclusive — Sync A clears Sync B', () => {
+    const a = new DeckStore('A', () => defaultSettings);
+    const b = new DeckStore('B', () => defaultSettings);
+    a.state = 'stopped';
+    b.state = 'stopped';
+    a.fileBpm = 128;
+    b.fileBpm = 128;
+    a.toggleSync(b);
+    expect(a.syncArmed).toBe(true);
+    expect(b.syncArmed).toBe(false);
+    b.toggleSync(a);
+    expect(b.syncArmed).toBe(true);
+    expect(a.syncArmed).toBe(false);
+  });
+
+  it('applySyncTo follows pitch-only BPM (ignores partner nudge)', () => {
+    const slave = new DeckStore('A', () => defaultSettings);
+    const master = new DeckStore('B', () => defaultSettings);
+    slave.state = 'stopped';
+    master.state = 'stopped';
+    slave.fileBpm = 128;
+    master.fileBpm = 128;
+    master.pitchPos = 0.5;
+    master.nudgeFactor = 1.02;
+    slave.toggleSync(master);
+    expect(slave.syncArmed).toBe(true);
+    // Slave matches pitch fader (~128), not nudged effective (~130.6)
+    expect(slave.pitchOnlyBpm).toBeCloseTo(128, 1);
+    expect(slave.effectiveBpm).toBeCloseTo(128, 1);
+  });
+
   it('manual trim sticks until next applyAutoGain/load reset cycle', () => {
     const settings: Settings = {
       ...defaultSettings,

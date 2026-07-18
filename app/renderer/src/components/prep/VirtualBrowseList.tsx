@@ -1,7 +1,9 @@
 import { observer } from 'mobx-react-lite';
 import { useEffect, useRef, useState } from 'react';
 import type { LibraryBrowseEntry } from '../../stores/LibraryStore';
-import { deckA, libraryStore } from '../../stores/root';
+import { mixReferenceKey } from '../../stores/mixReferenceKey';
+import { deckA, deckB, libraryStore } from '../../stores/root';
+import { KeyHint } from '../browse/KeyHint';
 import { fmtBpm, fmtDur } from './fmt';
 
 /** docs/06 — browser row 42 px at 16 px type */
@@ -11,6 +13,7 @@ const OVERSCAN = 8;
 export const VirtualBrowseList = observer(function VirtualBrowseList() {
   const entries = libraryStore.entries;
   const cursor = libraryStore.cursor;
+  const refKey = mixReferenceKey(deckA, deckB);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewH, setViewH] = useState(400);
@@ -78,6 +81,7 @@ export const VirtualBrowseList = observer(function VirtualBrowseList() {
               index={index}
               selected={index === cursor}
               offsetY={index * ROW_H}
+              referenceKey={refKey}
             />
           );
         })}
@@ -94,8 +98,9 @@ const BrowseRow = observer(function BrowseRow(props: {
   index: number;
   selected: boolean;
   offsetY: number;
+  referenceKey: string | null;
 }) {
-  const { entry, index, selected, offsetY } = props;
+  const { entry, index, selected, offsetY, referenceKey } = props;
   return (
     <div
       className={`prep-row${selected ? ' sel' : ''}${entry.kind === 'track' && entry.track.lowConfidence ? ' low' : ''}`}
@@ -122,7 +127,11 @@ const BrowseRow = observer(function BrowseRow(props: {
           <span className="prep-col bpm mono">
             {fmtBpm(entry.track.bpm, entry.track.lowConfidence)}
           </span>
-          <span className="prep-col key mono">{entry.track.keyCamelot ?? '…'}</span>
+          <KeyHint
+            className="prep-col key mono"
+            trackKey={entry.track.keyCamelot}
+            referenceKey={referenceKey}
+          />
           <span className="prep-col time mono">{fmtDur(entry.track.durationMs)}</span>
         </>
       )}

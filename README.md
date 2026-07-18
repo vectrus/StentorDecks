@@ -23,6 +23,8 @@ Authoritative HTML mockups and PNGs — see [`docs/mockups/MOCKUPS.md`](docs/moc
 
 ![Prep mode](docs/mockups/screenshots/02-prep-mode.png)
 
+**How to use the Prep library** (plain-language guide): [`docs/guides/prep-library.md`](docs/guides/prep-library.md)
+
 ### Audio setup
 
 ![Audio setup](docs/mockups/screenshots/03-audio-setup.png)

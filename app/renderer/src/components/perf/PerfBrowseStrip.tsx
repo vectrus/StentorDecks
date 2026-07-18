@@ -1,14 +1,42 @@
 import { observer } from 'mobx-react-lite';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { deckA, deckB, libraryStore } from '../../stores/root';
+import { mixReferenceKey } from '../../stores/mixReferenceKey';
+import { KeyHint } from '../browse/KeyHint';
 import { fmtBpm, fmtDur } from '../prep/fmt';
 
-/** Performance mode 3-row browser (docs/06 / mockup 01 / E4). */
+/** Row height matches R7.1 (≥42 px) — keep in sync with `.perf-row` in perf.css. */
+const ROW_PX = 42;
+const MIN_ROWS = 3;
+
+/** Performance library — fills leftover height; windowed list around cursor. */
 export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
+  const listRef = useRef<HTMLUListElement>(null);
+  const [visibleCount, setVisibleCount] = useState(MIN_ROWS);
+
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const measure = (): void => {
+      const h = el.clientHeight;
+      const n = Math.max(MIN_ROWS, Math.floor(h / ROW_PX));
+      setVisibleCount(n);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const entries = libraryStore.entries;
   const cursor = libraryStore.cursor;
-  const start = entries.length === 0 ? 0 : Math.max(0, Math.min(cursor - 1, entries.length - 3));
-  const visible = entries.slice(start, start + 3);
+  const start =
+    entries.length === 0
+      ? 0
+      : Math.max(0, Math.min(cursor - Math.floor((visibleCount - 1) / 2), entries.length - visibleCount));
+  const visible = entries.slice(start, start + visibleCount);
   const analyzing = libraryStore.analyzingCount;
+  const refKey = mixReferenceKey(deckA, deckB);
 
   return (
     <section className="perf-brow" aria-label="Library browser">
@@ -39,6 +67,7 @@ export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
       </div>
 
       <ul
+        ref={listRef}
         className="perf-rows"
         role="listbox"
         tabIndex={0}
@@ -92,7 +121,11 @@ export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
                   <span className="perf-col bpm mono">
                     {fmtBpm(entry.track.bpm, entry.track.lowConfidence)}
                   </span>
-                  <span className="perf-col key mono">{entry.track.keyCamelot ?? '…'}</span>
+                  <KeyHint
+                    className="perf-col key mono"
+                    trackKey={entry.track.keyCamelot}
+                    referenceKey={refKey}
+                  />
                   <span className="perf-col time mono">{fmtDur(entry.track.durationMs)}</span>
                 </>
               )}

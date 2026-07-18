@@ -87,8 +87,31 @@ v1 still excludes streaming services (see root README / docs/README). This doc i
 | V2-B | Local mixmatch list (rules from E5 analysis → 5–10) | E5 |
 | V2-C | LLM rerank + explanations; provider settings | V2-B; network optional |
 | V2-D | Spotify OAuth browse + local match + wantlist | V2-A |
-| V2-E | Co-pilot autoplay + STOP AI | V2-B/C; deck load APIs |
+| V2-E | Co-pilot autoplay + STOP AI | V2-B/C; deck load APIs; **V2-Q queue UI spike** |
 | V2-F | Full auto (optional) | V2-E + strong phrase/energy confidence |
+
+---
+
+## Design spike (later) — Prep library as queue / playlist surface
+
+**Status:** PARKED — examine when opening V2-E (Co-pilot), not in v1.  
+**Owner note (2026-07-18):** Julius — “examine later if we can use [Prep library] for a queue (playlist) as well” for the AI-plays-for-us roadmap item.
+
+**Idea to evaluate (not decided):**
+
+v1 Prep is browse-only (disk folders = crates; no in-app playlists). Co-pilot / Suggest-only already imply an ordered **Next N** list of library `trackId`s. Before inventing a separate playlist product, spike whether Prep’s library chrome (or a thin mode beside it) can host that queue:
+
+| Question | Why it matters |
+|---|---|
+| Same list vs new “Queue” panel? | Reuse cursor / MIDI browse / Load A·B habits vs avoid confusing crates with a live queue |
+| Ordered Next N editable by human? | Co-pilot default loads idle deck from top; human may want reorder / skip / pin |
+| Persist session queue across restart? | Nice for long sets; not required for Suggest-only |
+| Harmonic `~` hints + mixmatch? | Prep already shows Camelot fit vs playing deck — queue rows could reuse that |
+| Never break R4.2 | Auto-load only into **idle** deck; playing deck stays human-gated |
+
+**Non-decision:** This does **not** reopen v1 playlists. Disk folders stay the crates until a v2 epic explicitly changes that.
+
+**Entry point when v2 opens:** spike before or with V2-E; write outcome into this file (adopt / adapt / separate UI).
 
 ---
 

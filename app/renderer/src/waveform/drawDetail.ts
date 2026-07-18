@@ -1,13 +1,13 @@
 /**
- * Scrolling detail waveform (docs/05): fixed center playhead, ±4 s @ 50 pps → 400 buckets.
- * Canvas redraw from typed arrays — no React in the draw path.
+ * Scrolling detail waveform (docs/05): fixed center playhead, ±4 s @ 50 pps data.
+ * Drawn per device-pixel column with linear interpolation so fullscreen isn't blocky.
  */
 
 import { u8SignedToUnit, u8UnsignedToUnit } from './drawOverview';
 
 export const DETAIL_HALF_WINDOW_SEC = 4;
 export const DETAIL_PPS_DEFAULT = 50;
-/** Visible buckets in the ±4 s window at 50 pps. */
+/** Source buckets in the ±4 s window at 50 pps (analysis density). */
 export const DETAIL_WINDOW_BUCKETS = DETAIL_HALF_WINDOW_SEC * 2 * DETAIL_PPS_DEFAULT;
 
 export type DetailDrawOpts = {
@@ -25,6 +25,8 @@ export type DetailDrawOpts = {
   effectiveBpm: number | null;
   showBeatTicks: boolean;
 };
+
+export type DetailSample = { min: number; max: number; rms: number };
 
 /**
  * First detail bucket that may appear in the window (for tests / diagnostics).
@@ -76,9 +78,40 @@ export function detailBucketCount(detail: Uint8Array): number {
   return Math.floor(detail.length / 3);
 }
 
+function readBucket(detail: Uint8Array, i: number): DetailSample {
+  const o = i * 3;
+  return {
+    min: u8SignedToUnit(detail[o]!),
+    max: u8SignedToUnit(detail[o + 1]!),
+    rms: u8UnsignedToUnit(detail[o + 2]!),
+  };
+}
+
+/** Lerp min/max/rms between adjacent 50 pps buckets (display upsampling). */
+export function sampleDetailLerped(
+  detail: Uint8Array,
+  bucketCount: number,
+  bucketFloat: number,
+): DetailSample | null {
+  if (bucketCount <= 0) return null;
+  if (bucketFloat < -1e-9 || bucketFloat >= bucketCount) return null;
+  const clamped = Math.max(0, Math.min(bucketCount - 1e-9, bucketFloat));
+  const i0 = Math.floor(clamped);
+  const i1 = Math.min(bucketCount - 1, i0 + 1);
+  const t = clamped - i0;
+  const a = readBucket(detail, i0);
+  if (i0 === i1 || t < 1e-9) return a;
+  const b = readBucket(detail, i1);
+  return {
+    min: a.min + (b.min - a.min) * t,
+    max: a.max + (b.max - a.max) * t,
+    rms: a.rms + (b.rms - a.rms) * t,
+  };
+}
+
 /**
  * Draw scrolling detail into an already-sized canvas.
- * Center playhead is a CSS overlay; waveform scrolls under it via time→x.
+ * One column per device pixel + lerp — sharp on fullscreen / HiDPI.
  */
 export function drawDetailWaveform(
   ctx: CanvasRenderingContext2D,
@@ -106,37 +139,29 @@ export function drawDetailWaveform(
   const centerX = width / 2;
   const t0 = positionSec - DETAIL_HALF_WINDOW_SEC;
   const t1 = positionSec + DETAIL_HALF_WINDOW_SEC;
-  const b0 = Math.floor(t0 * pps);
-  const b1 = Math.ceil(t1 * pps);
+  const span = t1 - t0;
+  if (span <= 0) return;
 
-  for (let b = b0; b < b1; b++) {
-    if (b < 0 || b >= bucketCount) continue;
-    const timeSec = (b + 0.5) / pps;
-    const xCenter = timeToDetailX(timeSec, positionSec, width);
-    const x0 = Math.floor(timeToDetailX(b / pps, positionSec, width));
-    const x1 = Math.ceil(timeToDetailX((b + 1) / pps, positionSec, width));
-    const w = Math.max(1, x1 - x0);
-    if (x1 < 0 || x0 > width) continue;
+  ctx.fillStyle = accent;
+  for (let x = 0; x < width; x++) {
+    const timeSec = t0 + ((x + 0.5) / width) * span;
+    const sample = sampleDetailLerped(detail, bucketCount, timeSec * pps);
+    if (!sample) continue;
 
-    const o = b * 3;
-    const min = u8SignedToUnit(detail[o]!);
-    const max = u8SignedToUnit(detail[o + 1]!);
-    const rms = u8UnsignedToUnit(detail[o + 2]!);
-    const past = xCenter < centerX;
+    const past = x < centerX;
     const alpha = past ? 0.55 : 1;
 
-    const yMin = mid - max * mid * 0.92;
-    const yMax = mid - min * mid * 0.92;
+    const yMin = mid - sample.max * mid * 0.92;
+    const yMax = mid - sample.min * mid * 0.92;
     const top = Math.min(yMin, yMax);
     const bot = Math.max(yMin, yMax);
 
     ctx.globalAlpha = alpha * 0.55;
-    ctx.fillStyle = accent;
-    ctx.fillRect(x0, top, w, Math.max(1, bot - top));
+    ctx.fillRect(x, top, 1, Math.max(1, bot - top));
 
-    const rmsH = rms * mid * 0.75;
+    const rmsH = sample.rms * mid * 0.75;
     ctx.globalAlpha = alpha;
-    ctx.fillRect(x0, mid - rmsH, w, Math.max(1, rmsH * 2));
+    ctx.fillRect(x, mid - rmsH, 1, Math.max(1, rmsH * 2));
   }
 
   if (showBeatTicks && effectiveBpm != null && effectiveBpm > 0) {

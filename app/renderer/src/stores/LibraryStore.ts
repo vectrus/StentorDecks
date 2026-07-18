@@ -279,6 +279,7 @@ export class LibraryStore {
         title?: string;
         artist?: string;
         fileBpm?: number | null;
+        keyCamelot?: string | null;
         loudnessLufs?: number | null;
         libraryTrackId?: number | null;
         durationMs?: number | null;
@@ -300,6 +301,7 @@ export class LibraryStore {
         title?: string;
         artist?: string;
         fileBpm?: number | null;
+        keyCamelot?: string | null;
         loudnessLufs?: number | null;
         libraryTrackId?: number | null;
         durationMs?: number | null;
@@ -323,6 +325,7 @@ export class LibraryStore {
       title: payload.title ?? name,
       artist: payload.artist ?? '',
       fileBpm: payload.bpm,
+      keyCamelot: payload.keyCamelot,
       loudnessLufs: payload.loudnessLufs,
       libraryTrackId: payload.id,
       durationMs: payload.durationMs,

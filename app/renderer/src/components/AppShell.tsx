@@ -14,7 +14,7 @@ import { midiStore } from '../stores/root';
 
 export const AppShell = observer(function AppShell() {
   const [setupOpen, setSetupOpen] = useState(() => audioDeviceStore.needsSetup);
-  const [showHarness, setShowHarness] = useState(true);
+  const [showHarness, setShowHarness] = useState(false);
   const [showMidi, setShowMidi] = useState(false);
 
   if (setupOpen) {

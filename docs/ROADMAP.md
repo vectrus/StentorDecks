@@ -67,7 +67,7 @@ E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW ✓]
 - Inputs / mic, hotcues, loops, keylock, recording, gater, crossfader UI, second screen
 - Drive-letter remount identity hardening
 - Windows USB selective suspend guidance / mitigation
-- **v2 Spotify + AI mixmatch/autoplay** — decisions locked in [`BACKLOG-v2-spotify-ai.md`](./BACKLOG-v2-spotify-ai.md) (2026-07-18). Not v1.
+- **v2 Spotify + AI mixmatch/autoplay** — decisions locked in [`BACKLOG-v2-spotify-ai.md`](./BACKLOG-v2-spotify-ai.md) (2026-07-18). Not v1. Includes parked spike: **reuse Prep library chrome as Co-pilot queue / playlist surface** (examine at V2-E; no v1 playlists).
 
 ---
 

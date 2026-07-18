@@ -35,7 +35,7 @@
 }
 
 .perf-wave.detail {
-  height: 3.5rem;
+  height: 4.25rem; /* a bit taller in fullscreen — more vertical resolution */
   cursor: default;
 }
 
@@ -94,6 +94,8 @@
   border: 0.5px solid var(--border);
   border-radius: 0 0 0.5rem 0.5rem;
   padding: 0.75rem 0.85rem;
+  /* Overview canvas can paint past the box; clip so amber/blue don't bleed into the mixer. */
+  overflow: hidden;
 }
 
 .perf-deck-a {
@@ -343,15 +345,18 @@
   margin: 0;
   padding: 0;
   outline: none;
+  flex: 1;
+  min-height: calc(3 * 2.625rem); /* ≥3 rows */
+  overflow: hidden;
 }
 
 .perf-row {
   display: grid;
   grid-template-columns: 1fr 5.5rem 4rem 4.25rem;
   align-items: center;
-  height: 2.625rem; /* 42 px */
+  height: 2.625rem; /* 42 px — R7.1 */
   padding: 0 0.5rem;
-  font-size: 1rem;
+  font-size: 1.0625rem; /* 17 px — glanceable at arm's length */
   color: #d5dce5;
   border-radius: 0.375rem;
   cursor: pointer;

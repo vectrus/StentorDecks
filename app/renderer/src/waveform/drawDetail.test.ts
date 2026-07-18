@@ -7,6 +7,7 @@ import {
   detailBucketCount,
   detailWindowStartBucket,
   drawDetailWaveform,
+  sampleDetailLerped,
   timeToDetailX,
 } from './drawDetail';
 
@@ -49,6 +50,16 @@ describe('detail window math', () => {
 
   it('detailBucketCount', () => {
     expect(detailBucketCount(makeDetail(50))).toBe(50);
+  });
+
+  it('sampleDetailLerped blends adjacent buckets', () => {
+    const d = makeDetail(2, 0);
+    // bucket 0 rms=0, set bucket 1 rms high
+    d[2] = 0;
+    d[5] = 255;
+    const mid = sampleDetailLerped(d, 2, 0.5);
+    expect(mid).not.toBeNull();
+    expect(mid!.rms).toBeCloseTo(0.5, 5);
   });
 });
 

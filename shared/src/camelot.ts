@@ -64,6 +64,36 @@ export function isCamelotKey(s: string): s is CamelotKey {
   return (CAMELOT_KEYS as readonly string[]).includes(s);
 }
 
+/** Classic Mixed-in-Key / Camelot “safe” next-track relations. */
+export type CamelotRelation = 'same' | 'adjacent' | 'relative';
+
+function parseCamelotParts(key: CamelotKey): { n: number; letter: 'A' | 'B' } {
+  const m = /^(\d{1,2})([AB])$/.exec(key);
+  if (!m) return { n: 0, letter: 'A' };
+  return { n: Number(m[1]), letter: m[2] as 'A' | 'B' };
+}
+
+/**
+ * Harmonic distance on the Camelot wheel (for “play next” hints).
+ * Compatible = same key, ±1 number same letter, or relative major/minor (same number).
+ */
+export function camelotRelation(a: string, b: string): CamelotRelation | null {
+  if (!isCamelotKey(a) || !isCamelotKey(b)) return null;
+  if (a === b) return 'same';
+  const pa = parseCamelotParts(a);
+  const pb = parseCamelotParts(b);
+  if (pa.n === pb.n && pa.letter !== pb.letter) return 'relative';
+  if (pa.letter === pb.letter) {
+    const d = Math.min((pa.n - pb.n + 12) % 12, (pb.n - pa.n + 12) % 12);
+    if (d === 1) return 'adjacent';
+  }
+  return null;
+}
+
+export function isCamelotCompatible(a: string, b: string): boolean {
+  return camelotRelation(a, b) != null;
+}
+
 /**
  * Tap-tempo average (R6.6): need ≥ minTaps timestamps; BPM from mean inter-onset.
  * Returns null until enough taps; clamps to 60–220.
