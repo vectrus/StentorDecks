@@ -301,13 +301,21 @@ export class DeckStore {
     // pitchPos kept (soft takeover re-arm is MIDI-layer concern)
   }
 
+  /**
+   * R2.13 — only when auto-gain is enabled and the track has loudness.
+   * Disabled / missing LUFS: leave trim sticky (booth — do not wipe GAIN on load).
+   */
   applyAutoGain(): void {
     const s = this.getSettings();
-    if (!s.audio.autoGain || this.loudnessLufs == null) {
-      this.trimDb = 0;
-      return;
-    }
+    if (!s.audio.autoGain) return;
+    if (this.loudnessLufs == null) return;
     this.trimDb = autoGainTrimDb(this.loudnessLufs, s.audio.autoGainTargetLufs);
+  }
+
+  /** True when this load actually rewrote trim from analysis (MIDI should re-arm GAIN). */
+  didApplyAutoGainOnLoad(): boolean {
+    const s = this.getSettings();
+    return s.audio.autoGain && this.loudnessLufs != null;
   }
 
   play(opts?: { soft?: boolean }): void {

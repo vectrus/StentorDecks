@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — Sticky GAIN when auto-gain off
+
+Load no longer zeros trim when `audio.autoGain` is false (or loudness missing). Soft takeover re-arms GAIN only when auto-gain actually rewrote trim. Booth: keep your GAIN through track changes. R2.13 / R3.3, docs/03.
+
+---
+
 ## 2026-07-18 — Gig feel: unified frame clock + quieter SYNC assist
 
 Waveform A/B crawl and jog fight came from multi-rAF sampling + assist seeks, not Soft numbers. One rAF ticks transport then draws both decks from latency-compensated `visualPosSec`; detail draw steps ~CSS px; SYNC assist uses rate bias for small errors, throttled micro-seeks, longer jog mute (~800 ms); micro seek fade ~10 ms. R2.2, R2.3, R7.5, E7, docs/03.

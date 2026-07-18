@@ -571,7 +571,13 @@ export class MidiStore {
       const cur = this.takeovers.get(id) ?? createTakeover(soft);
 
       if (suffix === 'gain') {
-        this.takeovers.set(id, armTakeover(cur, soft));
+        // Re-arm only when auto-gain rewrote trim (R2.13 / R3.3). Sticky trim → keep live.
+        const deck = deckId === 'A' ? this.deckA : this.deckB;
+        if (deck.didApplyAutoGainOnLoad()) {
+          this.takeovers.set(id, armTakeover(cur, soft));
+        } else {
+          this.takeovers.set(id, preserveTakeoverAfterLoad(cur, soft));
+        }
         continue;
       }
 

@@ -86,7 +86,7 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     expect(deck.trimDb).toBeCloseTo(autoGainTrimDb(-8, -14), 5);
   });
 
-  it('applyAutoGain zeros trim when auto-gain disabled', () => {
+  it('applyAutoGain keeps sticky trim when auto-gain disabled (booth)', () => {
     const settings: Settings = {
       ...defaultSettings,
       audio: { ...defaultSettings.audio, autoGain: false },
@@ -95,7 +95,21 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     deck.loudnessLufs = -8;
     deck.trimDb = 3;
     deck.applyAutoGain();
-    expect(deck.trimDb).toBe(0);
+    expect(deck.trimDb).toBe(3);
+    expect(deck.didApplyAutoGainOnLoad()).toBe(false);
+  });
+
+  it('applyAutoGain keeps trim when loudness missing even if auto-gain on', () => {
+    const settings: Settings = {
+      ...defaultSettings,
+      audio: { ...defaultSettings.audio, autoGain: true },
+    };
+    const deck = new DeckStore('A', () => settings);
+    deck.loudnessLufs = null;
+    deck.trimDb = 2.5;
+    deck.applyAutoGain();
+    expect(deck.trimDb).toBe(2.5);
+    expect(deck.didApplyAutoGainOnLoad()).toBe(false);
   });
 
   it('toggleSync matches pitch without file BPM and latches on/off', () => {

@@ -67,7 +67,7 @@ Chain per continuous control: `raw14bit → normalize 0..1 → shape → domain 
 
 ## Auto-gain (R2.13)
 
-On load, after deck reset: if `audio.autoGain` is true and the track has `loudness_lufs` (docs/05), set trim so estimated playback loudness matches target `-14 LUFS` (clamped to trim domain -∞..+12 dB). Manual trim moves after that are sticky for the loaded track; next load re-applies auto-gain. Soft takeover re-arms the gain knob.
+On load, after deck reset: if `audio.autoGain` is true and the track has `loudness_lufs` (docs/05), set trim so estimated playback loudness matches target `-14 LUFS` (clamped to trim domain -∞..+12 dB) and soft takeover re-arms the gain knob. If auto-gain is **off** (or loudness missing), trim is **sticky** across loads — do not zero GAIN; soft takeover stays live if it was live.
 
 ## Soft takeover (R2.7)
 

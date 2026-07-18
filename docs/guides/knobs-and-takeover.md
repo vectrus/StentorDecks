@@ -14,6 +14,6 @@ Move the hardware through the software point → mark disappears → you’re li
 
 - **Pitch & EQ** stay live if they already were (no full relearn).  
 - **Filter / wet** follow the last known hardware position (FX pads still turn off).  
-- **Gain** may need a quick pickup after auto-gain on the new track.
+- **Gain** needs a quick pickup only when **auto-gain** rewrote trim on load. With auto-gain off, GAIN stays sticky and live.
 
 You should not have to re-match every knob on every load.

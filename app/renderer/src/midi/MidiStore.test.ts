@@ -115,9 +115,13 @@ describe('MidiStore ingest (fixture traffic)', () => {
     deckA.filterAmount = 0.8;
     deckA.filterOn = true;
 
+    deckA.loudnessLufs = -10;
+    deckA.applyAutoGain();
     deckA.resetOnLoad();
     expect(deckA.filterOn).toBe(false);
     expect(deckA.filterAmount).toBe(0.5);
+    deckA.loudnessLufs = -10;
+    deckA.applyAutoGain();
 
     store.noteDeckLoaded('A');
 
@@ -125,7 +129,28 @@ describe('MidiStore ingest (fixture traffic)', () => {
     expect(store.takeoverView('deckA.pitch')?.armed).toBe(false);
     expect(store.takeoverView('deckA.filter')?.armed).toBe(false);
     expect(deckA.filterAmount).toBeCloseTo(0.8); // adopted HW
-    expect(store.takeoverView('deckA.gain')?.armed).toBe(true); // auto-gain path
+    expect(store.takeoverView('deckA.gain')?.armed).toBe(true); // auto-gain rewrote trim
+  });
+
+  it('noteDeckLoaded keeps GAIN live when auto-gain off (sticky trim)', () => {
+    const deckA = new DeckStore('A', () => ({
+      ...defaultSettings,
+      audio: { ...defaultSettings.audio, autoGain: false },
+    }));
+    const deckB = new DeckStore('B', () => defaultSettings);
+    deckA.state = 'stopped';
+    deckA.trimDb = 4;
+    const mixer = new MixerStore(deckA, deckB);
+    const store = new MidiStore(deckA, deckB, mixer, makeLibrary(), () => false);
+    store.takeovers.set('deckA.gain', {
+      armed: false,
+      softwareValue: 0.7,
+      hardwareValue: 0.7,
+    });
+    deckA.applyAutoGain();
+    expect(deckA.trimDb).toBe(4);
+    store.noteDeckLoaded('A');
+    expect(store.takeoverView('deckA.gain')?.armed).toBe(false);
   });
 
   it('FX Mode relative encoder steps filter amount (CC 54 = 1 / 127)', () => {
