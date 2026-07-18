@@ -1,0 +1,4 @@
+# Private app — we do not publish to npm. Explicit ignore silences
+# npm's "gitignore-fallback" warning when workspace packing runs.
+*
+!package.json

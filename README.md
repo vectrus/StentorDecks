@@ -49,14 +49,16 @@ Electron · React 18 · TypeScript strict · MobX · better-sqlite3 · Web Audio
 
 ## Start the app
 
-**Fresh clone / other PC:** install deps once from the repo root before any build.
+### Easiest (Windows)
 
-```bash
-cd C:\Stentordecks   # or your clone path
-npm install          # required — installs TypeScript, Electron, etc.
-```
+1. Install [Node.js 22 LTS](https://nodejs.org) once (recommended).
+2. Double-click **[`INSTALL.bat`](./INSTALL.bat)** in the repo root.
 
-If `npm run dist` fails with `'tsc' is not recognized`, you skipped `npm install` (or it failed). Fix install, then retry.
+That script installs dependencies (Electron ABI for `better-sqlite3`), rebuilds the native module, frees the Vite port, and starts the app. Same entry: `npm run setup`.
+
+[`Start StentorDeck.bat`](./Start%20StentorDeck.bat) launches a packaged `.exe` if present; otherwise it runs `INSTALL.bat`.
+
+If it fails: close anything locking `node_modules`, delete that folder, run `INSTALL.bat` again. Prefer Node 22 — avoid Cursor’s helper Node on PATH (`where node` must not be under `…\cursor\…\helpers\`).
 
 ### Production-style (Explorer icon, no command window)
 
@@ -69,19 +71,19 @@ npm run shortcut      # Desktop StentorDeck.lnk → release/win-unpacked/Stentor
 
 Double-click **StentorDeck** on the Desktop. Closing the window shuts down analysis, DB, and MIDI cleanly. Boot shows a short branded splash.
 
-Silent helper (same targets): [`scripts/Launch-StentorDeck.vbs`](scripts/Launch-StentorDeck.vbs).
+Silent helper: [`scripts/Launch-StentorDeck.vbs`](scripts/Launch-StentorDeck.vbs).
 
-[`Start StentorDeck.bat`](./Start%20StentorDeck.bat) also prefers a packaged `.exe` when present (no console); otherwise falls back to dev mode.
-
-### Development
+### Development (already installed)
 
 ```bash
-npm start
+npm start             # same as npm run dev
 ```
 
-(`npm run dev` is the same command.) Dev starts windowed (`STENTOR_WINDOWED=1`). For fullscreen like production, set `STENTOR_WINDOWED=0`.
+Dev starts windowed (`STENTOR_WINDOWED=1`). Fullscreen like production: `STENTOR_WINDOWED=0`.
 
-If you see `NODE_MODULE_VERSION` errors for better-sqlite3, run `npm run rebuild:native` again (fetches the Electron prebuild; no VS Build Tools required when a prebuild exists).
+If you see `NODE_MODULE_VERSION` errors: `npm run rebuild:native` (or just re-run `INSTALL.bat`).
+
+**npm deprecation warnings:** Leftover `glob` / `inflight` / `rimraf` / `tar` / `npmlog` / `prebuild-install` noise is from **electron-builder** / native tooling (upstream). `EPERM` on Windows = something locking `node_modules`.
 
 ```bash
 npm test                 # unit + component (Vitest)

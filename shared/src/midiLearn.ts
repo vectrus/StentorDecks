@@ -90,7 +90,7 @@ export function createLearnState(): LearnState {
   return { phase: { phase: 'off' } };
 }
 
-export function learnEnable(state: LearnState): LearnState {
+export function learnEnable(_state: LearnState): LearnState {
   return { phase: { phase: 'pickControl' } };
 }
 
@@ -286,7 +286,7 @@ export function qualifyContinuous(
 
   // Prefer lower CC numbers (MSB before LSB) among qualifiers
   const qualifiers = [...byCc.entries()]
-    .filter(([cc, values]) => {
+    .filter(([_cc, values]) => {
       const distinct = new Set(values).size;
       return distinct >= CONTINUOUS_MIN_DISTINCT;
     })

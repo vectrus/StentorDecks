@@ -12,13 +12,16 @@
     "app/analysis"
   ],
   "scripts": {
+    "preinstall": "node scripts/check-node.mjs",
+    "bootstrap": "node scripts/bootstrap.mjs",
+    "setup": "node scripts/setup-and-run.mjs",
     "start": "node scripts/dev.mjs",
     "dev": "node scripts/dev.mjs",
     "build": "npm run build -w @stentordeck/shared && npm run build -w @stentordeck/main && npm run build -w @stentordeck/renderer && npm run build -w @stentordeck/analysis",
     "dist": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64",
     "dist:dir": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64 --dir",
     "shortcut": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Create-DesktopShortcut.ps1",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint .",
     "typecheck": "npm run typecheck -w @stentordeck/shared && npm run typecheck -w @stentordeck/main && npm run typecheck -w @stentordeck/renderer && npm run typecheck -w @stentordeck/analysis",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -45,6 +48,10 @@
       "app/analysis/dist/**/*",
       "shared/dist/**/*",
       "package.json"
+    ],
+    "asarUnpack": [
+      "**/*.node",
+      "**/better-sqlite3/**"
     ],
     "extraResources": [
       {
@@ -80,23 +87,29 @@
       "main": "app/main/dist/index.js"
     }
   },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "chokidar": "^4.0.3",
+    "music-metadata": "^11.14.0"
+  },
   "devDependencies": {
     "@electron/rebuild": "^3.7.1",
+    "@eslint/js": "^9.39.2",
     "@playwright/test": "^1.61.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@typescript-eslint/eslint-plugin": "^8.18.0",
-    "@typescript-eslint/parser": "^8.18.0",
     "@vitest/coverage-v8": "^2.1.9",
     "cross-env": "^7.0.3",
-    "electron": "^33.2.1",
+    "electron": "33.4.11",
     "electron-builder": "^25.1.8",
-    "eslint": "^8.57.1",
-    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint": "^9.39.2",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.5.0",
     "jsdom": "^29.1.1",
     "prettier": "^3.4.2",
     "typescript": "^5.7.2",
+    "typescript-eslint": "^8.50.0",
     "vitest": "^2.1.8"
   },
   "engines": {

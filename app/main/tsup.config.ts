@@ -12,6 +12,7 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   dts: false,
-  external: ['electron', 'better-sqlite3'],
+  // Must stay external — packaged via electron-builder node_modules + asarUnpack.
+  external: ['electron', 'better-sqlite3', 'chokidar', 'music-metadata'],
   noExternal: ['@stentordeck/shared'],
 });

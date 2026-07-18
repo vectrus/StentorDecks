@@ -5,6 +5,24 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — INSTALL.bat one-shot setup
+
+Root [`INSTALL.bat`](../INSTALL.bat) / `npm run setup` installs deps (Electron ABI), rebuilds native, frees Vite port, and starts the app. `Start StentorDeck.bat` delegates to it. E7 / R1.1.
+
+---
+
+## 2026-07-18 — npm install: bootstrap + ESLint 9
+
+Hard failure on Node 24 / Cursor helper Node (`better-sqlite3` → no host prebuild → node-gyp / unrecognized VS 18). Added `npm run bootstrap` (forces Electron ABI for better-sqlite3), pinned Electron `33.4.11`, `preinstall` check-node guidance, ESLint 9 flat config (drops deprecated eslint@8). Remaining deprecation noise is mostly transitive (electron-builder / npmlog / glob / prebuild-install) — not direct deps. E7 / R1.1.
+
+---
+
+## 2026-07-18 — Packaged app: ship better-sqlite3
+
+`npm run dist` omitted runtime `node_modules` (custom `files` whitelist + workspace-only deps), so the unpacked exe crashed with `Cannot find module 'better-sqlite3'`. Root `dependencies` now include `better-sqlite3`, `chokidar`, `music-metadata`; native `.node` unpacked via `asarUnpack`. E7 / R1.1.
+
+---
+
 ## 2026-07-18 — In-app Help (searchable guides)
 
 Topbar **Help** button + **F1** opens a searchable panel fed by `docs/guides/` (get-started, Prep, Performance/mixer, SYNC/jog, soft takeover, audio). Spec-link tails are stripped for operators. E7, docs/06.
