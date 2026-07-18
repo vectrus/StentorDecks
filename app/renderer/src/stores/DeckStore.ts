@@ -139,20 +139,41 @@ export class DeckStore {
     this.trimDb = autoGainTrimDb(this.loudnessLufs, s.audio.autoGainTargetLufs);
   }
 
-  play(): void {
+  play(opts?: { soft?: boolean }): void {
     const t = audioEngine.transport(this.id);
     if (!t || this.state === 'empty') return;
     void audioEngine.ensureRunning();
+    if (opts?.soft !== false) {
+      // Default soft-start — avoids PA/cue clicks on buffer create.
+      audioEngine.graph(this.id)?.softStartInput(0.02);
+    }
     t.setRate(this.effectiveRate);
     t.play(this.effectiveRate);
     this.state = 'playing';
     this.cuePreviewing = false;
   }
 
-  pause(opts?: { brake?: boolean }): void {
+  pause(opts?: { brake?: boolean; soft?: boolean }): void {
     const t = audioEngine.transport(this.id);
     if (!t || this.state !== 'playing') return;
     const s = this.getSettings();
+    const graph = audioEngine.graph(this.id);
+    if (opts?.soft) {
+      graph?.softStopInput(0.015);
+      window.setTimeout(() => {
+        runInAction(() => {
+          if (opts?.brake ?? s.audio.brakeOnStop) {
+            t.brake(s.audio.brakeMs);
+          } else {
+            t.pause();
+            this.position = t.position();
+          }
+          this.state = 'stopped';
+          graph?.restoreInputGain();
+        });
+      }, 18);
+      return;
+    }
     if (opts?.brake ?? s.audio.brakeOnStop) {
       t.brake(s.audio.brakeMs);
       this.state = 'stopped';
@@ -175,6 +196,8 @@ export class DeckStore {
     const pos = t.position();
 
     if (this.state === 'playing') {
+      // Jump-to-cue while playing — soft-start the new buffer source.
+      audioEngine.graph(this.id)?.softStartInput(0.02);
       t.seek(this.cueOffset);
       t.setRate(this.effectiveRate);
       this.position = this.cueOffset;
@@ -194,18 +217,25 @@ export class DeckStore {
     this.cuePreviewing = true;
     t.seek(this.cueOffset);
     t.setRate(this.effectiveRate);
-    t.play(this.effectiveRate);
-    this.state = 'playing';
+    this.play({ soft: true });
+    this.cuePreviewing = true; // play() clears it — restore
   }
 
   cueHoldEnd(): void {
     if (!this.cuePreviewing) return;
-    const t = audioEngine.transport(this.id);
-    t?.pause();
-    t?.seek(this.cueOffset);
-    this.position = this.cueOffset;
-    this.state = 'stopped';
     this.cuePreviewing = false;
+    const t = audioEngine.transport(this.id);
+    const graph = audioEngine.graph(this.id);
+    graph?.softStopInput(0.015);
+    window.setTimeout(() => {
+      runInAction(() => {
+        t?.pause();
+        t?.seek(this.cueOffset);
+        this.position = this.cueOffset;
+        this.state = 'stopped';
+        graph?.restoreInputGain();
+      });
+    }, 18);
   }
 
   seek(offset: number): void {
@@ -285,18 +315,18 @@ export class DeckStore {
 
   togglePfl(): void {
     this.pfl = !this.pfl;
+    this.pushGraph();
     if (this.pfl) {
-      // Stopped decks have no running source — start a monitor play so PFL has audio.
-      // Master path is muted via fader while pflMonitor is active (PFL tap is pre-fader).
+      // Stopped decks have no source — start transport so the pre-fader PFL tap has audio.
+      // Channel fader stays under user control (PFL must not steal/mute the fader).
       if (this.state === 'stopped' && this.duration > 0) {
         this.pflMonitor = true;
-        this.play();
+        this.play({ soft: true });
       }
-    } else if (this.pflMonitor) {
-      this.pflMonitor = false;
-      this.pause();
+      return;
     }
-    this.pushGraph();
+    // Turning PFL off does not pause or touch the fader — transport stays as the user left it.
+    this.pflMonitor = false;
   }
 
   tick(): void {
@@ -337,9 +367,8 @@ export class DeckStore {
     const g = audioEngine.graph(this.id);
     if (!g) return;
     const s = this.getSettings();
-    const liveFader = this.id === 'A' ? mixerFaderA() : mixerFaderB();
-    // PFL monitor: keep cue audible (pre-fader) but don't spill onto the master bus.
-    const faderPos = this.pflMonitor ? 0 : liveFader;
+    // PFL is pre-fader (docs/03) — channel fader always drives master independently.
+    const faderPos = this.id === 'A' ? mixerFaderA() : mixerFaderB();
     const shape =
       this.id === 'A' ? s.mixer.channelFaders.a.shape : s.mixer.channelFaders.b.shape;
     g.apply({

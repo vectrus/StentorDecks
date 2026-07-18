@@ -180,9 +180,47 @@ export class DeckGraph {
     rampParam(this.flangerDry.gain, dry, ctx);
     rampParam(this.flangerWetGain.gain, wetG, ctx);
 
-    rampParam(this.pflGain.gain, p.pfl ? 1 : 0, ctx);
-    rampParam(this.fader.gain, channelFaderGain(p.faderPos, p.faderShape), ctx);
+    // PFL: always ramp (≥15 ms) — never snap into the cue bus.
+    const pflTarget = p.pfl ? 1 : 0;
+    linearRampParam(this.pflGain.gain, pflTarget, ctx, 0.02);
+
+    const faderGain = channelFaderGain(p.faderPos, p.faderShape);
+    if (faderGain <= 0) {
+      // Hard mute master path — setTargetAtTime would leak a click onto the PA.
+      this.snapMasterMute();
+    } else {
+      rampParam(this.fader.gain, faderGain, ctx);
+    }
     rampParam(this.xfader.gain, p.crossfaderEnabled ? p.crossfaderGain : 1, ctx);
+  }
+
+  /** Instant mute of post-PFL master path (fader). Call before starting PFL monitor. */
+  snapMasterMute(): void {
+    const t = this.ctx.currentTime;
+    this.fader.gain.cancelScheduledValues(t);
+    this.fader.gain.setValueAtTime(0, t);
+  }
+
+  /** Fade deck input 0→1 so buffer starts / cue jumps don't click. */
+  softStartInput(seconds = 0.02): void {
+    const t = this.ctx.currentTime;
+    this.input.gain.cancelScheduledValues(t);
+    this.input.gain.setValueAtTime(0, t);
+    this.input.gain.linearRampToValueAtTime(1, t + seconds);
+  }
+
+  /** Fade deck input → 0 before pause/stop (cue release, etc.). */
+  softStopInput(seconds = 0.015): void {
+    const t = this.ctx.currentTime;
+    this.input.gain.cancelScheduledValues(t);
+    this.input.gain.setValueAtTime(this.input.gain.value, t);
+    this.input.gain.linearRampToValueAtTime(0, t + seconds);
+  }
+
+  restoreInputGain(): void {
+    const t = this.ctx.currentTime;
+    this.input.gain.cancelScheduledValues(t);
+    this.input.gain.setValueAtTime(1, t);
   }
 
   disconnect(): void {

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" role="img" aria-label="StentorDeck">
+  <rect width="40" height="40" rx="8" fill="#0E1115"/>
+  <rect x="9" y="10" width="7" height="22" rx="2.5" fill="#FFB454"/>
+  <rect x="18" y="6" width="7" height="26" rx="2.5" fill="#5BD0FF"/>
+  <text x="31" y="30" text-anchor="middle" fill="#F4F7FB"
+        font-family="Bahnschrift, Segoe UI, sans-serif" font-size="14" font-weight="600">j</text>
+</svg>

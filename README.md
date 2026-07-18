@@ -1,8 +1,43 @@
-# StentorDeck
+<p align="center">
+  <img src="brand/stentordeck-wordmark.png" alt="StentorDeck — for julius" width="480" />
+</p>
 
-Two-deck DJ application for Windows, built around the Hercules DJConsole RMX2.
+<p align="center">
+  Two-deck DJ application for Windows, built around the Hercules DJConsole RMX2.<br />
+  <em>for julius</em>
+</p>
 
 **Spec is law:** see [`docs/README.md`](docs/README.md), [`docs/ROADMAP.md`](docs/ROADMAP.md), [`docs/CHANGELOG.md`](docs/CHANGELOG.md).
+
+Brand assets live in [`brand/`](brand/) (mark, wordmark, app icon).
+
+## UI mockups
+
+Authoritative HTML mockups and PNGs — see [`docs/mockups/MOCKUPS.md`](docs/mockups/MOCKUPS.md). Regenerate with `npm run docs:screenshots`.
+
+### Performance
+
+![Performance mode](docs/mockups/screenshots/01-performance-mode.png)
+
+### Prep
+
+![Prep mode](docs/mockups/screenshots/02-prep-mode.png)
+
+### Audio setup
+
+![Audio setup](docs/mockups/screenshots/03-audio-setup.png)
+
+### Deck panel states
+
+![Deck panel states](docs/mockups/screenshots/04-deck-panel-states.png)
+
+### Mixer column
+
+![Mixer column](docs/mockups/screenshots/05-mixer-column.png)
+
+### Fader curve editor
+
+![Fader curve editor](docs/mockups/screenshots/06-fader-curve-editor.png)
 
 ## Stack
 
@@ -41,9 +76,9 @@ npm run dist       # NSIS installer → release/
 |---|---|
 | `shared` | IPC contract, settings zod schema |
 | `app/main` | Electron main, DB, settings file, IPC handlers |
-| `app/renderer` | React/MobX UI + (later) audio/MIDI engines |
+| `app/renderer` | React/MobX UI + audio/MIDI engines |
 | `app/analysis` | Hidden analysis window (E5; stub in E1) |
 
 ## Epic status
 
-E1 skeleton in progress. Do not start E4+ until E2 `[HW]` routing passes on the real RMX2.
+E1 skeleton done. E2 audio engine in progress — do not start E4+ until E2 `[HW]` routing passes on the real RMX2.

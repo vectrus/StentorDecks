@@ -1,2 +1,7 @@
-Place app icon assets here for electron-builder (`icon.ico` for Windows).
-E1 ships without a custom icon; builder falls back to the Electron default.
+# Build resources
+
+| File | Use |
+|---|---|
+| `icon.png` | Windows app + NSIS installer icon (electron-builder). Source of truth: `brand/stentordeck-icon.png`. |
+
+Copy updates from `brand/` into this folder before packaging if the mark changes.

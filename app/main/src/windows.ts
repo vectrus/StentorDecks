@@ -1,5 +1,6 @@
-import { BrowserWindow, screen } from 'electron';
+import { app, BrowserWindow, screen } from 'electron';
 import path from 'node:path';
+import fs from 'node:fs';
 
 export type WindowHandles = {
   main: BrowserWindow | null;
@@ -19,12 +20,17 @@ export function createMainWindow(opts: {
   startWindowedDev: boolean;
 }): BrowserWindow {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  // Dev: custom mark. Packaged builds use the exe icon from electron-builder.
+  const iconCandidate = path.join(app.getAppPath(), 'build', 'icon.png');
+  const icon = !app.isPackaged && fs.existsSync(iconCandidate) ? iconCandidate : undefined;
+
   const win = new BrowserWindow({
     width: Math.min(1440, width),
     height: Math.min(900, height),
     backgroundColor: '#0E1115',
     show: false,
     autoHideMenuBar: true,
+    ...(icon ? { icon } : {}),
     webPreferences: {
       preload: opts.preloadPath,
       contextIsolation: true,

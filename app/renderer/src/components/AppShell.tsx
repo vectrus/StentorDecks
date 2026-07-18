@@ -5,6 +5,7 @@ import { uiStore } from '../stores/UiStore';
 import { TempSettingsPanel } from './TempSettingsPanel';
 import { AudioSetupScreen } from './AudioSetupScreen';
 import { DevHarness } from './DevHarness';
+import { BrandMark } from './BrandMark';
 
 export const AppShell = observer(function AppShell() {
   const [setupOpen, setSetupOpen] = useState(() => audioDeviceStore.needsSetup);
@@ -14,7 +15,7 @@ export const AppShell = observer(function AppShell() {
     return (
       <div className="shell">
         <header className="topbar">
-          <div className="brand">STENTORDECK</div>
+          <BrandMark />
           <span className="hint">First-run / audio routing</span>
         </header>
         <main className="stage setup-stage">
@@ -30,7 +31,7 @@ export const AppShell = observer(function AppShell() {
   return (
     <div className="shell">
       <header className="topbar">
-        <div className="brand">STENTORDECK</div>
+        <BrandMark />
         <div className="modes">
           <button
             type="button"

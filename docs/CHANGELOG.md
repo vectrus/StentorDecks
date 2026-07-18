@@ -5,6 +5,20 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — Brand mark (for julius)
+
+Replaced all-caps `STENTORDECK` chrome with dual-fader mark + **StentorDeck** / **for julius** (lowercase j). Assets in `brand/`; Windows icon `build/icon.png`; in-app SVG `BrandMark.tsx`.
+
+---
+
+## 2026-07-18 — PFL independent of channel fader + cue soft edges
+
+- PFL no longer forces channel fader to 0 (pre-fader listen; fader always drives master).
+- Turning PFL off does not pause the deck.
+- Cue hold/jump and play use soft input fades to kill PA clicks.
+
+---
+
 ## 2026-07-18 — Fix cue PFL + phones gain
 
 - HeadMix default **0** (cue only) so master no longer drowns PFL at 50/50.

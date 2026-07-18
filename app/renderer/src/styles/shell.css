@@ -14,10 +14,38 @@
   background: var(--bg-panel);
 }
 
-.brand {
-  letter-spacing: 0.15em;
-  font-size: 0.85rem;
+.brand-mark {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.brand-mark-icon {
+  flex-shrink: 0;
+  border-radius: 0.4rem;
+  border: 0.5px solid var(--border);
+}
+
+.brand-mark-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.brand-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+
+.brand-for {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
   color: var(--text-faint);
+  text-transform: none; /* julius — never capitalize */
 }
 
 .modes {
