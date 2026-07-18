@@ -12,7 +12,7 @@ body{background:var(--bg);color:var(--tx);font-family:Bahnschrift,"Segoe UI",san
 .well{background:var(--well);border:0.5px solid var(--bd);border-radius:8px;padding:8px;position:relative;}
 .well canvas{width:100%;height:52px;display:block;}
 .ph{position:absolute;left:50%;top:8px;bottom:8px;width:2px;background:#fff;}
-.mid{display:grid;grid-template-columns:1fr 210px 1fr;gap:12px;}
+.mid{display:grid;grid-template-columns:1fr 328px 1fr;gap:12px;}
 .deck{background:var(--panel);border:0.5px solid var(--bd);border-radius:0 0 8px 8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
 .deck.a{border-top:3px solid var(--a);} .deck.b{border-top:3px solid var(--b);}
 .hd{display:flex;gap:10px;align-items:flex-start;}
@@ -34,13 +34,16 @@ body{background:var(--bg);color:var(--tx);font-family:Bahnschrift,"Segoe UI",san
 .play{width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:19px;flex:none;}
 .btn{border:1px solid var(--bds);border-radius:8px;padding:9px 13px;font-size:14px;letter-spacing:1px;color:#D5DCE5;display:inline-flex;align-items:center;gap:6px;}
 .btn.fxon{border-color:var(--a);background:#2B2314;color:var(--a);}
-.mixer{background:var(--panel);border:0.5px solid var(--bd);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:10px;}
-.eqg{display:grid;grid-template-columns:1fr 1fr;gap:4px;text-align:center;}
-.fads{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:1;}
-.fw{display:flex;gap:6px;justify-content:center;height:100%;}
-.ft{width:13px;min-height:110px;background:var(--raised);border-radius:4px;position:relative;}
-.ft .cap{position:absolute;left:-7px;right:-7px;height:20px;background:var(--tx);border-radius:4px;border:1px solid var(--bg);}
-.vu{width:9px;min-height:110px;background:var(--raised);border-radius:4px;display:flex;flex-direction:column-reverse;overflow:hidden;}
+.mixer{--row:34px;background:var(--panel);border:0.5px solid var(--bd);border-radius:8px;padding:10px 6px;display:grid;grid-template-columns:auto auto 1fr auto 1fr auto auto;column-gap:5px;align-items:stretch;}
+.mxcol{display:grid;grid-template-rows:var(--row) var(--row) var(--row) minmax(110px,1fr) 18px;justify-items:center;align-items:center;}
+.mxlab{font-size:11px;letter-spacing:1px;color:var(--dim);}
+.eqled{width:8px;height:8px;border-radius:50%;background:#1a3040;box-shadow:inset 0 0 0 1px #3a6a80;}
+.eqled.on{background:var(--b);box-shadow:0 0 6px #5BD0FFaa;}
+.fw{display:flex;gap:7px;justify-content:center;align-items:stretch;width:100%;height:100%;}
+.ft{width:30px;height:100%;background:#1a2028;border:0.5px solid var(--bd);border-radius:6px;position:relative;}
+.ft .groove{position:absolute;left:50%;top:9px;bottom:9px;width:3px;transform:translateX(-50%);background:var(--bg);border-radius:1px;}
+.ft .cap{position:absolute;left:50%;width:23px;height:18px;background:var(--tx);border-radius:4px;border:1px solid var(--bg);transform:translate(-50%,-50%);}
+.vu{width:11px;height:100%;background:var(--bg);border:0.5px solid var(--bd);border-radius:4px;display:flex;flex-direction:column-reverse;overflow:hidden;}
 .outs{display:flex;gap:10px;justify-content:center;text-align:center;}
 .lib{background:var(--panel2);border:0.5px solid var(--bd);border-radius:8px;padding:10px 12px;flex:1;display:flex;flex-direction:column;}
 .lh{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;color:var(--faint);}
@@ -71,7 +74,6 @@ tr.sel td:first-child{border-radius:6px 0 0 6px;} tr.sel td:last-child{border-ra
     <div class="hd">
       <div style="min-width:0;flex:1;"><div class="tt">Phobos (Original Mix)</div><div class="ar">Aquabeat And Vein Litterback</div></div>
       <i class="ti ti-headphones" style="color:var(--a);font-size:18px;margin-top:4px;"></i>
-      <div><div class="knob"></div><div class="kl">GAIN</div></div>
     </div>
     <div class="bpmrow">
       <span class="bpm mono" style="color:var(--a);">128.0</span><span class="pct mono">+1.9%</span>
@@ -91,31 +93,33 @@ tr.sel td:first-child{border-radius:6px 0 0 6px;} tr.sel td:last-child{border-ra
   </div>
 
   <div class="mixer">
-    <div class="eqg">
-      <div><div class="knob" style="width:32px;height:32px;"></div><div class="kl">HI</div></div>
-      <div><div class="knob" style="width:32px;height:32px;"></div><div class="kl">HI</div></div>
-      <div><div class="knob" style="width:32px;height:32px;"></div><div class="kl">MID</div></div>
-      <div><div class="knob" style="width:32px;height:32px;"></div><div class="kl">MID</div></div>
-      <div><div class="knob" style="width:32px;height:32px;"></div><div class="kl">LOW</div></div>
-      <div><div class="knob" style="width:32px;height:32px;"></div><div class="kl">LOW</div></div>
+    <div class="mxcol"><div><div class="knob" style="width:30px;height:30px;"></div><div class="kl">GAIN</div></div><div></div><div></div><div></div><div></div></div>
+    <div class="mxcol"><span class="eqled"></span><span class="eqled on"></span><span class="eqled"></span><div></div><div></div></div>
+    <div class="mxcol">
+      <div class="knob" style="width:30px;height:30px;"></div>
+      <div class="knob" style="width:30px;height:30px;"></div>
+      <div class="knob" style="width:30px;height:30px;"></div>
+      <div class="fw"><div class="ft"><span class="groove"></span><span class="cap" style="top:30%;"></span></div>
+        <div class="vu"><div style="height:46%;background:var(--ok);"></div><div style="height:12%;background:var(--a);"></div></div></div>
+      <div class="kl" style="color:var(--a);">A</div>
     </div>
-    <div class="fads">
-      <div><div class="fw">
-        <div class="ft"><span class="cap" style="top:30%;"></span></div>
-        <div class="vu"><div style="height:46%;background:var(--ok);"></div><div style="height:12%;background:var(--a);"></div></div>
-      </div><div class="kl" style="color:var(--a);margin-top:4px;">A</div></div>
-      <div><div class="fw">
-        <div class="ft"><span class="cap" style="top:60%;"></span></div>
-        <div class="vu"><div style="height:30%;background:var(--ok);"></div></div>
-      </div><div class="kl" style="color:var(--b);margin-top:4px;">B</div></div>
+    <div class="mxcol"><div class="mxlab">HI</div><div class="mxlab">MID</div><div class="mxlab">LOW</div><div></div><div></div></div>
+    <div class="mxcol">
+      <div class="knob" style="width:30px;height:30px;"></div>
+      <div class="knob" style="width:30px;height:30px;"></div>
+      <div class="knob" style="width:30px;height:30px;"></div>
+      <div class="fw"><div class="ft"><span class="groove"></span><span class="cap" style="top:60%;"></span></div>
+        <div class="vu"><div style="height:30%;background:var(--ok);"></div></div></div>
+      <div class="kl" style="color:var(--b);">B</div>
     </div>
+    <div class="mxcol"><span class="eqled"></span><span class="eqled"></span><span class="eqled"></span><div></div><div></div></div>
+    <div class="mxcol"><div><div class="knob" style="width:30px;height:30px;"></div><div class="kl">GAIN</div></div><div></div><div></div><div></div><div></div></div>
   </div>
 
   <div class="deck b">
     <div class="hd">
       <div style="min-width:0;flex:1;"><div class="tt">Are You With Me</div><div class="ar">Lost Frequencies</div></div>
       <i class="ti ti-headphones" style="color:var(--dis);font-size:18px;margin-top:4px;"></i>
-      <div><div class="knob"></div><div class="kl">GAIN</div></div>
     </div>
     <div class="bpmrow">
       <span class="bpm mono" style="color:var(--b);">121.0</span><span class="pct mono" style="color:var(--dis);">0.0%</span>
@@ -152,7 +156,7 @@ tr.sel td:first-child{border-radius:6px 0 0 6px;} tr.sel td:last-child{border-ra
 
 <div class="notes">
 <b>Handoff notes — v2.</b>
-Owner placement: MST · CUE · PHN live in the <b>top header</b> (not under mixer) so the mixer column is EQ + faders/VU only and the library gets max height. Deck panels: GAIN, phones, BPM·pitch%·key·remaining, overview, pitch strip, play/CUE/SYNC/FILTER/FLANGER/WET/LOAD. Tokens per docs/06.
+Owner placement: MST · CUE · PHN in the <b>top header</b>. Mixer 7-col: GAIN A · LEDs A · EQ+fader A · HI/MID/LOW labels · EQ+fader B · LEDs B · GAIN B. Deck panels: phones, BPM·pitch%·key·remaining, overview, pitch strip, play/CUE/SYNC/FILTER/FLANGER/WET/LOAD. Tokens per docs/06.
 </div>
 </div>
 <script>

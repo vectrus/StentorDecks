@@ -100,7 +100,7 @@
 
 .perf-mid {
   display: grid;
-  grid-template-columns: 1fr 13.125rem 1fr; /* ~210px mixer */
+  grid-template-columns: 1fr 20.5rem 1fr; /* 7-col mixer: GAIN·LED·EQ·labs·EQ·LED·GAIN */
   gap: 0.75rem;
   flex-shrink: 0;
   min-height: 0;
@@ -329,6 +329,16 @@
   color: var(--text);
   font-size: 0.9rem;
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* ▶ reads optically high-left; pause bars are more symmetric */
+  padding: 1px 0 0 2px;
+  line-height: 1;
+}
+
+.perf-play.on {
+  padding: 1px 0 0 0;
 }
 
 .perf-deck-a .perf-play.on {
@@ -351,11 +361,16 @@
 .perf-btn {
   border: 1px solid var(--border-strong);
   border-radius: 0.5rem;
-  padding: 0.5rem 0.7rem;
+  /* asymmetric pad: letter-spacing + caps make labels read high-left */
+  padding: 0.55rem 0.62rem 0.45rem 0.78rem;
   font-size: 0.85rem;
   letter-spacing: 0.06em;
   background: transparent;
   color: #d5dce5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .perf-btn.sync {
@@ -408,34 +423,108 @@
 }
 
 .perf-mixer {
+  --mx-row: 2.55rem; /* fits sm knob + optional GAIN caption */
+  --mx-knob: 1.9rem; /* = .perf-knob.size-sm — fader lane matches this */
   background: var(--bg-panel);
   border: 0.5px solid var(--border);
   border-radius: 0.5rem;
-  padding: 0.55rem 0.5rem 0.65rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
+  padding: 0.55rem 0.4rem 0.55rem;
+  display: grid;
+  /* GAIN A · LEDs A · knobs+fader A · labels · knobs+fader B · LEDs B · GAIN B */
+  grid-template-columns: auto auto 1fr auto 1fr auto auto;
+  column-gap: 0.2rem;
   min-width: 0;
   min-height: 0;
+  align-items: stretch;
 }
 
-.perf-eqg {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.perf-eq-row {
+.perf-mx-col {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.35rem;
+  grid-template-rows: var(--mx-row) var(--mx-row) var(--mx-row) minmax(6.5rem, 1fr) 1.1rem;
+  justify-items: center;
+  align-items: start; /* knobs share a top edge across columns */
+  min-width: 0;
 }
 
-.perf-eq-cell {
-  display: flex;
-  flex-direction: column;
+.perf-mx-gain .perf-knob-label {
+  font-size: 0.58rem;
+}
+
+.perf-mx-lab {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  line-height: 1;
+  align-self: center;
+}
+
+.perf-mx-leds .perf-eq-led-btn {
+  align-self: center;
+}
+
+/* Pull kill LEDs snug against EQ knobs (away from GAIN). */
+.perf-mx-leds.side-a {
+  margin-left: 0.15rem;
+  margin-right: -0.05rem;
+  transform: translateX(0.35rem);
+}
+
+.perf-mx-leds.side-b {
+  margin-right: 0.15rem;
+  margin-left: -0.05rem;
+  transform: translateX(-0.35rem);
+}
+
+.perf-mx-gain {
+  padding-inline: 0.1rem;
+}
+
+.perf-mx-spacer {
+  width: 1px;
+  height: 1px;
+}
+
+.perf-mx-foot {
+  align-self: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.perf-mx-foot.kl.accent-a {
+  color: var(--deck-a);
+}
+
+.perf-mx-foot.kl.accent-b {
+  color: var(--deck-b);
+}
+
+.perf-eq-led-btn {
+  width: 0.85rem;
+  height: 0.85rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: inline-flex;
   align-items: center;
-  gap: 0.15rem;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.perf-eq-led {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--deck-b) 18%, var(--bg-raised));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--deck-b) 40%, transparent);
+  flex-shrink: 0;
+}
+
+.perf-eq-led-btn.on .perf-eq-led {
+  background: var(--deck-b);
+  box-shadow:
+    0 0 0.4rem color-mix(in srgb, var(--deck-b) 75%, transparent),
+    0 0 0.12rem var(--deck-b);
 }
 
 .perf-knob-wrap {
@@ -509,86 +598,101 @@
   transform-origin: 50% 1rem;
 }
 
-.perf-eq-label {
-  border: none;
-  background: transparent;
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  color: var(--text-dim);
-  padding: 0.1rem 0.25rem;
-  cursor: pointer;
-}
-
-.perf-eq-label.kill {
-  color: var(--vu-clip);
-  text-decoration: line-through;
-}
-
-.perf-fads {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  flex: 1;
-  min-height: 0;
-}
-
-.perf-ch {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-}
-
+/* 3-slot grid: VU outside | fader (knob-width) | VU outside — fader axis = knob axis */
 .perf-fw {
-  display: flex;
-  gap: 0.4rem;
+  display: grid;
+  grid-template-columns: 0.7rem var(--mx-knob) 0.7rem;
+  column-gap: 0.35rem;
+  align-items: stretch;
   justify-content: center;
+  width: 100%;
+  min-height: 0;
   height: 100%;
-  min-height: 7rem;
+  align-self: stretch;
+  justify-self: stretch;
+  padding: 0.1rem 0;
 }
 
+.perf-fw .perf-ft {
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+}
+
+.perf-fw.vu-out-left .perf-vu {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.perf-fw.vu-out-right .perf-vu {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+/* Wide lane; cap centered on the groove. */
 .perf-ft {
-  width: 0.875rem;
+  width: var(--mx-knob);
   height: 100%;
-  background: var(--bg-raised);
-  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--bg-raised) 88%, var(--bg-app));
+  border: 0.5px solid var(--border);
+  border-radius: 0.35rem;
   position: relative;
   cursor: ns-resize;
   touch-action: none;
+  box-sizing: border-box;
+}
+
+.perf-ft-groove {
+  position: absolute;
+  left: 50%;
+  top: 0.55rem;
+  bottom: 0.55rem;
+  width: 0.22rem;
+  transform: translateX(-50%);
+  background: var(--bg-app);
+  border-radius: 1px;
+  pointer-events: none;
 }
 
 .perf-cap {
   position: absolute;
-  left: -0.45rem;
-  right: -0.45rem;
-  height: 1.25rem;
+  left: 50%;
+  width: 1.45rem;
+  height: 1.1rem;
   background: var(--text);
-  border-radius: 0.3rem;
+  border-radius: 0.28rem;
   border: 1px solid var(--bg-app);
   pointer-events: none;
+  transform: translateX(-50%);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 35%);
+  z-index: 1;
 }
 
 .perf-ghost {
   position: absolute;
-  left: -0.45rem;
-  right: -0.45rem;
-  height: 1.25rem;
+  left: 50%;
+  width: 1.45rem;
+  height: 1.1rem;
   background: transparent;
   border: 2px solid var(--text);
-  border-radius: 0.3rem;
+  border-radius: 0.28rem;
   opacity: 0.85;
   pointer-events: none;
   box-sizing: border-box;
+  transform: translateX(-50%);
+  z-index: 1;
 }
 
 .perf-vu {
-  width: 0.625rem;
+  width: 0.7rem;
   height: 100%;
-  background: var(--bg-raised);
+  background: var(--bg-app);
+  border: 0.5px solid var(--border);
   border-radius: 0.25rem;
   display: flex;
   flex-direction: column-reverse;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .perf-vu .ok {
@@ -607,19 +711,6 @@
   background: var(--vu-clip);
   width: 100%;
   flex-shrink: 0;
-}
-
-.perf-ch .kl {
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
-}
-
-.perf-ch .kl.accent-a {
-  color: var(--deck-a);
-}
-
-.perf-ch .kl.accent-b {
-  color: var(--deck-b);
 }
 
 

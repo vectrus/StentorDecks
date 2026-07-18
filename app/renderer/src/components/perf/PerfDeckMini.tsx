@@ -1,10 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import { useEffect, useState } from 'react';
-import {
-  gainKnobFromTrimDb,
-  trimDbFromGainKnob,
-  type ControlId,
-} from '@stentordeck/shared';
+import { type ControlId } from '@stentordeck/shared';
 import type { DeckStore } from '../../stores/DeckStore';
 import { libraryStore, midiStore } from '../../stores/root';
 import { formatUserError } from '../../util/formatUserError';
@@ -38,10 +34,7 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
   const pct = pitchPercent(deck);
   const pctZero = pct === '0.0%';
   const key = deck.keyCamelot ?? '—';
-  const gainRaw = gainKnobFromTrimDb(deck.trimDb);
-  const gainId = `deck${deck.id}.gain` as ControlId;
   const pitchId = `deck${deck.id}.pitch` as ControlId;
-  const gainPickup = midiStore.takeoverView(gainId);
   const pitchPickup = midiStore.takeoverView(pitchId);
   const syncLit = deck.syncArmed || deck.phaseGluePartner != null;
   const [loadFlash, setLoadFlash] = useState(false);
@@ -76,15 +69,6 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
         >
           ♪
         </button>
-        <PerfKnob
-          label="GAIN"
-          ariaLabel={`Deck ${deck.id} gain`}
-          value={gainRaw}
-          disabled={empty}
-          pickup={gainPickup?.armed ? gainPickup.hardwareValue : null}
-          onChange={(v) => deck.setTrimDb(trimDbFromGainKnob(v))}
-          reset={0.5}
-        />
       </div>
 
       <div className="perf-bpmrow">

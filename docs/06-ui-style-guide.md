@@ -47,9 +47,9 @@ UI scale (R7.2) multiplies a root `rem`; everything is rem-based. Minimum post-s
 
 **Performance mode** (mockup `01` v2) — **MST / CUE / PHN** knobs in the app topbar (left of Audio). Rows: waveform well / deck A · slim mixer · deck B / library that **fills remaining height** (≥3 × 42 px rows).
 
-Deck panel: title/artist + phones PFL + **GAIN**; BPM · pitch% · key chip · remaining (EOT → clip color / pulse); overview waveform; pitch strip (zero + cap + soft-takeover ghost); play · CUE · SYNC · **FILTER · AMT · FLANGER · WET** · LOAD (lock + flash toast when playing). Tap/half/double chrome remains Prep / nice-to-have.
+Deck panel: title/artist + phones PFL; BPM · pitch% · key chip · remaining (EOT → clip color / pulse); overview waveform; pitch strip (zero + cap + soft-takeover ghost); play · CUE · SYNC · **FILTER · AMT · FLANGER · WET** · LOAD (lock + flash toast when playing). Tap/half/double chrome remains Prep / nice-to-have.
 
-Mixer column: EQ knob pairs (HI/MID/LOW) with kill labels; channel faders + VU only. Master/cue/phones live in the Perf header. No crossfader.
+Mixer (7 columns L→R): **GAIN A** · blue kill LEDs A · EQ knobs + fader/VU A · centered HI/MID/LOW labels · EQ knobs + fader/VU B · blue kill LEDs B · **GAIN B**. Kill LEDs lit when kill on. Fader cap centered in a lane; VU clear beside it. Master/cue/phones in the app topbar. No crossfader.
 
 **Prep mode** — compact deck strips pinned top (accent left border, play state icon, title, BPM, remaining); below: folder tree (~190 px) + large browser with breadcrumb and search; **BPM/key correction strip** (tap, ½, ×2, key picker) required (R6.6); footer hints for encoder navigation. Operator walkthrough: [`guides/prep-library.md`](./guides/prep-library.md).
 
