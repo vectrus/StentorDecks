@@ -35,7 +35,11 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
   const pctZero = pct === '0.0%';
   const key = deck.keyCamelot ?? '—';
   const pitchId = `deck${deck.id}.pitch` as ControlId;
+  const filterId = `deck${deck.id}.filter` as ControlId;
+  const wetId = `deck${deck.id}.wet` as ControlId;
   const pitchPickup = midiStore.takeoverView(pitchId);
+  const filterPickup = midiStore.takeoverView(filterId);
+  const wetPickup = midiStore.takeoverView(wetId);
   const syncLit = deck.syncArmed || deck.phaseGluePartner != null;
   const [loadFlash, setLoadFlash] = useState(false);
 
@@ -172,6 +176,8 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
           value={deck.filterAmount}
           disabled={empty}
           reset={0.5}
+          className={deck.filterOn ? 'fx-active' : undefined}
+          pickup={filterPickup?.armed ? filterPickup.hardwareValue : null}
           onChange={(v) => deck.setFilterAmount(v)}
         />
         <button
@@ -190,6 +196,8 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
             value={deck.flangerWet}
             disabled={empty}
             reset={0}
+            className={deck.flangerOn ? 'fx-active' : undefined}
+            pickup={wetPickup?.armed ? wetPickup.hardwareValue : null}
             onChange={(v) => deck.setFlangerWet(v)}
           />
           <button

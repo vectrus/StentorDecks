@@ -5,6 +5,30 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — Jog feel: quieter RMX2 defaults
+
+RMX2 relative jogs flood ±1 CCs on a light turn, so prior spin thresholds (~45→130 t/s) opened spinback too early. New Soft defaults: finer seek/rate, spin opens ~120→300 t/s, softer EMA attack; auto-migrate previous factory bundles. Settings sliders widened. R2.2 / R2.3, docs/03, docs/07.
+
+---
+
+## 2026-07-18 — Filter AMT knob unresponsive in Perf
+
+Deck panel `overflow: hidden` could clip the FILTER **AMT** hit target; knobs also lacked pointer-capture / keyboard. Fixed layout (`flex-shrink: 0`, overflow visible) + hardened `PerfKnob` (R3.1 / R1.5, E6).
+
+---
+
+## 2026-07-18 — Splash during slow Desktop / npm start
+
+Desktop shortcut → VBS → `npm start` hid all progress (builds + Vite) before Electron painted. Dev now launches Electron (branded splash) right after main build and waits for Vite with splash up; VBS/INSTALL show a WinForms boot splash until Electron signals ready. E7 / R1.1.
+
+---
+
+## 2026-07-18 — INSTALL.bat stopped before setup (cmd CALL)
+
+`npm -v` without `call` ends `INSTALL.bat` on Windows (`npm` → `npm.cmd`), so setup never ran. Fixed with `call npm -v` / clearer progress line. E7 / R1.1.
+
+---
+
 ## 2026-07-18 — Windows icon + Desktop shortcut after install
 
 Packaged `StentorDeck.exe` kept the default Electron icon because `signAndEditExecutable: false` skips builder’s rcedit (and turning it on pulls `winCodeSign`, which fails on Windows without symlink privileges). Fix: `build/icon.ico` (`npm run icons`) + `afterPack` [`scripts/embed-win-icon.cjs`](../scripts/embed-win-icon.cjs) via devDep `rcedit` (justification: only reliable way to embed icon/metadata without winCodeSign). `npm run setup` / INSTALL.bat create a Desktop `.lnk` and prefer packaged exe; boot failures show a dialog. E7 / R1.1.

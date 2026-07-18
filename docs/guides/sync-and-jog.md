@@ -15,13 +15,13 @@ Half/double BPM mistakes are common — use **½ / ×2 / Tap** in Prep first.
 
 ## Jog (RMX2 platter)
 
-Dual-zone feel (Settings → Jog feel):
+Dual-zone feel (Settings → Jog feel). Default is **Soft (SL-1200)** — light fingertip stays subtle; the RMX2 sends many MIDI ticks per turn, so spinback only opens on a real hard twist.
 
 | Zone | When | Feel |
 |------|------|------|
 | **Fine** | Gentle fingertip | Subtle phase nudge (SL-1200 style) |
-| **Spin** | Fast twist | Bigger throw for spinbacks |
+| **Spin** | Fast whip | Bigger throw for spinbacks |
 
-Presets: **Soft · Balanced · Spinny**. Changes apply live while you turn the wheel.
+Presets: **Soft · Balanced · Spinny**. Changes apply live while you turn the wheel. If it still feels hot, open Settings → Jog → Soft, or turn **Dual zone** off for fine-only.
 
 Paused jog seeks through the track; playing jog nudges phase + light temp speed.

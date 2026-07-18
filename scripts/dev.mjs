@@ -1,3 +1,7 @@
+/**
+ * Dev launcher: build main → show Electron splash ASAP → Vite + analysis in parallel.
+ * Splash covers the Vite wait (see app/main boot + waitForRendererUrl).
+ */
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,58 +20,62 @@ function run(cmd, args, opts = {}) {
   });
 }
 
+function runBuild(workspace) {
+  return new Promise((resolve, reject) => {
+    const p = run('npm', ['run', 'build', '-w', workspace]);
+    p.on('exit', (code) =>
+      code === 0 ? resolve() : reject(new Error(`${workspace} build failed`)),
+    );
+  });
+}
+
 // Clear leftover Vite from a previous session
 spawnSync(process.execPath, [path.join(root, 'scripts/free-port.mjs'), VITE_PORT], {
   cwd: root,
   stdio: 'inherit',
 });
 
-// Build shared + main once so preload exists
-await new Promise((resolve, reject) => {
-  const p = run('npm', ['run', 'build', '-w', '@stentordeck/shared']);
-  p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error('shared build failed'))));
-});
-await new Promise((resolve, reject) => {
-  const p = run('npm', ['run', 'build', '-w', '@stentordeck/main']);
-  p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error('main build failed'))));
-});
-await new Promise((resolve, reject) => {
-  const p = run('npm', ['run', 'build', '-w', '@stentordeck/analysis']);
-  p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error('analysis build failed'))));
-});
+console.info('[dev] Building shared + main (splash starts after this)…');
+await runBuild('@stentordeck/shared');
+await runBuild('@stentordeck/main');
 
-const vite = run('npm', ['run', 'dev', '-w', '@stentordeck/renderer'], {
-  env: { ...process.env, VITE_PORT },
-});
-
-// Wait until Vite answers (or timeout)
-await waitForUrl(VITE_URL, 20_000);
-
+// Electron first — branded splash while Vite/analysis finish.
+console.info('[dev] Launching Electron (splash)…');
 const electron = run(electronPath, ['.'], {
   env: {
     ...process.env,
     VITE_DEV_SERVER_URL: VITE_URL,
     STENTOR_WINDOWED: process.env.STENTOR_WINDOWED ?? '1',
+    STENTOR_WAIT_VITE_MS: process.env.STENTOR_WAIT_VITE_MS ?? '60000',
   },
 });
 
-async function waitForUrl(url, timeoutMs) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    try {
-      const res = await fetch(url);
-      if (res.ok || res.status === 404) return;
-    } catch {
-      /* not up yet */
-    }
-    await new Promise((r) => setTimeout(r, 250));
-  }
-  console.warn(`[dev] Vite not ready at ${url} after ${timeoutMs}ms — launching Electron anyway`);
-}
+console.info('[dev] Starting Vite + analysis build…');
+const vite = run('npm', ['run', 'dev', '-w', '@stentordeck/renderer'], {
+  env: { ...process.env, VITE_PORT },
+});
+
+const analysis = run('npm', ['run', 'build', '-w', '@stentordeck/analysis']);
+analysis.on('exit', (code) => {
+  if (code !== 0) console.warn('[dev] analysis build failed — analysis window may be unavailable');
+});
 
 function shutdown() {
-  vite.kill();
-  electron.kill();
+  try {
+    vite.kill();
+  } catch {
+    /* ignore */
+  }
+  try {
+    electron.kill();
+  } catch {
+    /* ignore */
+  }
+  try {
+    analysis.kill();
+  } catch {
+    /* ignore */
+  }
   process.exit(0);
 }
 
@@ -75,6 +83,15 @@ process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
 electron.on('exit', () => {
-  vite.kill();
+  try {
+    vite.kill();
+  } catch {
+    /* ignore */
+  }
+  try {
+    analysis.kill();
+  } catch {
+    /* ignore */
+  }
   process.exit(0);
 });

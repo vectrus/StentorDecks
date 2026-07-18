@@ -4,18 +4,21 @@
  * - Spin: fast twist / spinback — larger sticky seek + stronger temp rate
  *
  * Tunables live in settings.mixer.jog (docs/07). Constants below are the defaults.
+ *
+ * RMX2 relative jogs flood ±1 CCs (~50–150 msg/s on a light turn). Spin thresholds
+ * must sit above that flood or every nudge opens spinback and feels "too sensitive".
  */
 
 /** Default engine units (matches defaultJogSettings) — tests / docs. */
-export const JOG_FINE_SEEK_SEC = 0.0004;
-export const JOG_SPIN_SEEK_SEC = 0.016;
-export const JOG_FINE_RATE = 0.0008;
-export const JOG_SPIN_RATE = 0.06;
-export const JOG_RATE_DECAY_MS = 480;
-export const JOG_PAUSED_FINE_SEEK_SEC = 0.002;
-export const JOG_PAUSED_SPIN_SEEK_SEC = 0.02;
-export const JOG_TPS_FINE = 45;
-export const JOG_TPS_SPIN = 130;
+export const JOG_FINE_SEEK_SEC = 0.00015;
+export const JOG_SPIN_SEEK_SEC = 0.012;
+export const JOG_FINE_RATE = 0.0003;
+export const JOG_SPIN_RATE = 0.04;
+export const JOG_RATE_DECAY_MS = 300;
+export const JOG_PAUSED_FINE_SEEK_SEC = 0.001;
+export const JOG_PAUSED_SPIN_SEEK_SEC = 0.012;
+export const JOG_TPS_FINE = 120;
+export const JOG_TPS_SPIN = 300;
 
 /** Human-unit jog settings (matches settings.mixer.jog). */
 export type JogSettings = {
@@ -32,24 +35,37 @@ export type JogSettings = {
 };
 
 /**
- * Default = very subtle fingertip (SL-1200).
- * A light push must barely move phase; spinback only on a real hard twist.
+ * Default = RMX2-safe fingertip (SL-1200).
+ * Light push stays in fine; spinback only on a real hard twist.
  */
 export const defaultJogSettings: JogSettings = {
   dualZone: true,
-  fineSeekMs: 0.4,
-  spinSeekMs: 16,
-  fineRatePercent: 0.08,
-  spinRatePercent: 6,
-  rateDecayMs: 480,
-  pausedFineSeekMs: 2,
-  pausedSpinSeekMs: 20,
-  spinStartsAtTps: 45,
-  spinFullAtTps: 130,
+  fineSeekMs: 0.15,
+  spinSeekMs: 12,
+  fineRatePercent: 0.03,
+  spinRatePercent: 4,
+  rateDecayMs: 300,
+  pausedFineSeekMs: 1,
+  pausedSpinSeekMs: 12,
+  spinStartsAtTps: 120,
+  spinFullAtTps: 300,
 };
 
 /** Previous factory defaults — migrate once so saved itchy settings quiet down. */
 export const LEGACY_ITCHY_JOG_DEFAULTS: readonly JogSettings[] = [
+  // 2026-07-18 "very subtle" — still too hot for RMX2 tick flood
+  {
+    dualZone: true,
+    fineSeekMs: 0.4,
+    spinSeekMs: 16,
+    fineRatePercent: 0.08,
+    spinRatePercent: 6,
+    rateDecayMs: 480,
+    pausedFineSeekMs: 2,
+    pausedSpinSeekMs: 20,
+    spinStartsAtTps: 45,
+    spinFullAtTps: 130,
+  },
   {
     dualZone: true,
     fineSeekMs: 2,
@@ -109,30 +125,30 @@ export const JOG_PRESETS = {
     label: 'Balanced',
     jog: {
       dualZone: true,
-      fineSeekMs: 1,
-      spinSeekMs: 24,
-      fineRatePercent: 0.2,
-      spinRatePercent: 10,
-      rateDecayMs: 400,
-      pausedFineSeekMs: 4,
-      pausedSpinSeekMs: 32,
-      spinStartsAtTps: 28,
-      spinFullAtTps: 95,
+      fineSeekMs: 0.35,
+      spinSeekMs: 18,
+      fineRatePercent: 0.08,
+      spinRatePercent: 7,
+      rateDecayMs: 340,
+      pausedFineSeekMs: 2,
+      pausedSpinSeekMs: 18,
+      spinStartsAtTps: 90,
+      spinFullAtTps: 240,
     } satisfies JogSettings,
   },
   spinny: {
     label: 'Spinny',
     jog: {
       dualZone: true,
-      fineSeekMs: 1.5,
-      spinSeekMs: 40,
-      fineRatePercent: 0.35,
-      spinRatePercent: 16,
-      rateDecayMs: 320,
-      pausedFineSeekMs: 6,
-      pausedSpinSeekMs: 50,
-      spinStartsAtTps: 20,
-      spinFullAtTps: 80,
+      fineSeekMs: 0.7,
+      spinSeekMs: 28,
+      fineRatePercent: 0.18,
+      spinRatePercent: 12,
+      rateDecayMs: 280,
+      pausedFineSeekMs: 3.5,
+      pausedSpinSeekMs: 32,
+      spinStartsAtTps: 60,
+      spinFullAtTps: 180,
     } satisfies JogSettings,
   },
 } as const;
@@ -183,6 +199,9 @@ export function createJogActivity(): JogActivity {
 /**
  * Update tick-rate EMA from one relative message.
  * Pure — caller replaces stored state with the return value.
+ *
+ * Attack is intentionally soft: RMX2 sends bursty ±1 floods; a hard attack
+ * would open the spin zone on every fingertip nudge.
  */
 export function updateJogActivity(
   prev: JogActivity,
@@ -199,8 +218,8 @@ export function updateJogActivity(
   }
   const dt = Math.max(1, nowMs - prev.lastTickMs);
   const inst = (mag * 1000) / dt;
-  // Fast attack / slower release so a spin opens quickly and fades after.
-  const alpha = inst > prev.ticksPerSec ? 0.55 : 0.22;
+  // Soft attack / faster release — spin needs sustained high rate, not a burst.
+  const alpha = inst > prev.ticksPerSec ? 0.28 : 0.18;
   const ticksPerSec = prev.ticksPerSec + alpha * (inst - prev.ticksPerSec);
   return { lastTickMs: nowMs, ticksPerSec };
 }
@@ -224,8 +243,8 @@ export function jogSpinIntensity(
   if (!params.dualZone) return 0;
   const mag = Number.isFinite(absDelta) ? Math.max(0, absDelta) : 0;
   const fromRate = jogSmoothstep(params.spinStartsAtTps, params.spinFullAtTps, ticksPerSec);
-  // Only large packed deltas open spin early (ignore ±1…±2 noise).
-  const fromDelta = jogSmoothstep(3, 8, mag);
+  // Only large packed deltas open spin early (ignore ±1…±4 RMX2 noise packs).
+  const fromDelta = jogSmoothstep(5, 12, mag);
   return Math.min(1, Math.max(fromRate, fromDelta));
 }
 

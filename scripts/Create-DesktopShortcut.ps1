@@ -41,7 +41,7 @@ if ($target) {
 }
 
 $sc.WindowStyle = 1
-$sc.Description = 'StentorDeck — for julius'
+$sc.Description = 'StentorDeck - for julius'
 $sc.Save()
 
 Write-Host "Desktop shortcut created:"

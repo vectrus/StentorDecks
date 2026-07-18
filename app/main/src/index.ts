@@ -6,6 +6,7 @@ import { registerIpcHandlers } from './ipcHandlers';
 import { gracefulShutdown, registerLifecycleHandlers } from './lifecycle';
 import { loadSettings, type SettingsFileState } from './settingsFile';
 import { closeSplash, showSplash } from './splash';
+import { waitForUrl } from './waitForUrl';
 import { createMainWindow, preloadPathFromDist } from './windows';
 import type { AppModeState, Settings } from '@stentordeck/shared';
 
@@ -53,6 +54,7 @@ async function boot(): Promise<void> {
 
   await app.whenReady();
   registerLifecycleHandlers();
+  // Splash first — covers DB/IPC setup and (in dev) waiting for Vite.
   showSplash();
 
   const userDataPath = app.getPath('userData');
@@ -94,6 +96,15 @@ async function boot(): Promise<void> {
   const rendererFile = rendererUrl
     ? null
     : path.join(app.getAppPath(), 'app/renderer/dist/index.html');
+
+  if (rendererUrl) {
+    const waitMs = Number(process.env.STENTOR_WAIT_VITE_MS ?? 60_000);
+    console.info(`[app] waiting for Vite at ${rendererUrl} (up to ${waitMs}ms)…`);
+    const ok = await waitForUrl(rendererUrl, waitMs);
+    if (!ok) {
+      console.warn('[app] Vite not ready — loading URL anyway');
+    }
+  }
 
   createMainWindow({
     preloadPath: preloadPathFromDist(),

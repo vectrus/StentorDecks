@@ -36,15 +36,15 @@ Stored as `settings.json` in `app.getPath('userData')`, written atomically (temp
     },
     "jog": {                                         // R2.2 dual-zone feel — live in Settings
       "dualZone": true,                              // false = fine-only (no spinback boost)
-      "fineSeekMs": 0.4,                             // phase ms/tick when gentle (very subtle)
-      "spinSeekMs": 16,                              // phase ms/tick at full spin
-      "fineRatePercent": 0.08,                       // temp rate bend % (fine)
-      "spinRatePercent": 6,                          // temp rate bend % (spin)
-      "rateDecayMs": 480,                            // how long temp rate holds
-      "pausedFineSeekMs": 2,                         // stopped scrub (fine)
-      "pausedSpinSeekMs": 20,                        // stopped scrub (spin)
-      "spinStartsAtTps": 45,                         // tick-rate EMA where spin opens
-      "spinFullAtTps": 130                           // tick-rate EMA for full spin
+      "fineSeekMs": 0.15,                            // phase ms/tick when gentle (RMX2-safe)
+      "spinSeekMs": 12,                              // phase ms/tick at full spin
+      "fineRatePercent": 0.03,                       // temp rate bend % (fine)
+      "spinRatePercent": 4,                          // temp rate bend % (spin)
+      "rateDecayMs": 300,                            // how long temp rate holds
+      "pausedFineSeekMs": 1,                         // stopped scrub (fine)
+      "pausedSpinSeekMs": 12,                        // stopped scrub (spin)
+      "spinStartsAtTps": 120,                        // above light RMX2 ±1 flood
+      "spinFullAtTps": 300                           // tick-rate EMA for full spin
     }
   },
 

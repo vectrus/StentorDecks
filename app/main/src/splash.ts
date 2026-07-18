@@ -1,8 +1,30 @@
 import { BrowserWindow, app } from 'electron';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 let splash: BrowserWindow | null = null;
+
+/** Signals pre-Electron WinForms splash (Desktop VBS) that Electron UI is up. */
+function bootReadyMarkerPath(): string {
+  return path.join(os.tmpdir(), 'stentordeck-ui-ready');
+}
+
+function signalBootReady(): void {
+  try {
+    fs.writeFileSync(bootReadyMarkerPath(), String(Date.now()), 'utf8');
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearBootReady(): void {
+  try {
+    fs.unlinkSync(bootReadyMarkerPath());
+  } catch {
+    /* ignore */
+  }
+}
 
 function splashHtmlPath(): string {
   // Built: app/main/dist/splash/index.html (copied next to bundle)
@@ -36,6 +58,8 @@ export function showSplash(): BrowserWindow | null {
     return null;
   }
 
+  clearBootReady();
+
   splash = new BrowserWindow({
     width: 420,
     height: 280,
@@ -45,7 +69,8 @@ export function showSplash(): BrowserWindow | null {
     maximizable: false,
     minimizable: false,
     fullscreenable: false,
-    skipTaskbar: true,
+    // Visible on the taskbar so a long Vite wait is not "nothing happened"
+    skipTaskbar: false,
     alwaysOnTop: true,
     center: true,
     show: false,
@@ -62,7 +87,10 @@ export function showSplash(): BrowserWindow | null {
   splash.setMenuBarVisibility(false);
   void splash.loadFile(html);
   splash.once('ready-to-show', () => {
-    if (splash && !splash.isDestroyed()) splash.show();
+    if (splash && !splash.isDestroyed()) {
+      splash.show();
+      signalBootReady();
+    }
   });
   splash.on('closed', () => {
     splash = null;
@@ -71,6 +99,7 @@ export function showSplash(): BrowserWindow | null {
 }
 
 export function closeSplash(): void {
+  clearBootReady();
   if (!splash || splash.isDestroyed()) {
     splash = null;
     return;

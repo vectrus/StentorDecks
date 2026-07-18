@@ -115,7 +115,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  overflow: hidden;
+  /* visible: overflow:hidden was clipping FILTER AMT / FLANGER hit targets */
+  overflow: visible;
+  min-width: 0;
 }
 
 .perf-deck-a {
@@ -311,6 +313,13 @@
   gap: 0.45rem;
   align-items: center;
   flex-wrap: wrap;
+  min-width: 0;
+}
+
+.perf-deck-row > .perf-play,
+.perf-deck-row > .perf-btn,
+.perf-deck-row > .perf-knob-wrap {
+  flex-shrink: 0;
 }
 
 .perf-deck-trail {
@@ -318,6 +327,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .perf-play {
@@ -532,6 +542,8 @@
   flex-direction: column;
   align-items: center;
   gap: 0.1rem;
+  position: relative;
+  z-index: 2;
 }
 
 .perf-knob-label {
@@ -545,6 +557,20 @@
   display: none;
 }
 
+.perf-knob-wrap.fx-active .perf-knob {
+  border-color: var(--deck-a);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--deck-a) 45%, transparent);
+}
+
+.perf-deck-b .perf-knob-wrap.fx-active .perf-knob {
+  border-color: var(--deck-b);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--deck-b) 45%, transparent);
+}
+
+.perf-knob-wrap.fx-active .perf-knob-label {
+  color: var(--text);
+}
+
 .perf-knob {
   width: 2.25rem;
   height: 2.25rem;
@@ -554,6 +580,13 @@
   position: relative;
   padding: 0;
   cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.perf-knob:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .perf-knob.size-sm {

@@ -206,8 +206,8 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     deck.phaseGlueTargetSec = 0;
     deck.nudge(1);
     expect(deck.position).toBeGreaterThan(10);
-    expect(deck.position).toBeLessThan(10.002); // cold EMA → fine ~0.4 ms
-    expect(deck.nudgeFactor).toBeCloseTo(1.0008, 5);
+    expect(deck.position).toBeLessThan(10.001); // cold EMA → fine ~0.15 ms
+    expect(deck.nudgeFactor).toBeCloseTo(1.0003, 5);
     expect(deck.phaseGlueRetarget).toBe(true);
     expect(deck.phaseAssistMuteUntil).toBeGreaterThan(0);
   });
@@ -220,11 +220,11 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     // Pretend the wheel is already spinning hard (dual-zone open).
     (deck as unknown as { jogActivity: { lastTickMs: number; ticksPerSec: number } }).jogActivity = {
       lastTickMs: 1000,
-      ticksPerSec: 160,
+      ticksPerSec: 320,
     };
     deck.nudge(-1);
-    expect(deck.position).toBeLessThan(10 - 0.01); // spin seek ~16 ms
-    expect(deck.nudgeFactor).toBeLessThan(0.95); // ~−6 % temp rate
+    expect(deck.position).toBeLessThan(10 - 0.008); // spin seek ~12 ms
+    expect(deck.nudgeFactor).toBeLessThan(0.97); // ~−4 % temp rate
   });
 
   it('toggleSync is mutually exclusive — Sync A clears Sync B', () => {

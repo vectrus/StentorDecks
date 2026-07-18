@@ -272,7 +272,7 @@ const JogFeelSection = observer(function JogFeelSection() {
         label="Fine seek"
         hint="Phase step per tick when nudging gently — keep low for SL-1200 feel"
         value={jog.fineSeekMs}
-        min={0.15}
+        min={0.05}
         max={8}
         step={0.05}
         unit=" ms"
@@ -296,7 +296,7 @@ const JogFeelSection = observer(function JogFeelSection() {
         label="Spin seek"
         hint="Phase throw per tick at full spin intensity"
         value={jog.spinSeekMs}
-        min={5}
+        min={4}
         max={80}
         step={1}
         unit=" ms"
@@ -315,11 +315,11 @@ const JogFeelSection = observer(function JogFeelSection() {
       />
       <JogSlider
         label="Spin starts at"
-        hint="Tick-rate where the spin zone begins to open"
+        hint="Tick-rate where spin opens — keep above light RMX2 flood (~80–120)"
         value={jog.spinStartsAtTps}
-        min={5}
-        max={80}
-        step={1}
+        min={20}
+        max={250}
+        step={5}
         unit=" t/s"
         onChange={(v) => patchJog({ spinStartsAtTps: v })}
       />
@@ -327,9 +327,9 @@ const JogFeelSection = observer(function JogFeelSection() {
         label="Full spin at"
         hint="Tick-rate for maximum spinback throw"
         value={jog.spinFullAtTps}
-        min={30}
-        max={200}
-        step={1}
+        min={60}
+        max={450}
+        step={5}
         unit=" t/s"
         onChange={(v) => patchJog({ spinFullAtTps: v })}
       />

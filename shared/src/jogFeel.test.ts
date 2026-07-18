@@ -19,14 +19,18 @@ describe('jogSpinIntensity', () => {
     expect(jogSpinIntensity(1, 10, defaultFeel)).toBeLessThan(0.15);
   });
 
+  it('stays fine through a typical RMX2 fingertip flood (~80 t/s)', () => {
+    expect(jogSpinIntensity(1, 80, defaultFeel)).toBeLessThan(0.1);
+  });
+
   it('opens the spin zone at high tick rate', () => {
-    expect(jogSpinIntensity(1, 100, defaultFeel)).toBeGreaterThan(0.5);
-    expect(jogSpinIntensity(1, 150, defaultFeel)).toBeGreaterThan(0.95);
+    expect(jogSpinIntensity(1, 220, defaultFeel)).toBeGreaterThan(0.4);
+    expect(jogSpinIntensity(1, 320, defaultFeel)).toBeGreaterThan(0.95);
   });
 
   it('ignores small packed |delta|; opens only on large packs', () => {
-    expect(jogSpinIntensity(2, 5, defaultFeel)).toBeLessThan(0.15);
-    expect(jogSpinIntensity(8, 5, defaultFeel)).toBeGreaterThan(0.5);
+    expect(jogSpinIntensity(4, 5, defaultFeel)).toBeLessThan(0.15);
+    expect(jogSpinIntensity(12, 5, defaultFeel)).toBeGreaterThan(0.9);
   });
 
   it('stays fine when dualZone is off', () => {
@@ -45,7 +49,7 @@ describe('scaleJogTick', () => {
   });
 
   it('spin tick ≈ spinback seek / stronger rate', () => {
-    const s = scaleJogTick(1, 160, defaultFeel);
+    const s = scaleJogTick(1, 320, defaultFeel);
     expect(s.playingSeekSec).toBeCloseTo(JOG_SPIN_SEEK_SEC, 5);
     expect(s.playingRateAmount).toBeCloseTo(JOG_SPIN_RATE, 5);
     expect(s.intensity).toBeGreaterThan(0.95);
@@ -75,12 +79,16 @@ describe('updateJogActivity', () => {
     expect(a.ticksPerSec).toBe(0);
   });
 
-  it('EMA rises when ticks arrive close together', () => {
+  it('EMA rises when ticks arrive close together (soft attack)', () => {
     let a = createJogActivity();
     a = updateJogActivity(a, 1, 1000);
     a = updateJogActivity(a, 1, 1010);
     a = updateJogActivity(a, 1, 1020);
-    expect(a.ticksPerSec).toBeGreaterThan(40);
+    a = updateJogActivity(a, 1, 1030);
+    a = updateJogActivity(a, 1, 1040);
+    // Soft attack — a short burst must not instantly claim 100 t/s.
+    expect(a.ticksPerSec).toBeGreaterThan(25);
+    expect(a.ticksPerSec).toBeLessThan(90);
   });
 
   it('EMA falls when ticks slow down', () => {

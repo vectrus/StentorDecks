@@ -139,15 +139,16 @@ export const settingsSchema = z.object({
     jog: z
       .object({
         dualZone: z.boolean(),
-        fineSeekMs: z.number().min(0.15).max(30),
+        fineSeekMs: z.number().min(0.05).max(30),
         spinSeekMs: z.number().min(1).max(100),
         fineRatePercent: z.number().min(0).max(5),
         spinRatePercent: z.number().min(0).max(50),
         rateDecayMs: z.number().min(50).max(1500),
         pausedFineSeekMs: z.number().min(0.5).max(50),
         pausedSpinSeekMs: z.number().min(1).max(150),
-        spinStartsAtTps: z.number().min(1).max(120),
-        spinFullAtTps: z.number().min(10).max(250),
+        // RMX2 light turns flood ~50–150 t/s — spin floor sits above that.
+        spinStartsAtTps: z.number().min(1).max(300),
+        spinFullAtTps: z.number().min(10).max(500),
       })
       .refine((j) => j.spinFullAtTps > j.spinStartsAtTps, {
         message: 'spinFullAtTps must be greater than spinStartsAtTps',

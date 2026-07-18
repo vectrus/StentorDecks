@@ -2,9 +2,9 @@
 setlocal
 cd /d "%~dp0"
 
-title StentorDeck — Install ^& Start
+title StentorDeck - Install ^& Start
 echo.
-echo  StentorDeck — easy install ^& start
+echo  StentorDeck - easy install ^& start
 echo  Repo: %CD%
 echo.
 
@@ -26,10 +26,12 @@ if errorlevel 1 (
 
 echo Using:
 where.exe node
-node -v
-npm -v
+call node -v
+REM IMPORTANT: npm is npm.cmd — without CALL, the .bat ends here and never runs setup.
+call npm -v
 echo.
 
+echo Starting setup ^(install + shortcut + launch^)…
 REM Full path: npm install → rebuild → Desktop shortcut → start packaged exe or dev
 call npm run setup
 set EXITCODE=%ERRORLEVEL%

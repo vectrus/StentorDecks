@@ -137,4 +137,17 @@ Tip: npm run dist:dir  then double-click the Desktop shortcut for a no-console l
 
 Close the app window or press Ctrl+C here to stop.
 `);
+
+// Pre-Electron splash while shared/main build (Desktop path uses VBS; this covers INSTALL.bat).
+if (process.platform === 'win32') {
+  const splashPs1 = path.join(root, 'scripts', 'show-boot-splash.ps1');
+  if (fs.existsSync(splashPs1)) {
+    spawn(
+      'powershell',
+      ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', splashPs1],
+      { cwd: root, detached: true, stdio: 'ignore', windowsHide: true },
+    ).unref();
+  }
+}
+
 run(npm, ['start']);
