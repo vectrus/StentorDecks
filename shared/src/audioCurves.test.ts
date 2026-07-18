@@ -6,9 +6,11 @@ import {
   endOfTrackWarnLevel,
   eqKnobDb,
   filterFromAmount,
+  gainKnobFromTrimDb,
   pitchFaderNormalized,
   pitchPosFromRate,
   pitchRate,
+  trimDbFromGainKnob,
 } from './audioCurves.js';
 
 describe('channel fader curves', () => {
@@ -54,6 +56,16 @@ describe('EQ knob', () => {
     expect(Math.abs(eqKnobDb(0.25, 12))).toBeLessThan(Math.abs(eqKnobDb(0, 12)));
     expect(eqKnobDb(1, 12)).toBeCloseTo(12, 0);
     expect(eqKnobDb(0, 12)).toBeCloseTo(-12, 0);
+  });
+});
+
+describe('gain knob inverse (soft takeover raw space)', () => {
+  it('round-trips raw ↔ trim dB', () => {
+    expect(trimDbFromGainKnob(0.5)).toBe(0);
+    expect(trimDbFromGainKnob(1)).toBe(12);
+    expect(trimDbFromGainKnob(0)).toBe(-12);
+    expect(gainKnobFromTrimDb(0)).toBeCloseTo(0.5, 5);
+    expect(gainKnobFromTrimDb(6)).toBeCloseTo(0.75, 5);
   });
 });
 

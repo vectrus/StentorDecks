@@ -155,6 +155,50 @@ export const DevHarness = observer(function DevHarness() {
       </section>
 
       <section className="sec">
+        <div className="hd">Soft takeover pickup (E3)</div>
+        <p className="hint">
+          After Sync or a UI slider move, hardware is inert until it crosses software
+          (raw 0..1). Gain uses trim↔knob inverse.
+        </p>
+        <table className="mono" style={{ width: '100%', fontSize: '12px' }}>
+          <thead>
+            <tr>
+              <th align="left">Control</th>
+              <th align="right">Soft</th>
+              <th align="right">Hard</th>
+              <th align="left">Armed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(
+              [
+                'deckA.pitch',
+                'deckB.pitch',
+                'deckA.gain',
+                'deckB.gain',
+                'mixer.faderA',
+                'mixer.faderB',
+                'mixer.master',
+                'mixer.headMix',
+              ] as const
+            ).map((id) => {
+              const t = midiStore.takeoverView(id);
+              return (
+                <tr key={id}>
+                  <td>{id}</td>
+                  <td align="right">{t ? t.softwareValue.toFixed(3) : '—'}</td>
+                  <td align="right">
+                    {t?.hardwareValue != null ? t.hardwareValue.toFixed(3) : '—'}
+                  </td>
+                  <td>{t?.armed ? 'ARMED' : t ? 'live' : '—'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="sec">
         <div className="hd">MIDI learn (E3)</div>
         <p className="hint mono">
           Phase: {midiStore.learn.phase.phase}

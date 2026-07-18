@@ -7,6 +7,7 @@ import {
   resolveCueHoldEnd,
   resolveCueHoldStart,
   resolveCuePress,
+  type ControlId,
   type Settings,
 } from '@stentordeck/shared';
 import { audioEngine } from '../audio/AudioEngine';
@@ -72,11 +73,35 @@ export class DeckStore {
    * cloning from a dying context truncated tracks to ~25–28s).
    */
   fileBytes: ArrayBuffer | null = null;
+  /** Soft-takeover re-arm hooks (wired from root → MidiStore; not observable). */
+  takeoverSoftwareChange: ((id: ControlId) => void) | null = null;
+  takeoverLoaded: ((deckId: DeckId) => void) | null = null;
 
   constructor(id: DeckId, getSettings: () => Settings) {
     this.id = id;
     this.getSettings = getSettings;
-    makeAutoObservable(this, { fileBytes: false }, { autoBind: true });
+    makeAutoObservable(
+      this,
+      {
+        fileBytes: false,
+        takeoverSoftwareChange: false,
+        takeoverLoaded: false,
+      },
+      { autoBind: true },
+    );
+  }
+
+  setTakeoverHooks(opts: {
+    onSoftwareChange?: (id: ControlId) => void;
+    onLoaded?: (deckId: DeckId) => void;
+  }): void {
+    this.takeoverSoftwareChange = opts.onSoftwareChange ?? null;
+    this.takeoverLoaded = opts.onLoaded ?? null;
+  }
+
+  private notify(suffix: string): void {
+    const id = `deck${this.id}.${suffix}` as ControlId;
+    this.takeoverSoftwareChange?.(id);
   }
 
   get effectiveRate(): number {
@@ -126,6 +151,7 @@ export class DeckStore {
           this.loading = false;
         });
         this.pushGraph();
+        this.takeoverLoaded?.(this.id);
       } finally {
         audioEngine.endDecode();
       }
@@ -296,6 +322,7 @@ export class DeckStore {
     // Moving pitch releases SYNC (docs/03).
     this.clearSync();
     audioEngine.transport(this.id)?.setRate(this.effectiveRate);
+    this.notify('pitch');
   }
 
   clearSync(): void {
@@ -394,11 +421,14 @@ export class DeckStore {
   setTrimDb(db: number): void {
     this.trimDb = db;
     this.pushGraph();
+    this.notify('gain');
   }
 
   setEq(band: 'low' | 'mid' | 'high', value: number): void {
     this.eq = { ...this.eq, [band]: value };
     this.pushGraph();
+    const suffix = band === 'low' ? 'eqLow' : band === 'mid' ? 'eqMid' : 'eqHigh';
+    this.notify(suffix);
   }
 
   toggleKill(band: 'low' | 'mid' | 'high'): void {
@@ -414,6 +444,7 @@ export class DeckStore {
   setFilterAmount(v: number): void {
     this.filterAmount = v;
     this.pushGraph();
+    this.notify('filter');
   }
 
   toggleFlanger(): void {
@@ -424,6 +455,7 @@ export class DeckStore {
   setFlangerWet(v: number): void {
     this.flangerWet = v;
     this.pushGraph();
+    this.notify('wet');
   }
 
   togglePfl(): void {

@@ -21,6 +21,19 @@ export function armTakeover(state: TakeoverState, softwareValue: number): Takeov
 }
 
 /**
+ * While armed, keep the pickup target on the current software raw
+ * (e.g. SYNC tempo follow moves pitch without a new arm event).
+ * Does not change `armed`. Live (disarmed) controls are unchanged.
+ */
+export function refreshTakeoverSoftware(
+  state: TakeoverState,
+  softwareValue: number,
+): TakeoverState {
+  if (!state.armed) return state;
+  return { ...state, softwareValue: clamp01(softwareValue) };
+}
+
+/**
  * Incoming hardware raw 0..1.
  * Returns updated state + whether the value should be applied to software.
  */

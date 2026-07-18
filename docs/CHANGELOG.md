@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — E3 soft takeover raw-space + harness pickup
+
+Takeover compares hardware vs software in raw 0..1 (docs/03): refresh software target while armed (SYNC follow), gain uses `gainKnobFromTrimDb` inverse, UI/load re-arms (MIDI writes skipped). Dev harness shows Soft/Hard/Armed for pitch, gain, faders, master, headMix. R2.7, E3 `[HW]` soft-takeover AC (software ready; owner verifies on RMX2).
+
+---
+
 ## 2026-07-18 — README roadmap with timestamps
 
 Root [`README.md`](../README.md) now carries a dated epic status table (DONE/DOING/TODO), same-day milestones, in-progress, and next-up — mirrored from this ROADMAP. Update both when epic status changes.

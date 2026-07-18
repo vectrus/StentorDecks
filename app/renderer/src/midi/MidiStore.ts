@@ -6,6 +6,7 @@ import {
   createLearnState,
   createTakeover,
   factoryMidiMapping,
+  gainKnobFromTrimDb,
   learnAcceptSteal,
   learnCancel,
   learnConfirm,
@@ -17,7 +18,9 @@ import {
   norm14,
   norm7,
   processTakeoverInput,
+  refreshTakeoverSoftware,
   relativeCcsFromMapping,
+  trimDbFromGainKnob,
   type ControlId,
   type DecodedMidi,
   type LearnState,
@@ -50,6 +53,8 @@ export class MidiStore {
   takeovers = new Map<ControlId, TakeoverState>();
   mappingReady = false;
   learn: LearnState = createLearnState();
+  /** True while applying MIDI → store (skip re-arm on those writes). */
+  private applyingFromMidi = false;
 
   private decodeState = createMidiDecodeState();
   private cc14Pairs: Array<{ msb: number; lsb: number }> = [];
@@ -404,74 +409,111 @@ export class MidiStore {
   }
 
   private dispatchContinuous(id: ControlId, raw: number): void {
-    const st = this.takeovers.get(id) ?? createTakeover(this.softwareRaw(id));
+    // Compare in raw 0..1 space (docs/03): refresh software target while armed
+    // so SYNC follow / load don't leave a stale pickup point.
+    const soft = this.softwareRaw(id);
+    const st = refreshTakeoverSoftware(
+      this.takeovers.get(id) ?? createTakeover(soft),
+      soft,
+    );
     const result = processTakeoverInput(st, raw);
     this.takeovers.set(id, result.state);
     if (!result.apply) return;
 
-    switch (id) {
-      case 'mixer.faderA':
-        this.mixer.setFaderA(result.value);
-        break;
-      case 'mixer.faderB':
-        this.mixer.setFaderB(result.value);
-        break;
-      case 'mixer.master':
-        this.mixer.setMaster(result.value);
-        break;
-      case 'mixer.headMix':
-        this.mixer.setHeadMix(result.value);
-        break;
-      case 'deckA.pitch':
-        this.deckA.setPitchPos(result.value);
-        break;
-      case 'deckB.pitch':
-        this.deckB.setPitchPos(result.value);
-        break;
-      case 'deckA.gain':
-        this.deckA.setTrimDb((result.value - 0.5) * 24);
-        break;
-      case 'deckB.gain':
-        this.deckB.setTrimDb((result.value - 0.5) * 24);
-        break;
-      case 'deckA.eqHigh':
-        this.deckA.setEq('high', result.value);
-        break;
-      case 'deckA.eqMid':
-        this.deckA.setEq('mid', result.value);
-        break;
-      case 'deckA.eqLow':
-        this.deckA.setEq('low', result.value);
-        break;
-      case 'deckB.eqHigh':
-        this.deckB.setEq('high', result.value);
-        break;
-      case 'deckB.eqMid':
-        this.deckB.setEq('mid', result.value);
-        break;
-      case 'deckB.eqLow':
-        this.deckB.setEq('low', result.value);
-        break;
-      case 'deckA.filter':
-        this.deckA.setFilterAmount(result.value);
-        break;
-      case 'deckB.filter':
-        this.deckB.setFilterAmount(result.value);
-        break;
-      case 'deckA.wet':
-        this.deckA.setFlangerWet(result.value);
-        break;
-      case 'deckB.wet':
-        this.deckB.setFlangerWet(result.value);
-        break;
-      default:
-        break;
+    this.applyingFromMidi = true;
+    try {
+      switch (id) {
+        case 'mixer.faderA':
+          this.mixer.setFaderA(result.value);
+          break;
+        case 'mixer.faderB':
+          this.mixer.setFaderB(result.value);
+          break;
+        case 'mixer.master':
+          this.mixer.setMaster(result.value);
+          break;
+        case 'mixer.headMix':
+          this.mixer.setHeadMix(result.value);
+          break;
+        case 'deckA.pitch':
+          this.deckA.setPitchPos(result.value);
+          break;
+        case 'deckB.pitch':
+          this.deckB.setPitchPos(result.value);
+          break;
+        case 'deckA.gain':
+          this.deckA.setTrimDb(trimDbFromGainKnob(result.value));
+          break;
+        case 'deckB.gain':
+          this.deckB.setTrimDb(trimDbFromGainKnob(result.value));
+          break;
+        case 'deckA.eqHigh':
+          this.deckA.setEq('high', result.value);
+          break;
+        case 'deckA.eqMid':
+          this.deckA.setEq('mid', result.value);
+          break;
+        case 'deckA.eqLow':
+          this.deckA.setEq('low', result.value);
+          break;
+        case 'deckB.eqHigh':
+          this.deckB.setEq('high', result.value);
+          break;
+        case 'deckB.eqMid':
+          this.deckB.setEq('mid', result.value);
+          break;
+        case 'deckB.eqLow':
+          this.deckB.setEq('low', result.value);
+          break;
+        case 'deckA.filter':
+          this.deckA.setFilterAmount(result.value);
+          break;
+        case 'deckB.filter':
+          this.deckB.setFilterAmount(result.value);
+          break;
+        case 'deckA.wet':
+          this.deckA.setFlangerWet(result.value);
+          break;
+        case 'deckB.wet':
+          this.deckB.setFlangerWet(result.value);
+          break;
+        default:
+          break;
+      }
+    } finally {
+      this.applyingFromMidi = false;
     }
   }
 
   private arm(id: ControlId): void {
     const cur = this.takeovers.get(id) ?? createTakeover(0.5);
     this.takeovers.set(id, armTakeover(cur, this.softwareRaw(id)));
+  }
+
+  /**
+   * UI / sync / load changed a continuous control — re-arm soft takeover (R2.7).
+   * No-op when the write came from MIDI dispatch.
+   */
+  noteSoftwareChange(id: ControlId): void {
+    if (this.applyingFromMidi) return;
+    this.arm(id);
+  }
+
+  /** After deck load — re-arm continuous deck controls (R2.7 / R3.3). */
+  noteDeckLoaded(deckId: 'A' | 'B'): void {
+    if (this.applyingFromMidi) return;
+    const prefix = deckId === 'A' ? 'deckA' : 'deckB';
+    for (const suffix of [
+      'pitch',
+      'gain',
+      'eqHigh',
+      'eqMid',
+      'eqLow',
+      'filter',
+      'wet',
+    ] as const) {
+      this.arm(`${prefix}.${suffix}` as ControlId);
+    }
   }
 
   private softwareRaw(id: ControlId): number {
@@ -488,6 +530,10 @@ export class MidiStore {
         return this.deckA.pitchPos;
       case 'deckB.pitch':
         return this.deckB.pitchPos;
+      case 'deckA.gain':
+        return gainKnobFromTrimDb(this.deckA.trimDb);
+      case 'deckB.gain':
+        return gainKnobFromTrimDb(this.deckB.trimDb);
       case 'deckA.filter':
         return this.deckA.filterAmount;
       case 'deckB.filter':

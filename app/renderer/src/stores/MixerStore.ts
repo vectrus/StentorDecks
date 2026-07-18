@@ -1,4 +1,5 @@
 import { makeAutoObservable } from 'mobx';
+import type { ControlId } from '@stentordeck/shared';
 import { audioEngine } from '../audio/AudioEngine';
 import { setMixerFaderPositions, type DeckStore } from './DeckStore';
 
@@ -9,6 +10,8 @@ export class MixerStore {
   /** 0 = cue/PFL only, 1 = master only. Default cue-only for headphone pre-listen. */
   headMix = 0;
   phones = 1;
+
+  takeoverSoftwareChange: ((id: ControlId) => void) | null = null;
 
   applyToEngine(): void {
     audioEngine.setMasterGain(this.master);
@@ -21,29 +24,37 @@ export class MixerStore {
     private readonly deckA: DeckStore,
     private readonly deckB: DeckStore,
   ) {
-    makeAutoObservable(this, {}, { autoBind: true });
+    makeAutoObservable(this, { takeoverSoftwareChange: false }, { autoBind: true });
+  }
+
+  setTakeoverHooks(opts: { onSoftwareChange?: (id: ControlId) => void }): void {
+    this.takeoverSoftwareChange = opts.onSoftwareChange ?? null;
   }
 
   setFaderA(pos: number): void {
     this.faderA = pos;
     setMixerFaderPositions(this.faderA, this.faderB);
     this.deckA.pushGraph();
+    this.takeoverSoftwareChange?.('mixer.faderA');
   }
 
   setFaderB(pos: number): void {
     this.faderB = pos;
     setMixerFaderPositions(this.faderA, this.faderB);
     this.deckB.pushGraph();
+    this.takeoverSoftwareChange?.('mixer.faderB');
   }
 
   setMaster(v: number): void {
     this.master = v;
     audioEngine.setMasterGain(v);
+    this.takeoverSoftwareChange?.('mixer.master');
   }
 
   setHeadMix(v: number): void {
     this.headMix = v;
     audioEngine.setHeadMix(v);
+    this.takeoverSoftwareChange?.('mixer.headMix');
   }
 
   setPhones(v: number): void {

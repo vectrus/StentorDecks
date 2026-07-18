@@ -28,6 +28,20 @@ export const midiLeds = new MidiLeds(
   () => midiStore.mapping,
   () => settingsStore.settings.midi.sendLeds,
 );
+
+// Soft takeover re-arm: UI/load/sync → same hook MIDI skips while applying (R2.7).
+const takeoverNotify = (id: Parameters<typeof midiStore.noteSoftwareChange>[0]) => {
+  midiStore.noteSoftwareChange(id);
+};
+deckA.setTakeoverHooks({
+  onSoftwareChange: takeoverNotify,
+  onLoaded: (id) => midiStore.noteDeckLoaded(id),
+});
+deckB.setTakeoverHooks({
+  onSoftwareChange: takeoverNotify,
+  onLoaded: (id) => midiStore.noteDeckLoaded(id),
+});
+mixerStore.setTakeoverHooks({ onSoftwareChange: takeoverNotify });
 export const audioDeviceStore = new AudioDeviceStore(
   settingsStore,
   async () => {

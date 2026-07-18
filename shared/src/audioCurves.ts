@@ -79,6 +79,20 @@ export function trimDbToGain(dB: number): number {
   return Math.pow(10, Math.min(dB, 12) / 20);
 }
 
+/**
+ * MIDI gain knob raw 0..1 ↔ trim dB (docs/03 soft takeover inverse).
+ * Forward (MIDI → software): `trimDb = (raw - 0.5) * 24` → −12..+12.
+ */
+export function trimDbFromGainKnob(raw: number): number {
+  return (clamp01(raw) - 0.5) * 24;
+}
+
+/** Inverse: software trim dB → raw knob for takeover comparison. */
+export function gainKnobFromTrimDb(trimDb: number): number {
+  if (!Number.isFinite(trimDb)) return 0.5;
+  return clamp01(trimDb / 24 + 0.5);
+}
+
 /** Auto-gain: LUFS → trim dB toward target (clamped). */
 export function autoGainTrimDb(loudnessLufs: number, targetLufs: number): number {
   const delta = targetLufs - loudnessLufs;
