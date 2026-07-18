@@ -71,6 +71,20 @@ describe('MidiStore ingest (fixture traffic)', () => {
     expect(deckA.bendFactor).toBeCloseTo(1.005, 5);
   });
 
+  it('inverts RMX2 pitch MIDI so high CC is slow (logical 0)', () => {
+    const { store, deckA } = makeStore();
+    store.takeovers.set('deckA.pitch', {
+      armed: false,
+      softwareValue: 0.5,
+      hardwareValue: 0.5,
+    });
+    deckA.pitchPos = 0.5;
+    // MSB 0x7F + LSB 0x7F ≈ full-scale MIDI 1.0 → after invert ≈ 0 (slow)
+    store.ingest([0xb0, 0x36, 0x7f], 0);
+    store.ingest([0xb0, 0x37, 0x7f], 1);
+    expect(deckA.pitchPos).toBeLessThan(0.05);
+  });
+
   it('noteDeckLoaded keeps live pitch/EQ live (no full relearn)', () => {
     const { store, deckA } = makeStore();
     // Pick up EQ mid at 0.7

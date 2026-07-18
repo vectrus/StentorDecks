@@ -33,8 +33,8 @@ Browse cluster (shared): up `45` prev row, down `46` next row, left `44` parent 
 |---|---|---|
 | Ch fader A | 3A / 3B | curve-mapped, soft takeover |
 | Ch fader B | 4A / 4B | curve-mapped, soft takeover |
-| Pitch fader A | 36 / 37 | dead-zone, soft takeover |
-| Pitch fader B | 38 / 39 | dead-zone, soft takeover |
+| Pitch fader A | 36 / 37 | dead-zone, soft takeover; **MIDI inverted** → logical 0=slow / 1=fast |
+| Pitch fader B | 38 / 39 | dead-zone, soft takeover; **MIDI inverted** → logical 0=slow / 1=fast |
 | Master volume | 44 / 45 | soft takeover |
 | HeadMix (cue/mix) | 46 / 47 | soft takeover |
 | Crossfader | 48 / 49 | **ignored by default** (R2.4) |

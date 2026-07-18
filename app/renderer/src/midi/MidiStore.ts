@@ -275,7 +275,12 @@ export class MidiStore {
       return;
     }
     if (ev.kind === 'cc14' || ev.kind === 'cc7') {
-      const raw = ev.kind === 'cc14' ? norm14(ev.value14) : norm7(ev.value);
+      let raw = ev.kind === 'cc14' ? norm14(ev.value14) : norm7(ev.value);
+      // RMX2 pitch faders are MIDI-inverted vs tempo: high CC = toward −%.
+      // Keep logical pitchPos: 0 = slow, 1 = fast (matches UI strip + docs/03).
+      if (id === 'deckA.pitch' || id === 'deckB.pitch') {
+        raw = 1 - raw;
+      }
       this.dispatchContinuous(id, raw);
     }
   }

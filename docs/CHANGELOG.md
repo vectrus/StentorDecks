@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — RMX2 pitch fader polarity
+
+Hardware pitch felt inverted vs tempo. Factory pitch CC is now MIDI-inverted into logical `pitchPos` (0=slow, 1=fast) so soft-takeover stays in one domain; UI strip unchanged (left slow / right fast). R2.6, docs/04, E3.
+
+---
+
 ## 2026-07-18 — App updates: GitHub Releases + UPDATE.bat
 
 Packaged app uses `electron-updater` against GitHub Releases (`npm run release` + Settings → Check for updates / restart). Source trees use `UPDATE.bat` / `npm run update` (refuse dirty tree; `--stash` optional). NSIS `deleteAppDataOnUninstall: false`. Replaces GitHub Desktop as the booth update path. E7 / R1.1.
