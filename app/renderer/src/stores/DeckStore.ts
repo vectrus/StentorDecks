@@ -44,6 +44,10 @@ export class DeckStore {
   syncArmed = false;
   /** Partner deck id while sync is on (for tempo follow). */
   syncPartner: DeckId | null = null;
+  /** Last sync strategy — for harness / UI honesty. */
+  syncMode: 'off' | 'bpm' | 'pitchPercent' = 'off';
+  /** True when BPM target was outside ±pitch range (clamped). */
+  syncClamped = false;
   cueOffset = 0;
   cuePreviewing = false;
 
@@ -328,6 +332,8 @@ export class DeckStore {
   clearSync(): void {
     this.syncArmed = false;
     this.syncPartner = null;
+    this.syncMode = 'off';
+    this.syncClamped = false;
   }
 
   /**
@@ -346,6 +352,23 @@ export class DeckStore {
     this.applySyncTo(other);
   }
 
+  /**
+   * Human-readable sync status for the harness (why Sync “did nothing”).
+   */
+  get syncStatusLine(): string | null {
+    if (!this.syncArmed) return null;
+    if (this.syncMode === 'bpm') {
+      const bpm = this.effectiveBpm?.toFixed(1) ?? '?';
+      return this.syncClamped
+        ? `SYNC: matching BPM (~${bpm}) — target outside ±pitch range (clamped)`
+        : `SYNC: matching partner BPM (~${bpm})`;
+    }
+    if (this.fileBpm == null) {
+      return 'SYNC: pitch-% only — set File BPM on THIS deck to match tempo by BPM';
+    }
+    return 'SYNC: pitch-% only — partner needs File BPM too';
+  }
+
   /** Match tempo to `other` (BPM when known; else pitch fader %). */
   applySyncTo(other: DeckStore): void {
     if (this.state === 'empty' || other.state === 'empty') return;
@@ -355,11 +378,17 @@ export class DeckStore {
 
     if (other.effectiveBpm != null && this.fileBpm != null && this.fileBpm !== 0) {
       const targetRate = other.effectiveBpm / this.fileBpm;
+      const minRate = 1 - range;
+      const maxRate = 1 + range;
+      this.syncClamped = targetRate < minRate - 1e-9 || targetRate > maxRate + 1e-9;
       this.pitchPos = pitchPosFromRate(targetRate, dead, range);
+      this.syncMode = 'bpm';
     } else {
       // No analysis BPM yet — match pitch fader (same % rate). Set file BPM
-      // in the harness for real beatmatch across different tracks.
+      // on BOTH decks for real beatmatch across different tracks.
       this.pitchPos = other.pitchPos;
+      this.syncMode = 'pitchPercent';
+      this.syncClamped = false;
     }
     audioEngine.transport(this.id)?.setRate(this.effectiveRate);
   }
@@ -370,6 +399,7 @@ export class DeckStore {
       return;
     }
     this.fileBpm = bpm;
+    // Next tick() will re-apply Sync if armed — no partner ref here.
   }
 
   /** @deprecated use toggleSync — kept for tests that apply a one-shot match */

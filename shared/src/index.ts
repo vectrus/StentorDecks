@@ -7,6 +7,7 @@ export * from './controlIds.js';
 export * from './midiDecode.js';
 export {
   RMX2_FACTORY_MAP,
+  RMX2_PAD_NOTES_STATUS,
   RMX2_PAD_NOTES_UNVERIFIED,
   factoryCc14Pairs,
   factoryRelativeCcs,

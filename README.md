@@ -103,7 +103,7 @@ E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW]
 |---|---|---|---|
 | **E1** Skeleton | DONE | 2026-07-18 | Shell, typed IPC, settings, SQLite, workspaces |
 | **E2** Audio engine | DONE | 2026-07-18 | Dual-deck engine, Plan A/B, cue/PFL, USB rebuild. **`[HW]` PASS** (owner Julius) — Plan A, Plan B, unplug/replug. Checklist: [`docs/E2-HW-CHECKLIST.md`](docs/E2-HW-CHECKLIST.md) |
-| **E3** MIDI layer | **DOING** | 2026-07-18 → | **Done:** decode, factory map, dispatch, soft takeover (raw-space + gain inverse + UI re-arm), monitor, LEDs, FF/RW/bend, browse fixture, map persist, learn mode, harness pickup table. **Left:** pad note `[HW]`, full E3 `[HW]` on RMX2 |
+| **E3** MIDI layer | **DOING** | 2026-07-18 → | Software ready: decode/map/dispatch/learn/persist/takeover/LEDs + FX pads (provisional `01`/`02`/`11`/`12`) + MIDI Load→file pick. **`[HW]` READY** — owner checklist [`docs/E3-HW-CHECKLIST.md`](docs/E3-HW-CHECKLIST.md) |
 | **E4** Library | TODO | — | Scanner, Prep corrections; after E3 per path (audio gate already clear) |
 | **E5** Analysis | TODO | — | BPM/key/waveform/loudness (stub today; File BPM is manual in harness) |
 | **E6** Decks/mixer UI | TODO | — | Performance UI from mockups; beat ticks, EOT, `[HW]` mix |
@@ -120,11 +120,12 @@ E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW]
 | E3 scaffold | MIDI decode/map/dispatch/monitor/LEDs |
 | E3 persist + learn | SQLite `midi_map`, export/import/reset, learn SM + harness UI |
 | E3 takeover polish | Raw-space pickup refresh, gain↔trim inverse, UI re-arm, harness pickup table |
+| E3 pads + load | Provisional FX pad notes + dispatch/LEDs; MIDI Load → harness file picker until E4 |
 | Testing | Vitest unit/component + Playwright e2e (`docs/TESTING.md`) |
 
 ### In progress right now
 
-- **E3 MIDI** — owner `[HW]`: pad FX note capture via MIDI monitor → commit factory map; full OOTB control sweep + LED check on RMX2.
+- **E3 `[HW]`** — owner runs [`docs/E3-HW-CHECKLIST.md`](docs/E3-HW-CHECKLIST.md) on the RMX2 (pads, takeover, OOTB sweep, LEDs).
 
 ### Next up (after E3)
 

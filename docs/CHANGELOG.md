@@ -5,6 +5,14 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — E3 FX pads + Load pending + HW checklist
+
+- ControlIds `filterPad` / `flangerPad`; factory provisional notes from Hercules PDF (`01`/`02` / `11`/`12`); dispatch + LEDs.
+- MIDI Load → `BrowseStore.pendingLoad` + harness file picker (until E4 paths).
+- Owner checklist [`E3-HW-CHECKLIST.md`](./E3-HW-CHECKLIST.md) — READY FOR HW VERIFICATION (do not self-pass). R8.2, docs/04, E3 `[HW]`.
+
+---
+
 ## 2026-07-18 — E3 soft takeover raw-space + harness pickup
 
 Takeover compares hardware vs software in raw 0..1 (docs/03): refresh software target while armed (SYNC follow), gain uses `gainKnobFromTrimDb` inverse, UI/load re-arms (MIDI writes skipped). Dev harness shows Soft/Hard/Armed for pitch, gain, faders, master, headMix. R2.7, E3 `[HW]` soft-takeover AC (software ready; owner verifies on RMX2).

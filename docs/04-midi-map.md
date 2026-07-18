@@ -21,7 +21,7 @@ Factory defaults below are taken from the Mixxx project's RMX2 mapping (communit
 | Kill mid | 29 | 3A | toggle EQ mid kill |
 | Kill low | 2A | 3B | toggle EQ low kill |
 | Jog press | 2F | 40 | (reserved; no-op v1) |
-| Pads 1–4 (fx mode) | verify | verify | pad1 = filter toggle, pad2 = flanger toggle |
+| Pads 1–4 (fx mode) | `01` / `02`* | `11` / `12`* | pad1 = `filterPad` (filter toggle), pad2 = `flangerPad` (flanger toggle). *Provisional from Hercules MIDI Commands PDF — confirm in FX mode on owner RMX2 (`docs/E3-HW-CHECKLIST.md`) |
 
 Browse cluster (shared): up `45` prev row, down `46` next row, left `44` parent folder, right `43` enter folder. Mic button `48`: reserved, no-op v1.
 

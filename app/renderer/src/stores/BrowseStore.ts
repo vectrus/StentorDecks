@@ -30,10 +30,20 @@ const FOLDER_CHILDREN: Record<string, BrowseEntry[]> = {
   'f-chill': [{ id: 't-chi-1', name: 'Afterglow.mp3', kind: 'track' }],
 };
 
+export type PendingLoad = {
+  deckId: 'A' | 'B';
+  entry: BrowseEntry;
+};
+
 export class BrowseStore {
   pathLabels: string[] = ['Library'];
   private stack: BrowseEntry[][] = [ROOT];
   cursor = 0;
+  /**
+   * MIDI Load pressed before E4 disk paths exist — harness prompts for a file.
+   * Cleared when the operator picks a file or dismisses.
+   */
+  pendingLoad: PendingLoad | null = null;
 
   constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -76,5 +86,22 @@ export class BrowseStore {
     this.stack.pop();
     this.pathLabels.pop();
     this.cursor = 0;
+  }
+
+  /**
+   * Load button (R4.2 / R5.3). Until E4 resolves paths from disk, stash a
+   * pending request so the harness can open a file picker for that deck.
+   */
+  requestLoad(deckId: 'A' | 'B'): void {
+    const sel = this.selected;
+    if (!sel || sel.kind !== 'track') {
+      this.pendingLoad = null;
+      return;
+    }
+    this.pendingLoad = { deckId, entry: sel };
+  }
+
+  clearPendingLoad(): void {
+    this.pendingLoad = null;
   }
 }

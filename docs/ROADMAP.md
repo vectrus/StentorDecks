@@ -40,7 +40,7 @@ E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW]
 |---|---|---|---|
 | E1 | DONE | — | Shell + IPC + settings + DB (2026-07-18) |
 | E2 | DONE | E1; **RMX2** | `[HW]` Plan A/B + unplug/replug **PASS** — owner Julius 2026-07-18. Checklist: [`E2-HW-CHECKLIST.md`](./E2-HW-CHECKLIST.md) |
-| E3 | DOING | E2 actions | Decode/dispatch/monitor/LEDs + map persist + learn + **soft-takeover raw/inverse + harness pickup** 2026-07-18. Remaining: pad `[HW]`, full E3 `[HW]` on RMX2 |
+| E3 | DOING | E2 actions | Software close 2026-07-18 (pads provisional + load pending + takeover + learn + persist). **READY FOR HW VERIFICATION** — [`E3-HW-CHECKLIST.md`](./E3-HW-CHECKLIST.md) |
 | E4 | TODO | E1; after E3 per README | Prep corrections; R5.6/R5.7 |
 | E5 | TODO | E1 + schema | loudness stage |
 | E6 | TODO | E2–E5; mockups | beat ticks, cue marker, EOT; filter knob (S10) |

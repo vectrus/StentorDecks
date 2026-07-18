@@ -43,11 +43,39 @@ export const DevHarness = observer(function DevHarness() {
             </li>
           ))}
         </ul>
+        {browseStore.pendingLoad && (
+          <div className="row" style={{ marginTop: 8 }}>
+            <span className="mono">
+              MIDI Load → Deck {browseStore.pendingLoad.deckId}:{' '}
+              {browseStore.pendingLoad.entry.name}
+            </span>
+            <label className="row">
+              Pick audio file
+              <input
+                type="file"
+                accept="audio/*,.mp3,.flac,.wav"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  const pending = browseStore.pendingLoad;
+                  if (!f || !pending) return;
+                  const deck = pending.deckId === 'A' ? deckA : deckB;
+                  browseStore.clearPendingLoad();
+                  void deck.load(f).catch((err: unknown) => {
+                    alert(formatUserError(err, `Couldn’t load on Deck ${pending.deckId}`));
+                  });
+                }}
+              />
+            </label>
+            <button type="button" onClick={() => browseStore.clearPendingLoad()}>
+              Dismiss
+            </button>
+          </div>
+        )}
       </section>
       <p className="hint">
         Manual soak (not CI): 30 min two-deck + FX toggles; renderer working set &lt; ~400 MB;
-        heap snapshot after rebuilds should not accumulate nodes. HW gate:{' '}
-        <code>docs/E2-HW-CHECKLIST.md</code>
+        heap snapshot after rebuilds should not accumulate nodes. E2 HW done · E3 HW:{' '}
+        <code>docs/E3-HW-CHECKLIST.md</code>
       </p>
 
       <div className="harness-grid">
@@ -96,6 +124,11 @@ export const DevHarness = observer(function DevHarness() {
           />
           Auto-gain
         </label>
+        <p className="hint">
+          Sync tip: File BPM is a label (like writing “128” on a vinyl sleeve). Pitch changes real
+          speed. Sync makes the other deck’s <em>effective</em> BPM match — only within ±8/16%, so a
+          128 track cannot sync down to “20”.
+        </p>
       </section>
 
       <section className="sec">
@@ -335,10 +368,12 @@ const DeckPanel = observer(function DeckPanel(props: {
         {deck.loading ? ' (loading…)' : ''}
       </div>
       <div className="mono">
-        BPM {deck.effectiveBpm?.toFixed(1) ?? '—'} · {fmt(deck.position)} / {fmt(deck.duration)}
+        BPM {deck.effectiveBpm?.toFixed(1) ?? '—'}
+        {deck.fileBpm != null ? ` (= file ${deck.fileBpm} × rate)` : ' (set File BPM)'} ·{' '}
+        {fmt(deck.position)} / {fmt(deck.duration)}
       </div>
       <label>
-        File BPM
+        File BPM (tag only — not playback speed)
         <input
           type="number"
           min={60}
@@ -350,7 +385,7 @@ const DeckPanel = observer(function DeckPanel(props: {
             const v = e.target.value;
             deck.setFileBpm(v === '' ? null : Number(v));
           }}
-          title="Needed for Sync to beatmatch different tracks (E5 will fill this)"
+          title="Track’s tagged BPM for Sync math. Does NOT change how fast audio plays — use Pitch. E5 will fill this."
         />
       </label>
       <div className="row">
@@ -381,7 +416,9 @@ const DeckPanel = observer(function DeckPanel(props: {
               ? 'Load the other deck first'
               : deck.syncArmed
                 ? 'SYNC on — press to turn off'
-                : 'SYNC off — press to match tempo and latch on'
+                : other.fileBpm == null || deck.fileBpm == null
+                  ? 'SYNC needs File BPM on BOTH decks to match tempo (else only copies pitch %)'
+                  : 'SYNC off — press to match tempo and latch on'
           }
         >
           SYNC{deck.syncArmed ? ' ON' : ''}
@@ -390,6 +427,11 @@ const DeckPanel = observer(function DeckPanel(props: {
           PFL
         </button>
       </div>
+      {deck.syncStatusLine ? (
+        <p className="hint mono" style={{ color: deck.syncMode === 'bpm' ? undefined : 'var(--warn, #e6a23c)' }}>
+          {deck.syncStatusLine}
+        </p>
+      ) : null}
       <label>
         Pitch
         <input

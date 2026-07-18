@@ -23,6 +23,9 @@ export const RMX2_FACTORY_MAP: MidiMapping = {
   'deckA.eqHigh': { kind: 'cc7', ch: 0, cc: 0x3c },
   'deckA.eqMid': { kind: 'cc7', ch: 0, cc: 0x3e },
   'deckA.eqLow': { kind: 'cc7', ch: 0, cc: 0x40 },
+  // FX pads — Hercules RMX2 MIDI Commands PDF (FX mode). Confirm on owner unit [HW].
+  'deckA.filterPad': { kind: 'button', ch: 0, note: 0x01 },
+  'deckA.flangerPad': { kind: 'button', ch: 0, note: 0x02 },
 
   'deckB.play': { kind: 'button', ch: 0, note: 0x32 },
   'deckB.cue': { kind: 'button', ch: 0, note: 0x33 },
@@ -42,6 +45,8 @@ export const RMX2_FACTORY_MAP: MidiMapping = {
   'deckB.eqHigh': { kind: 'cc7', ch: 0, cc: 0x4c },
   'deckB.eqMid': { kind: 'cc7', ch: 0, cc: 0x4e },
   'deckB.eqLow': { kind: 'cc7', ch: 0, cc: 0x50 },
+  'deckB.filterPad': { kind: 'button', ch: 0, note: 0x11 },
+  'deckB.flangerPad': { kind: 'button', ch: 0, note: 0x12 },
 
   'mixer.faderA': { kind: 'cc14', ch: 0, msb: 0x3a, lsb: 0x3b },
   'mixer.faderB': { kind: 'cc14', ch: 0, msb: 0x4a, lsb: 0x4b },
@@ -55,10 +60,20 @@ export const RMX2_FACTORY_MAP: MidiMapping = {
   'browse.right': { kind: 'button', ch: 0, note: 0x43 },
 };
 
-/** Pad filter/flanger notes: verify on owner RMX2 via MIDI monitor before committing. */
-export const RMX2_PAD_NOTES_UNVERIFIED = {
-  note: 'FX pad note numbers vary by pad mode — READY FOR HW VERIFICATION',
+/**
+ * Provisional FX pad notes from Hercules RMX2 MIDI Commands PDF (FX mode):
+ * A pad1=0x01 filter, pad2=0x02 flanger; B pad1=0x11, pad2=0x12.
+ * Owner must confirm in FX pad mode via MIDI monitor — see docs/E3-HW-CHECKLIST.md.
+ */
+export const RMX2_PAD_NOTES_STATUS = {
+  source: 'Hercules RMX2_MIDI_Commands.pdf',
+  status: 'READY FOR HW VERIFICATION',
+  deckA: { filterPad: 0x01, flangerPad: 0x02 },
+  deckB: { filterPad: 0x11, flangerPad: 0x12 },
 } as const;
+
+/** @deprecated use RMX2_PAD_NOTES_STATUS */
+export const RMX2_PAD_NOTES_UNVERIFIED = RMX2_PAD_NOTES_STATUS;
 
 export function factoryCc14Pairs(): Array<{ msb: number; lsb: number }> {
   const pairs: Array<{ msb: number; lsb: number }> = [];

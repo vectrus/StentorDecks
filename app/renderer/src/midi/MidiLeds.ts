@@ -36,7 +36,11 @@ export class MidiLeds {
     this.setLed('deckB.killHigh', this.deckB.kills.high);
     this.setLed('deckB.killMid', this.deckB.kills.mid);
     this.setLed('deckB.killLow', this.deckB.kills.low);
-    // FX pad notes: READY FOR HW VERIFICATION before wiring filter/flanger LEDs
+    // FX pads — provisional factory notes; confirm on RMX2 (E3-HW-CHECKLIST)
+    this.setLed('deckA.filterPad', this.deckA.filterOn);
+    this.setLed('deckA.flangerPad', this.deckA.flangerOn);
+    this.setLed('deckB.filterPad', this.deckB.filterOn);
+    this.setLed('deckB.flangerPad', this.deckB.flangerOn);
   }
 
   private setLed(id: ControlId, on: boolean): void {

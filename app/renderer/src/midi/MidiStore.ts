@@ -137,8 +137,10 @@ export class MidiStore {
   }
 
   async persistMapping(mapping: MidiMapping): Promise<void> {
-    await invoke('midi:mapping:set', mapping);
-    this.applyMapping(mapping);
+    // Plain JSON for IPC — MobX proxies throw "object could not be cloned".
+    const plain = JSON.parse(JSON.stringify(mapping)) as MidiMapping;
+    await invoke('midi:mapping:set', plain);
+    this.applyMapping(plain);
   }
 
   async resetMapping(): Promise<void> {
@@ -373,7 +375,24 @@ export class MidiStore {
       case 'browse.left':
         this.browse.parent();
         break;
-      // load + FX pads: E4 library / pad [HW] verification
+      case 'deckA.load':
+        this.browse.requestLoad('A');
+        break;
+      case 'deckB.load':
+        this.browse.requestLoad('B');
+        break;
+      case 'deckA.filterPad':
+        this.deckA.toggleFilter();
+        break;
+      case 'deckA.flangerPad':
+        this.deckA.toggleFlanger();
+        break;
+      case 'deckB.filterPad':
+        this.deckB.toggleFilter();
+        break;
+      case 'deckB.flangerPad':
+        this.deckB.toggleFlanger();
+        break;
       default:
         break;
     }

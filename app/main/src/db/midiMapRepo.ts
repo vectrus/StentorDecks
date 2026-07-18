@@ -34,7 +34,13 @@ export function loadMidiMapping(db: DbHandle): MidiMapping {
       );
     }
   }
-  return parseMidiMapping(raw);
+  // Fill any new factory ControlIds (e.g. FX pads) without wiping learned bindings.
+  const stored = parseMidiMapping(raw);
+  const merged = { ...factoryMidiMapping(), ...stored };
+  if (Object.keys(merged).length > Object.keys(stored).length) {
+    saveMidiMapping(db, merged);
+  }
+  return merged;
 }
 
 export function saveMidiMapping(db: DbHandle, mapping: MidiMapping): void {

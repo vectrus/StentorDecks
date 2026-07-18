@@ -26,10 +26,11 @@ describe('midiLearn (E3)', () => {
   it('binds a button from note-on and confirms without conflict on free note', () => {
     let s = learnEnable(createLearnState());
     s = learnSelectControl(s, 'browse.up');
-    s = learnFeedRaw(s, noteOn(0, 0x01, 127, 0), RMX2_FACTORY_MAP);
+    // 0x50 is unused by factory (pads now own 0x01/0x02)
+    s = learnFeedRaw(s, noteOn(0, 0x50, 127, 0), RMX2_FACTORY_MAP);
     expect(s.phase.phase).toBe('confirm');
     if (s.phase.phase !== 'confirm') return;
-    expect(s.phase.binding).toEqual({ kind: 'button', ch: 0, note: 0x01 });
+    expect(s.phase.binding).toEqual({ kind: 'button', ch: 0, note: 0x50 });
     expect(s.phase.conflict).toBeNull();
     const { commit } = learnConfirm(s);
     expect(commit?.controlId).toBe('browse.up');
