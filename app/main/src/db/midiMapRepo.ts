@@ -6,6 +6,7 @@
 import {
   assertNonEmptyMapping,
   factoryMidiMapping,
+  migrateFxEncoderBindings,
   parseMidiMapping,
   parseMidiMappingJson,
   serializeMidiMapping,
@@ -35,9 +36,10 @@ export function loadMidiMapping(db: DbHandle): MidiMapping {
     }
   }
   // Fill any new factory ControlIds (e.g. FX pads) without wiping learned bindings.
+  // Migrate FX Mode encoders cc7→ccRel so relative decode matches SQLite (R3.1 / docs/04).
   const stored = parseMidiMapping(raw);
-  const merged = { ...factoryMidiMapping(), ...stored };
-  if (Object.keys(merged).length > Object.keys(stored).length) {
+  const merged = migrateFxEncoderBindings({ ...factoryMidiMapping(), ...stored });
+  if (JSON.stringify(merged) !== JSON.stringify(stored)) {
     saveMidiMapping(db, merged);
   }
   return merged;

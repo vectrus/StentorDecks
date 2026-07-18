@@ -246,8 +246,19 @@ export type TransportSnapshot = {
   rate: number;
 };
 
+/** Playing seek overlap — docs/03 ≥15 ms; avoids cold BufferSource cuts (jog zipper). */
+export const TRANSPORT_SEEK_CROSSFADE_SEC = 0.015;
+
+type FadingSource = {
+  src: AudioBufferSourceNode;
+  gain: GainNode;
+};
+
 export class DeckTransport {
   private source: AudioBufferSourceNode | null = null;
+  /** Per-source gain — used for overlap crossfade seeks. */
+  private sourceGain: GainNode | null = null;
+  private fadingOut: FadingSource[] = [];
   private buffer: AudioBuffer | null = null;
   private snap: TransportSnapshot = {
     playing: false,
@@ -309,11 +320,15 @@ export class DeckTransport {
   seek(offset: number): void {
     const dur = this.buffer?.duration ?? 0;
     const next = Math.max(0, Math.min(dur, offset));
-    const wasPlaying = this.snap.playing;
+    const wasPlaying = this.snap.playing && this.source != null;
     const rate = this.snap.rate;
-    this.stopImmediate();
-    this.snap.offset = next;
-    if (wasPlaying) this.startSource(next, rate);
+    if (!wasPlaying) {
+      this.stopImmediate();
+      this.snap.offset = next;
+      this.rateAccumOffset = next;
+      return;
+    }
+    this.seekPlayingCrossfade(next, rate);
   }
 
   setRate(rate: number): void {
@@ -350,7 +365,7 @@ export class DeckTransport {
     src.playbackRate.cancelScheduledValues(t);
     src.playbackRate.setValueAtTime(src.playbackRate.value, t);
     src.playbackRate.linearRampToValueAtTime(0.001, t + ms / 1000);
-    window.setTimeout(() => {
+    globalThis.setTimeout(() => {
       const pos = this.position();
       this.stopImmediate();
       this.snap.offset = pos;
@@ -359,27 +374,70 @@ export class DeckTransport {
   }
 
   stopImmediate(): void {
-    if (this.source) {
-      try {
-        this.source.onended = null;
-        this.source.stop();
-        this.source.disconnect();
-      } catch {
-        /* ignore */
-      }
-      this.source = null;
+    this.killSourcePair(this.source, this.sourceGain);
+    this.source = null;
+    this.sourceGain = null;
+    for (const f of this.fadingOut) {
+      this.killSourcePair(f.src, f.gain);
     }
+    this.fadingOut = [];
     this.snap.playing = false;
   }
 
+  /** Cold start / play — replace any active source. */
   private startSource(offset: number, rate: number): void {
-    if (!this.buffer) return;
     this.stopImmediate();
+    this.armSource(offset, rate, 0);
+  }
+
+  /**
+   * Playing seek: overlap old→new BufferSources (~15 ms) so jog sticky phase
+   * does not zipper (R2.2 / docs/03).
+   */
+  private seekPlayingCrossfade(next: number, rate: number): void {
+    const t = this.ctx.currentTime;
+    const fade = TRANSPORT_SEEK_CROSSFADE_SEC;
+    const oldSrc = this.source;
+    const oldGain = this.sourceGain;
+    if (!oldSrc || !oldGain) {
+      this.startSource(next, rate);
+      return;
+    }
+
+    oldSrc.onended = null;
+    oldGain.gain.cancelScheduledValues(t);
+    oldGain.gain.setValueAtTime(oldGain.gain.value, t);
+    oldGain.gain.linearRampToValueAtTime(0, t + fade);
+
+    const fading: FadingSource = { src: oldSrc, gain: oldGain };
+    this.fadingOut.push(fading);
+    this.source = null;
+    this.sourceGain = null;
+
+    const fadeMs = Math.ceil(fade * 1000) + 12;
+    globalThis.setTimeout(() => {
+      this.killSourcePair(fading.src, fading.gain);
+      this.fadingOut = this.fadingOut.filter((x) => x !== fading);
+    }, fadeMs);
+
+    this.armSource(next, rate, fade);
+  }
+
+  private armSource(offset: number, rate: number, fadeInSec: number): void {
+    if (!this.buffer) return;
     const src = this.ctx.createBufferSource();
+    const gain = this.ctx.createGain();
     src.buffer = this.buffer;
     src.playbackRate.value = rate;
-    src.connect(this.dest);
+    src.connect(gain);
+    gain.connect(this.dest);
     const t = this.ctx.currentTime;
+    if (fadeInSec > 0) {
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(1, t + fadeInSec);
+    } else {
+      gain.gain.setValueAtTime(1, t);
+    }
     src.start(t, offset);
     // Natural buffer end: latch offset at duration so DeckStore tick can run EOT
     // stop→cue (R2.11). Clearing playing without updating offset left a stale
@@ -387,6 +445,7 @@ export class DeckTransport {
     src.onended = () => {
       if (this.source !== src) return;
       this.source = null;
+      this.sourceGain = null;
       const dur = this.buffer?.duration ?? 0;
       this.snap.offset = dur;
       this.rateAccumOffset = dur;
@@ -394,6 +453,7 @@ export class DeckTransport {
       this.snap.playing = false;
     };
     this.source = src;
+    this.sourceGain = gain;
     this.snap.playing = true;
     this.snap.offset = offset;
     this.snap.startCtxTime = t;
@@ -401,5 +461,27 @@ export class DeckTransport {
     this.rateAccumOffset = offset;
     this.rateAccumCtxTime = t;
     this.rateAccumRate = rate;
+  }
+
+  private killSourcePair(
+    src: AudioBufferSourceNode | null,
+    gain: GainNode | null,
+  ): void {
+    if (src) {
+      try {
+        src.onended = null;
+        src.stop();
+        src.disconnect();
+      } catch {
+        /* ignore */
+      }
+    }
+    if (gain) {
+      try {
+        gain.disconnect();
+      } catch {
+        /* ignore */
+      }
+    }
   }
 }

@@ -4,15 +4,14 @@ import {
   createJogImpulse,
   defaultJogSettings,
   fineFloodGain,
-  fineSeekBlend,
   gateJogPlayingSeek,
   jogFeelFromSettings,
   jogSpinIntensity,
   scaleJogTick,
   updateJogActivity,
   JOG_FINE_IMPULSE_CAP_SEC,
+  JOG_FINE_SEEK_SEC,
   JOG_FINE_RATE,
-  JOG_PLATTER_DIAMETER_SCALE,
   JOG_SPIN_SEEK_SEC,
   JOG_SPIN_RATE,
 } from './jogFeel.js';
@@ -29,8 +28,8 @@ describe('jogSpinIntensity', () => {
   });
 
   it('opens the spin zone at high tick rate', () => {
-    expect(jogSpinIntensity(1, 240, defaultFeel)).toBeGreaterThan(0.4);
-    expect(jogSpinIntensity(1, 360, defaultFeel)).toBeGreaterThan(0.95);
+    expect(jogSpinIntensity(1, 220, defaultFeel)).toBeGreaterThan(0.4);
+    expect(jogSpinIntensity(1, 340, defaultFeel)).toBeGreaterThan(0.95);
   });
 
   it('ignores small packed |delta|; opens only on large packs', () => {
@@ -45,39 +44,25 @@ describe('jogSpinIntensity', () => {
   });
 });
 
-describe('fineSeekBlend (small heavy wheel)', () => {
-  it('kills sticky seek on a steady light turn (rate-primary)', () => {
-    expect(fineSeekBlend(80, 0)).toBeLessThan(0.02);
-  });
-
-  it('allows only a tiny fraction on a short burst', () => {
-    const burst = fineSeekBlend(8, 0);
-    expect(burst).toBeGreaterThan(0);
-    expect(burst).toBeLessThanOrEqual(0.25 * JOG_PLATTER_DIAMETER_SCALE + 1e-9);
-  });
-});
-
-describe('scaleJogTick', () => {
-  it('fine steady turn: near-zero seek, gentle rate for smooth crawl', () => {
-    const s = scaleJogTick(1, 80, defaultFeel);
-    expect(s.playingSeekSec).toBeLessThan(0.00001);
-    expect(s.playingRateAmount).toBeGreaterThan(0);
-    expect(s.playingRateAmount).toBeLessThan(JOG_FINE_RATE);
+describe('scaleJogTick (seek-primary fine)', () => {
+  it('fine tick is quiet sticky seek with ~0 rate (no tempo warble)', () => {
+    const s = scaleJogTick(1, 8, defaultFeel);
+    const flood = fineFloodGain(8, s.intensity);
+    expect(s.playingSeekSec).toBeCloseTo(JOG_FINE_SEEK_SEC * flood, 5);
+    expect(s.playingRateAmount).toBeCloseTo(JOG_FINE_RATE, 5);
+    expect(s.playingRateAmount).toBe(0);
     expect(s.intensity).toBeLessThan(0.2);
   });
 
-  it('short burst seek is far smaller than a vinyl-style push', () => {
-    const s = scaleJogTick(1, 8, defaultFeel);
-    expect(s.playingSeekSec).toBeLessThan(0.00002);
-    expect(s.playingRateAmount).toBeCloseTo(
-      JOG_FINE_RATE *
-        (JOG_PLATTER_DIAMETER_SCALE + (1 - JOG_PLATTER_DIAMETER_SCALE) * 0.55),
-      5,
-    );
+  it('compresses fine seek under RMX2 flood t/s', () => {
+    const idle = scaleJogTick(1, 8, defaultFeel).playingSeekSec;
+    const flood = scaleJogTick(1, 80, defaultFeel).playingSeekSec;
+    expect(flood).toBeLessThan(idle * 0.6);
+    expect(flood).toBeGreaterThan(0);
   });
 
   it('spin tick ≈ spinback seek / stronger rate', () => {
-    const s = scaleJogTick(1, 360, defaultFeel);
+    const s = scaleJogTick(1, 340, defaultFeel);
     expect(s.playingSeekSec).toBeCloseTo(JOG_SPIN_SEEK_SEC, 5);
     expect(s.playingRateAmount).toBeCloseTo(JOG_SPIN_RATE, 5);
     expect(s.intensity).toBeGreaterThan(0.95);
@@ -97,8 +82,8 @@ describe('scaleJogTick', () => {
     });
     const s = scaleJogTick(1, 8, feel);
     const flood = fineFloodGain(8, 0);
-    const blend = fineSeekBlend(8, 0);
-    expect(s.playingSeekSec).toBeCloseTo(0.01 * flood * blend, 5);
+    expect(s.playingSeekSec).toBeCloseTo(0.01 * flood, 5);
+    expect(s.playingRateAmount).toBeCloseTo(0.01, 5);
   });
 });
 
@@ -133,7 +118,6 @@ describe('updateJogActivity', () => {
     a = updateJogActivity(a, 1, 1020);
     a = updateJogActivity(a, 1, 1030);
     a = updateJogActivity(a, 1, 1040);
-    // Soft attack — a short burst must not instantly claim 100 t/s.
     expect(a.ticksPerSec).toBeGreaterThan(25);
     expect(a.ticksPerSec).toBeLessThan(90);
   });

@@ -327,7 +327,7 @@ const JogFeelSection = observer(function JogFeelSection() {
         Jog feel (live)
       </div>
       <div className="temp-meta" style={{ marginBottom: 8 }}>
-        Soft = small heavy wheel: steady turn crawls (rate); short push = tiny impulse.
+        Soft = quiet sticky phase (no fine rate warble). Short push stays tiny.
       </div>
 
       <div className="temp-jog-presets">
@@ -363,7 +363,7 @@ const JogFeelSection = observer(function JogFeelSection() {
       <div className="temp-jog-group">Fine (fingertip)</div>
       <JogSlider
         label="Fine seek"
-        hint="Burst impulse only — steady light turns use rate (keep very low)"
+        hint="Sticky phase per tick when gentle — Soft keeps this low (main fine feel)"
         value={jog.fineSeekMs}
         min={0.01}
         max={8}
@@ -374,7 +374,7 @@ const JogFeelSection = observer(function JogFeelSection() {
       />
       <JogSlider
         label="Fine rate bend"
-        hint="Smooth crawl while turning lightly (this is the main fine feel)"
+        hint="Keep at 0 for Soft — rate warble fights wheel-phase feel"
         value={jog.fineRatePercent}
         min={0}
         max={1}

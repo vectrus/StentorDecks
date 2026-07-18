@@ -5,9 +5,21 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
-## 2026-07-18 — Jog: small heavy wheel (rate crawl)
+## 2026-07-18 — FX amount: factory relative AMT + Shift WET
 
-RMX2 jog ≈ 9 cm vs SL-1200 ≈ 30 cm — short bursts felt like vinyl slip and steady light turns felt chunky (sticky seeks). Fine zone is now **rate-primary** when turning steadily; seek only a tiny impulse on short bursts (diameter-scaled + harder flood/impulse caps). Soft defaults migrate again. R2.2 / R2.3.
+RMX2 FX Mode encoder (`54`/`55`) and Shift+FX (`5C`/`5D`) are factory `ccRel` for filter AMT / flanger WET. Main SQLite load migrates mistaken `cc7` learns so relative decode sticks after restart. R3.1, docs/04.
+
+---
+
+## 2026-07-18 — Playing seek: overlap crossfade (jog zipper)
+
+Cold `stop` + new `AudioBufferSourceNode` on every sticky seek caused zipper clicks; Soft retunes could not fix that. Playing seeks now dual-source ~15 ms gain crossfade; jog flush no longer ducks deck input. R2.2, docs/03.
+
+---
+
+## 2026-07-18 — Jog Soft: revert rate-primary → quiet phase
+
+Rate-primary fine (seek killed on steady turns) felt worse — dead crawl + tempo warble. Soft is seek-primary again: quiet sticky phase, fine rate 0, flood + impulse cap kept; migrate the rate-crawl Soft bundle. R2.2 / R2.3.
 
 ---
 

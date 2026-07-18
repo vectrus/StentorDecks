@@ -20,6 +20,19 @@ function stubCtx(): AudioContext {
       };
       return src as unknown as AudioBufferSourceNode;
     },
+    createGain: () => {
+      const g = {
+        gain: {
+          value: 1,
+          cancelScheduledValues: vi.fn(),
+          setValueAtTime: vi.fn(),
+          linearRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+      };
+      return g as unknown as GainNode;
+    },
   };
   return Object.assign(ctx, {
     advance(sec: number) {

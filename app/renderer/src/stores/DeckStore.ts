@@ -113,8 +113,6 @@ export class DeckStore {
   private jogImpulse = createJogImpulse();
   /** Playing jog sticky seek coalesced to one transport.seek per rAF (R2.2 / clicks). */
   private jogSeekPendingSec = 0;
-  /** Last coalesced jog seek time — soft-start only after idle (avoid per-frame duck). */
-  private lastJogSeekFlushMs = 0;
   /** Temporary pitch bend while held (docs/04: ±0.5%). */
   bendFactor = 1;
   private getSettings: () => Settings;
@@ -429,9 +427,9 @@ export class DeckStore {
 
   seek(offset: number, opts?: { soft?: boolean }): void {
     const clamped = Math.max(0, Math.min(this.duration || 0, offset));
+    // Playing seek = transport overlap crossfade (docs/03); soft duck is optional legacy.
     audioEngine.transport(this.id)?.seek(clamped);
     this.position = clamped;
-    // Soft-edge after buffer recreate — jog coalesced seeks (docs/03 ≥15 ms).
     if (opts?.soft && this.state === 'playing') {
       audioEngine.graph(this.id)?.softStartInput(0.02);
     }
@@ -697,7 +695,7 @@ export class DeckStore {
     const scaled = scaleJogTick(v, this.jogActivity.ticksPerSec, feel);
 
     if (this.state === 'playing') {
-      // Accumulate sticky seek — flush once per rAF (impulse-capped in fine zone).
+      // Quiet sticky phase — coalesce seeks; fine rate is ~0 (no tempo warble).
       const gated = gateJogPlayingSeek(
         this.jogImpulse,
         scaled.playingSeekSec * scaled.sign,
@@ -707,13 +705,15 @@ export class DeckStore {
       );
       this.jogImpulse = gated.impulse;
       this.jogSeekPendingSec += gated.seekSec;
-      this.nudgeFactor = 1 + scaled.playingRateAmount * scaled.sign;
-      audioEngine.transport(this.id)?.setRate(this.effectiveRate);
-      if (this.nudgeTimer != null) globalThis.clearTimeout(this.nudgeTimer);
-      this.nudgeTimer = globalThis.setTimeout(() => {
-        this.nudgeFactor = 1;
+      if (scaled.playingRateAmount > 0) {
+        this.nudgeFactor = 1 + scaled.playingRateAmount * scaled.sign;
         audioEngine.transport(this.id)?.setRate(this.effectiveRate);
-      }, scaled.rateDecayMs) as unknown as number;
+        if (this.nudgeTimer != null) globalThis.clearTimeout(this.nudgeTimer);
+        this.nudgeTimer = globalThis.setTimeout(() => {
+          this.nudgeFactor = 1;
+          audioEngine.transport(this.id)?.setRate(this.effectiveRate);
+        }, scaled.rateDecayMs) as unknown as number;
+      }
     } else {
       this.seek(this.position + scaled.pausedSeekSec * scaled.sign);
     }
@@ -727,19 +727,10 @@ export class DeckStore {
       return;
     }
     this.jogSeekPendingSec = 0;
-    const abs = Math.abs(delta);
-    // Drop sub-audible leftovers — fine zone is rate-primary; seeking these chunks.
-    if (abs < 0.00004) return;
+    if (Math.abs(delta) < 1e-7) return;
     const pos = audioEngine.transport(this.id)?.position() ?? this.position;
-    const now =
-      typeof performance !== 'undefined' && typeof performance.now === 'function'
-        ? performance.now()
-        : Date.now();
-    // Soft-edge after idle or larger spin seeks — not every rAF (would pump gain).
-    const idle = this.lastJogSeekFlushMs <= 0 || now - this.lastJogSeekFlushMs > 80;
-    const soft = abs >= 0.002 || (idle && abs >= 0.00008);
-    this.lastJogSeekFlushMs = now;
-    this.seek(pos + delta, { soft });
+    // Crossfade seek owns click-free (docs/03) — do not duck deck input.
+    this.seek(pos + delta);
   }
 
   /** Pitch bend ±0.5% while held (docs/04). */

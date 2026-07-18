@@ -28,6 +28,8 @@ export const RMX2_FACTORY_MAP: MidiMapping = {
   'deckA.flangerPad': { kind: 'button', ch: 0, note: 0x02 },
   // FX Mode encoder — relative incremental (01…3F CW / 40…7F CCW), not absolute.
   'deckA.filter': { kind: 'ccRel', ch: 0, cc: 0x54 },
+  // Shift+FX Mode encoder — flanger wet (docs/04).
+  'deckA.wet': { kind: 'ccRel', ch: 0, cc: 0x5c },
 
   'deckB.play': { kind: 'button', ch: 0, note: 0x32 },
   'deckB.cue': { kind: 'button', ch: 0, note: 0x33 },
@@ -50,6 +52,7 @@ export const RMX2_FACTORY_MAP: MidiMapping = {
   'deckB.filterPad': { kind: 'button', ch: 0, note: 0x11 },
   'deckB.flangerPad': { kind: 'button', ch: 0, note: 0x12 },
   'deckB.filter': { kind: 'ccRel', ch: 0, cc: 0x55 },
+  'deckB.wet': { kind: 'ccRel', ch: 0, cc: 0x5d },
 
   'mixer.faderA': { kind: 'cc14', ch: 0, msb: 0x3a, lsb: 0x3b },
   'mixer.faderB': { kind: 'cc14', ch: 0, msb: 0x4a, lsb: 0x4b },
@@ -97,23 +100,41 @@ export function factoryRelativeCcs(): Set<number> {
 }
 
 /**
- * Soft-migrate maps that learned FX Mode encoders as absolute cc7 (only ever
- * saw 1/127). Also fill missing filter bindings from factory.
+ * Soft-migrate maps that learned FX Mode / Shift+FX encoders as absolute cc7
+ * (only ever saw 1/127). Fill missing filter/wet factory bindings.
+ * Clears other controls that mistakenly own those relative CCs as cc7.
  */
 export function migrateFxEncoderBindings(mapping: MidiMapping): MidiMapping {
   const next: MidiMapping = { ...mapping };
-  const fix = (id: 'deckA.filter' | 'deckB.filter', cc: number) => {
+  const factoryRel: Array<{
+    id: 'deckA.filter' | 'deckB.filter' | 'deckA.wet' | 'deckB.wet';
+    cc: number;
+  }> = [
+    { id: 'deckA.filter', cc: 0x54 },
+    { id: 'deckB.filter', cc: 0x55 },
+    { id: 'deckA.wet', cc: 0x5c },
+    { id: 'deckB.wet', cc: 0x5d },
+  ];
+  const factoryCcs = new Set(factoryRel.map((x) => x.cc));
+
+  for (const [id, b] of Object.entries(next) as [keyof MidiMapping, MidiBinding | undefined][]) {
+    if (!b || b.kind !== 'cc7' || !factoryCcs.has(b.cc)) continue;
+    const owner = factoryRel.find((x) => x.cc === b.cc);
+    if (owner && id !== owner.id) {
+      delete next[id];
+    }
+  }
+
+  for (const { id, cc } of factoryRel) {
     const b = next[id];
     if (!b) {
       next[id] = { kind: 'ccRel', ch: 0, cc };
-      return;
+      continue;
     }
     if (b.kind === 'cc7' && b.cc === cc) {
       next[id] = { kind: 'ccRel', ch: b.ch, cc };
     }
-  };
-  fix('deckA.filter', 0x54);
-  fix('deckB.filter', 0x55);
+  }
   return next;
 }
 

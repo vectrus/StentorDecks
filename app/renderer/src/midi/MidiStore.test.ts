@@ -137,4 +137,12 @@ describe('MidiStore ingest (fixture traffic)', () => {
     expect(deckA.filterAmount).toBeCloseTo(0.5, 5);
     expect(store.monitor.some((e) => e.controlId === 'deckA.filter')).toBe(true);
   });
+
+  it('Shift+FX relative encoder steps flanger wet (CC 5C = 1 / 127)', () => {
+    const { store, deckA } = makeStore();
+    deckA.flangerWet = 0;
+    store.ingest([0xb0, 0x5c, 0x01], 0);
+    expect(deckA.flangerWet).toBeCloseTo(0.01, 5);
+    expect(store.monitor.some((e) => e.controlId === 'deckA.wet')).toBe(true);
+  });
 });
