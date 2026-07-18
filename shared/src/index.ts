@@ -12,3 +12,30 @@ export {
   factoryRelativeCcs,
   lookupControlId,
 } from './midiFactoryMap.js';
+export {
+  MidiMappingParseError,
+  assertNonEmptyMapping,
+  cc14PairsFromMapping,
+  factoryMidiMapping,
+  findBindingConflict,
+  parseMidiMapping,
+  parseMidiMappingJson,
+  relativeCcsFromMapping,
+  serializeMidiMapping,
+} from './midiMappingSchema.js';
+export {
+  applyLearnCommit,
+  createLearnState,
+  isButtonControl,
+  learnAcceptSteal,
+  learnCancel,
+  learnConfirm,
+  learnEnable,
+  learnFeedRaw,
+  learnRejectSteal,
+  learnSelectControl,
+  qualifyContinuous,
+  type LearnCommit,
+  type LearnPhase,
+  type LearnState,
+} from './midiLearn.js';

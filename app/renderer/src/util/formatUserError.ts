@@ -39,6 +39,14 @@ export function formatUserError(err: unknown, context: string): string {
     ].join('\n');
   }
 
+  if (lower.includes('midi map') || lower.includes('midimapping')) {
+    return [
+      `${context} — the MIDI map couldn’t be read or saved.`,
+      'Try: Reset to RMX2 defaults in the E2 harness, or import a map exported from this app.',
+      `Detail: ${raw}`,
+    ].join('\n');
+  }
+
   return [
     `${context}.`,
     'Try: retry the action. If it keeps failing, note what you clicked and the detail below.',

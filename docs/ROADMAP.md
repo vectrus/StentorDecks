@@ -26,10 +26,10 @@ Living tracker for spec work and build order. Update when decisions land (also l
 
 ## Build order (implementation)
 
-Gating rule unchanged: **E2 `[HW]` Plan A/B on real RMX2 must pass before E4+ merges.**
+Gating rule: **E2 `[HW]` Plan A/B on real RMX2** — **PASSED 2026-07-18** (owner). E4+ no longer blocked by audio routing. E3 MIDI `[HW]` remains owner-verified separately.
 
 ```
-E1 skeleton → E2 audio [HW gate] → E3 MIDI [HW]
+E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW]
                 → E4 library  ⎤
                 → E5 analysis ⎦ parallel
                 → E6 UI [HW mix]
@@ -39,8 +39,8 @@ E1 skeleton → E2 audio [HW gate] → E3 MIDI [HW]
 | Epic | Status | Blocking deps | Notes |
 |---|---|---|---|
 | E1 | DONE | — | Shell + IPC + settings + DB (2026-07-18) |
-| E2 | DOING | E1; **RMX2** | Software close 2026-07-18. **READY FOR HW VERIFICATION** — [`E2-HW-CHECKLIST.md`](./E2-HW-CHECKLIST.md). Earlier: load/play + Plan A + VU ✓ |
-| E3 | DOING | E2 actions | Scaffold: decoder + factory map + monitor + takeover + dispatch. Full `[HW]` after E2 HW gate |
+| E2 | DONE | E1; **RMX2** | `[HW]` Plan A/B + unplug/replug **PASS** — owner Julius 2026-07-18. Checklist: [`E2-HW-CHECKLIST.md`](./E2-HW-CHECKLIST.md) |
+| E3 | DOING | E2 actions | Decode/dispatch/monitor/LEDs + map persist + **learn mode** (pure SM + harness) 2026-07-18. Remaining: pad `[HW]`, inverse-curve takeover polish, full E3 `[HW]` on RMX2 |
 | E4 | TODO | E1; after E3 per README | Prep corrections; R5.6/R5.7 |
 | E5 | TODO | E1 + schema | loudness stage |
 | E6 | TODO | E2–E5; mockups | beat ticks, cue marker, EOT; filter knob (S10) |
@@ -83,4 +83,5 @@ v2 Spotify/AI defaults were agent-decided with rationale in `BACKLOG-v2-spotify-
 
 1. Change the Status cell; add a one-line Notes date.
 2. Add a matching entry at the top of `CHANGELOG.md` if requirements/docs changed.
-3. Never silently expand v1 — park in Backlog and ask.
+3. Mirror epic status + “in progress / next” into the **Roadmap & status** section of [`../README.md`](../README.md).
+4. Never silently expand v1 — park in Backlog and ask.

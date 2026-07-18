@@ -62,15 +62,32 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     expect(deck.trimDb).toBe(0);
   });
 
-  it('syncTo matches other deck rate without file BPM (E2 harness)', () => {
+  it('toggleSync matches pitch without file BPM and latches on/off', () => {
     const deck = new DeckStore('A', () => defaultSettings);
     const other = new DeckStore('B', () => defaultSettings);
     deck.state = 'stopped';
     other.state = 'stopped';
-    other.pitchPos = 1; // max +rate
-    deck.syncTo(other);
+    other.pitchPos = 1;
+    deck.toggleSync(other);
     expect(deck.syncArmed).toBe(true);
+    expect(deck.pitchPos).toBe(1);
     expect(deck.effectiveRate).toBeCloseTo(other.effectiveRate, 5);
+    deck.toggleSync(other);
+    expect(deck.syncArmed).toBe(false);
+  });
+
+  it('toggleSync matches effective BPM when both have file BPM', () => {
+    // ±8% range: 128 → max ~138.2; use 132 so target is reachable
+    const deck = new DeckStore('A', () => defaultSettings);
+    const other = new DeckStore('B', () => defaultSettings);
+    deck.state = 'stopped';
+    other.state = 'stopped';
+    deck.fileBpm = 128;
+    other.fileBpm = 132;
+    other.pitchPos = 0.5; // effective 132
+    deck.toggleSync(other);
+    expect(deck.syncArmed).toBe(true);
+    expect(deck.effectiveBpm).toBeCloseTo(132, 1);
   });
 
   it('manual trim sticks until next applyAutoGain/load reset cycle', () => {

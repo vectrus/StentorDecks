@@ -1,6 +1,6 @@
 # E2 — Audio engine & device routing
 
-Reads: docs/02 (routing), docs/03 (engine), docs/07. **This epic retires the project's biggest risk: dual-output routing on the real Hercules driver. Nothing downstream starts until the `[HW]` criteria pass.**
+Reads: docs/02 (routing), docs/03 (engine), docs/07. **Dual-output routing risk retired: `[HW]` criteria PASS (owner Julius, 2026-07-18) — see `E2-HW-CHECKLIST.md`.**
 
 ## Scope
 

@@ -1,22 +1,34 @@
-import { makeAutoObservable } from 'mobx';
+import { makeAutoObservable, runInAction } from 'mobx';
 import {
+  applyLearnCommit,
   armTakeover,
+  cc14PairsFromMapping,
+  createLearnState,
   createTakeover,
-  factoryCc14Pairs,
-  factoryRelativeCcs,
+  factoryMidiMapping,
+  learnAcceptSteal,
+  learnCancel,
+  learnConfirm,
+  learnEnable,
+  learnFeedRaw,
+  learnRejectSteal,
+  learnSelectControl,
   lookupControlId,
   norm14,
   norm7,
   processTakeoverInput,
-  RMX2_FACTORY_MAP,
+  relativeCcsFromMapping,
   type ControlId,
   type DecodedMidi,
+  type LearnState,
   type MidiMapping,
   type TakeoverState,
   createMidiDecodeState,
   decodeMidiMessage,
   normalizeMidiBytes,
 } from '@stentordeck/shared';
+import { invoke } from '../ipc/client';
+import type { BrowseStore } from '../stores/BrowseStore';
 import type { DeckStore } from '../stores/DeckStore';
 import type { MixerStore } from '../stores/MixerStore';
 
@@ -30,25 +42,112 @@ export type MidiMonitorEntry = {
 const MONITOR_CAP = 200;
 
 export class MidiStore {
-  mapping: MidiMapping = { ...RMX2_FACTORY_MAP };
+  mapping: MidiMapping = factoryMidiMapping();
   connected = false;
   portName: string | null = null;
   unknownCount = 0;
   monitor: MidiMonitorEntry[] = [];
   takeovers = new Map<ControlId, TakeoverState>();
+  mappingReady = false;
+  learn: LearnState = createLearnState();
 
   private decodeState = createMidiDecodeState();
-  private readonly cc14Pairs = factoryCc14Pairs();
-  private readonly relativeCcs = factoryRelativeCcs();
+  private cc14Pairs: Array<{ msb: number; lsb: number }> = [];
+  private relativeCcs: Set<number> = new Set();
 
   constructor(
     private readonly deckA: DeckStore,
     private readonly deckB: DeckStore,
     private readonly mixer: MixerStore,
+    private readonly browse: BrowseStore,
     private readonly getCrossfaderEnabled: () => boolean,
   ) {
     makeAutoObservable(this, {}, { autoBind: true });
+    this.refreshDecodeHints();
     this.rearmAllTakeovers();
+  }
+
+  get learnActive(): boolean {
+    return this.learn.phase.phase !== 'off';
+  }
+
+  startLearn(): void {
+    this.learn = learnEnable(this.learn);
+  }
+
+  cancelLearn(): void {
+    this.learn = learnCancel(this.learn);
+  }
+
+  selectLearnControl(id: ControlId): void {
+    this.learn = learnSelectControl(this.learn, id);
+  }
+
+  async confirmLearn(): Promise<void> {
+    const { state, commit } = learnConfirm(this.learn);
+    this.learn = state;
+    if (!commit) return;
+    const next = applyLearnCommit(this.mapping, commit);
+    await this.persistMapping(next);
+  }
+
+  async acceptLearnSteal(): Promise<void> {
+    const { state, commit } = learnAcceptSteal(this.learn);
+    this.learn = state;
+    if (!commit) return;
+    const next = applyLearnCommit(this.mapping, commit);
+    await this.persistMapping(next);
+  }
+
+  rejectLearnSteal(): void {
+    this.learn = learnRejectSteal(this.learn);
+  }
+
+  /** Load persisted map from main (SQLite). Falls back to factory on failure. */
+  async hydrateMapping(): Promise<void> {
+    try {
+      const mapping = await invoke('midi:mapping:get');
+      runInAction(() => {
+        this.applyMapping(mapping);
+        this.mappingReady = true;
+      });
+    } catch (err) {
+      console.error('[midi] mapping hydrate failed — using factory', err);
+      runInAction(() => {
+        this.applyMapping(factoryMidiMapping());
+        this.mappingReady = true;
+      });
+    }
+  }
+
+  applyMapping(mapping: MidiMapping): void {
+    this.mapping = { ...mapping };
+    this.refreshDecodeHints();
+    this.rearmAllTakeovers();
+  }
+
+  private refreshDecodeHints(): void {
+    this.cc14Pairs = cc14PairsFromMapping(this.mapping);
+    this.relativeCcs = relativeCcsFromMapping(this.mapping);
+  }
+
+  async persistMapping(mapping: MidiMapping): Promise<void> {
+    await invoke('midi:mapping:set', mapping);
+    this.applyMapping(mapping);
+  }
+
+  async resetMapping(): Promise<void> {
+    const mapping = await invoke('midi:mapping:reset');
+    this.applyMapping(mapping);
+  }
+
+  async exportMappingJson(): Promise<string> {
+    return invoke('midi:mapping:export');
+  }
+
+  async importMappingJson(json: string): Promise<void> {
+    const mapping = await invoke('midi:mapping:import', { json });
+    this.applyMapping(mapping);
   }
 
   setConnection(connected: boolean, portName: string | null): void {
@@ -91,17 +190,27 @@ export class MidiStore {
   ingest(data: Uint8Array | number[], timeMs: number): void {
     const raw = normalizeMidiBytes(data, timeMs);
     if (!raw) return;
+
+    const learning =
+      this.learn.phase.phase === 'listen' ||
+      this.learn.phase.phase === 'confirm' ||
+      this.learn.phase.phase === 'steal';
+
+    if (this.learn.phase.phase === 'listen') {
+      this.learn = learnFeedRaw(this.learn, raw, this.mapping);
+    }
+
     const { state, events } = decodeMidiMessage(this.decodeState, raw, {
       cc14Pairs: this.cc14Pairs,
       relativeCcs: this.relativeCcs,
     });
     this.decodeState = state;
     for (const ev of events) {
-      this.handleDecoded(ev, timeMs);
+      this.handleDecoded(ev, timeMs, learning);
     }
   }
 
-  private handleDecoded(ev: DecodedMidi, timeMs: number): void {
+  private handleDecoded(ev: DecodedMidi, timeMs: number, learning: boolean): void {
     if (ev.kind === 'unknown') {
       this.unknownCount += 1;
       this.pushMonitor(timeMs, `unknown ${ev.status.toString(16)}`, null, true);
@@ -116,8 +225,19 @@ export class MidiStore {
       msb: 'msb' in ev ? ev.msb : undefined,
     });
 
-    const annotation = annotate(ev, controlId);
+    const learnTag =
+      learning && this.learn.phase.phase === 'listen'
+        ? ' [learn]'
+        : learning
+          ? ' [learn paused]'
+          : '';
+    const annotation = annotate(ev, controlId) + learnTag;
     this.pushMonitor(timeMs, annotation, controlId, false);
+
+    if (learning) {
+      // Learn owns the stream — never dispatch deck/mixer actions (docs/04).
+      return;
+    }
 
     if (!controlId) {
       this.unknownCount += 1;
@@ -153,8 +273,7 @@ export class MidiStore {
 
   private dispatchButton(id: ControlId, down: boolean): void {
     if (!down) {
-      if (id === 'deckA.cue') this.deckA.cueHoldEnd();
-      if (id === 'deckB.cue') this.deckB.cueHoldEnd();
+      this.dispatchButtonUp(id);
       return;
     }
     switch (id) {
@@ -165,8 +284,7 @@ export class MidiStore {
         this.deckB.togglePlay();
         break;
       case 'deckA.cue':
-        // While playing: jump+stop only. Hold-preview only when already stopped
-        // (otherwise noteOn would stop then immediately start cue preview).
+        // While playing: jump+stop only. Hold-preview only when already stopped.
         if (this.deckA.state === 'playing') {
           this.deckA.cuePress();
         } else {
@@ -183,12 +301,12 @@ export class MidiStore {
         }
         break;
       case 'deckA.sync':
-        this.deckA.syncTo(this.deckB);
-        this.arm('deckA.pitch');
+        this.deckA.toggleSync(this.deckB);
+        if (this.deckA.syncArmed) this.arm('deckA.pitch');
         break;
       case 'deckB.sync':
-        this.deckB.syncTo(this.deckA);
-        this.arm('deckB.pitch');
+        this.deckB.toggleSync(this.deckA);
+        if (this.deckB.syncArmed) this.arm('deckB.pitch');
         break;
       case 'deckA.pfl':
         this.deckA.togglePfl();
@@ -214,7 +332,72 @@ export class MidiStore {
       case 'deckB.killLow':
         this.deckB.toggleKill('low');
         break;
-      // FX pad notes: assign after HW verification (docs/04) — filter/flanger toggles.
+      case 'deckA.ff':
+        this.deckA.startSeekHold(1);
+        break;
+      case 'deckA.rw':
+        this.deckA.startSeekHold(-1);
+        break;
+      case 'deckB.ff':
+        this.deckB.startSeekHold(1);
+        break;
+      case 'deckB.rw':
+        this.deckB.startSeekHold(-1);
+        break;
+      case 'deckA.pitchBendPlus':
+        this.deckA.setPitchBend(1);
+        break;
+      case 'deckA.pitchBendMinus':
+        this.deckA.setPitchBend(-1);
+        break;
+      case 'deckB.pitchBendPlus':
+        this.deckB.setPitchBend(1);
+        break;
+      case 'deckB.pitchBendMinus':
+        this.deckB.setPitchBend(-1);
+        break;
+      case 'browse.up':
+        this.browse.up();
+        break;
+      case 'browse.down':
+        this.browse.down();
+        break;
+      case 'browse.right':
+        this.browse.enter();
+        break;
+      case 'browse.left':
+        this.browse.parent();
+        break;
+      // load + FX pads: E4 library / pad [HW] verification
+      default:
+        break;
+    }
+  }
+
+  private dispatchButtonUp(id: ControlId): void {
+    switch (id) {
+      case 'deckA.cue':
+        this.deckA.cueHoldEnd();
+        break;
+      case 'deckB.cue':
+        this.deckB.cueHoldEnd();
+        break;
+      case 'deckA.ff':
+      case 'deckA.rw':
+        this.deckA.stopSeekHold();
+        break;
+      case 'deckB.ff':
+      case 'deckB.rw':
+        this.deckB.stopSeekHold();
+        break;
+      case 'deckA.pitchBendPlus':
+      case 'deckA.pitchBendMinus':
+        this.deckA.setPitchBend(0);
+        break;
+      case 'deckB.pitchBendPlus':
+      case 'deckB.pitchBendMinus':
+        this.deckB.setPitchBend(0);
+        break;
       default:
         break;
     }

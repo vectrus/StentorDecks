@@ -11,5 +11,6 @@ export async function decodeArrayBufferOffThread(
   ctx: BaseAudioContext,
   arrayBuffer: ArrayBuffer,
 ): Promise<AudioBuffer> {
+  // Always decode a copy — decodeAudioData may detach the buffer it receives.
   return ctx.decodeAudioData(arrayBuffer.slice(0));
 }

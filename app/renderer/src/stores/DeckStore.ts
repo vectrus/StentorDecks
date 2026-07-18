@@ -10,11 +10,6 @@ import {
   type Settings,
 } from '@stentordeck/shared';
 import { audioEngine } from '../audio/AudioEngine';
-import {
-  bufferFromSnapshot,
-  snapshotAudioBuffer,
-  type BufferSnapshot,
-} from '../audio/cloneAudioBuffer';
 import { decodeArrayBufferOffThread } from '../audio/decodeAudio';
 import type { DeckId } from '../audio/DeckGraph';
 
@@ -44,7 +39,10 @@ export class DeckStore {
   /** Logical pitch fader 0..1 */
   pitchPos = 0.5;
   nudgeFactor = 1;
+  /** Latching SYNC — lit while on; press again to release (docs/06). */
   syncArmed = false;
+  /** Partner deck id while sync is on (for tempo follow). */
+  syncPartner: DeckId | null = null;
   cueOffset = 0;
   cuePreviewing = false;
 
@@ -64,21 +62,29 @@ export class DeckStore {
   eotWarn: 0 | 30 | 15 | 10 = 0;
 
   private nudgeTimer: number | null = null;
+  private seekHoldTimer: number | null = null;
+  /** Temporary pitch bend while held (docs/04: ±0.5%). */
+  bendFactor = 1;
   private getSettings: () => Settings;
-  /** Full-track PCM for rebuilds — not observable (large). */
-  pcmSnapshot: BufferSnapshot | null = null;
+  /**
+   * Compressed file bytes for rebuilds — not observable.
+   * Re-decode into the live AudioContext after USB/teardown (never stash PCM:
+   * cloning from a dying context truncated tracks to ~25–28s).
+   */
+  fileBytes: ArrayBuffer | null = null;
 
   constructor(id: DeckId, getSettings: () => Settings) {
     this.id = id;
     this.getSettings = getSettings;
-    makeAutoObservable(this, { pcmSnapshot: false }, { autoBind: true });
+    makeAutoObservable(this, { fileBytes: false }, { autoBind: true });
   }
 
   get effectiveRate(): number {
     const s = this.getSettings();
     return (
       pitchRate(this.pitchPos, s.mixer.pitchFaders.centerDeadZone, s.mixer.pitchFaders.range) *
-      this.nudgeFactor
+      this.nudgeFactor *
+      this.bendFactor
     );
   }
 
@@ -94,37 +100,59 @@ export class DeckStore {
     }
     this.loading = true;
     try {
-      const ctx = audioEngine.masterCtx;
-      if (!ctx) throw new Error('Audio engine not ready');
-      await audioEngine.ensureRunning();
-      const ab = await file.arrayBuffer();
-      // Decode off main thread so long WAVs don't freeze the UI (E2).
-      const buffer = await decodeArrayBufferOffThread(ctx, ab);
-      const transport = audioEngine.transport(this.id);
-      if (!transport) throw new Error('No transport');
+      await audioEngine.waitUntilDecodeReady();
+      audioEngine.beginDecode();
+      try {
+        await audioEngine.ensureRunning();
+        const ab = await file.arrayBuffer();
+        // Independent copy — decodeAudioData may detach its argument.
+        const fileBytes = ab.slice(0);
+        const buffer = await this.decodeIntoLiveContext(fileBytes);
+        const transport = audioEngine.transport(this.id);
+        if (!transport) throw new Error('No transport');
 
-      // Stash PCM independent of AudioContext lifetime (USB rebuilds).
-      this.pcmSnapshot = snapshotAudioBuffer(buffer);
-      transport.setBuffer(buffer);
-      this.resetOnLoad(meta);
-      runInAction(() => {
-        this.title = meta?.title ?? file.name;
-        this.artist = meta?.artist ?? '';
-        this.fileBpm = meta?.fileBpm ?? null;
-        this.loudnessLufs = meta?.loudnessLufs ?? null;
-        this.duration = buffer.duration;
-        this.position = 0;
-        this.state = 'stopped';
-        this.applyAutoGain();
-        this.loading = false;
-      });
-      this.pushGraph();
+        this.fileBytes = fileBytes;
+        transport.setBuffer(buffer);
+        this.resetOnLoad(meta);
+        runInAction(() => {
+          this.title = meta?.title ?? file.name;
+          this.artist = meta?.artist ?? '';
+          this.fileBpm = meta?.fileBpm ?? null;
+          this.loudnessLufs = meta?.loudnessLufs ?? null;
+          this.duration = buffer.duration;
+          this.position = 0;
+          this.state = 'stopped';
+          this.applyAutoGain();
+          this.loading = false;
+        });
+        this.pushGraph();
+      } finally {
+        audioEngine.endDecode();
+      }
     } catch (err) {
       runInAction(() => {
         this.loading = false;
       });
       throw err;
     }
+  }
+
+  /**
+   * Decode file bytes into the current master context.
+   * If the engine rebuilds mid-await, retry on the new context (epoch guard).
+   */
+  private async decodeIntoLiveContext(fileBytes: ArrayBuffer): Promise<AudioBuffer> {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      await audioEngine.waitUntilDecodeReady();
+      const epoch = audioEngine.epoch;
+      const ctx = audioEngine.masterCtx;
+      if (!ctx) throw new Error('Audio engine not ready');
+      const buffer = await decodeArrayBufferOffThread(ctx, fileBytes);
+      if (audioEngine.epoch === epoch && audioEngine.masterCtx === ctx) {
+        return buffer;
+      }
+    }
+    throw new Error('Audio engine kept rebuilding while decoding — try loading again');
   }
 
   /** Unit-testable reset checklist (R3.3). */
@@ -135,7 +163,9 @@ export class DeckStore {
     this.flangerWet = 0;
     this.kills = { low: false, mid: false, high: false };
     this.nudgeFactor = 1;
-    this.syncArmed = false;
+    this.bendFactor = 1;
+    this.stopSeekHold();
+    this.clearSync();
     this.cueOffset = 0;
     this.cuePreviewing = false;
     this.pfl = false;
@@ -263,33 +293,64 @@ export class DeckStore {
 
   setPitchPos(pos: number): void {
     this.pitchPos = Math.min(1, Math.max(0, pos));
-    this.syncArmed = false;
+    // Moving pitch releases SYNC (docs/03).
+    this.clearSync();
     audioEngine.transport(this.id)?.setRate(this.effectiveRate);
   }
 
+  clearSync(): void {
+    this.syncArmed = false;
+    this.syncPartner = null;
+  }
+
   /**
-   * One-shot SYNC — match other deck tempo.
-   * With file BPM (E5): match effective BPM. Without: match playback rate
-   * so Sync works in the E2 harness before analysis lands.
+   * SYNC is a latching on/off control (docs/06 lit until released).
+   * On → match other deck tempo and stay armed (follow while on).
+   * Off → clear armed; leave pitch where it is.
    */
-  syncTo(other: DeckStore): void {
-    if (this.state === 'empty') return;
+  toggleSync(other: DeckStore): void {
+    if (this.syncArmed) {
+      this.clearSync();
+      return;
+    }
+    if (this.state === 'empty' || other.state === 'empty') return;
+    this.syncPartner = other.id;
+    this.syncArmed = true;
+    this.applySyncTo(other);
+  }
+
+  /** Match tempo to `other` (BPM when known; else pitch fader %). */
+  applySyncTo(other: DeckStore): void {
+    if (this.state === 'empty' || other.state === 'empty') return;
     const s = this.getSettings();
     const range = s.mixer.pitchFaders.range;
     const dead = s.mixer.pitchFaders.centerDeadZone;
 
-    let targetRate: number;
     if (other.effectiveBpm != null && this.fileBpm != null && this.fileBpm !== 0) {
-      targetRate = other.effectiveBpm / this.fileBpm;
-    } else if (other.state === 'empty') {
-      return;
+      const targetRate = other.effectiveBpm / this.fileBpm;
+      this.pitchPos = pitchPosFromRate(targetRate, dead, range);
     } else {
-      targetRate = other.effectiveRate;
+      // No analysis BPM yet — match pitch fader (same % rate). Set file BPM
+      // in the harness for real beatmatch across different tracks.
+      this.pitchPos = other.pitchPos;
     }
-
-    this.pitchPos = pitchPosFromRate(targetRate, dead, range);
-    this.syncArmed = true;
     audioEngine.transport(this.id)?.setRate(this.effectiveRate);
+  }
+
+  setFileBpm(bpm: number | null): void {
+    if (bpm == null || !Number.isFinite(bpm) || bpm <= 0) {
+      this.fileBpm = null;
+      return;
+    }
+    this.fileBpm = bpm;
+  }
+
+  /** @deprecated use toggleSync — kept for tests that apply a one-shot match */
+  syncTo(other: DeckStore): void {
+    if (this.state === 'empty' || other.state === 'empty') return;
+    this.syncPartner = other.id;
+    this.syncArmed = true;
+    this.applySyncTo(other);
   }
 
   nudge(velocity: number): void {
@@ -303,6 +364,30 @@ export class DeckStore {
       }, 250);
     } else {
       this.seek(this.position + 0.02 * Math.sign(velocity || 1));
+    }
+  }
+
+  /** Pitch bend ±0.5% while held (docs/04). */
+  setPitchBend(dir: -1 | 0 | 1): void {
+    this.bendFactor = dir === 0 ? 1 : 1 + 0.005 * dir;
+    audioEngine.transport(this.id)?.setRate(this.effectiveRate);
+  }
+
+  /** FF/RW hold — seek in 0.25 s steps (~5×). */
+  startSeekHold(dir: -1 | 1): void {
+    this.stopSeekHold();
+    const step = () => {
+      if (this.state === 'empty') return;
+      this.seek(this.position + dir * 0.25);
+    };
+    step();
+    this.seekHoldTimer = window.setInterval(step, 50);
+  }
+
+  stopSeekHold(): void {
+    if (this.seekHoldTimer != null) {
+      window.clearInterval(this.seekHoldTimer);
+      this.seekHoldTimer = null;
     }
   }
 
@@ -357,13 +442,18 @@ export class DeckStore {
     this.pflMonitor = false;
   }
 
-  tick(): void {
+  tick(other?: DeckStore): void {
     const t = audioEngine.transport(this.id);
     if (!t || this.state === 'empty') return;
     const pos = t.position();
     const dur = t.duration;
     this.position = pos;
     this.duration = dur;
+
+    // While SYNC is on, keep matching the partner's tempo (latching follow).
+    if (this.syncArmed && other && other.id === this.syncPartner && other.state !== 'empty') {
+      this.applySyncTo(other);
+    }
 
     if (this.state === 'playing' && dur > 0 && pos >= dur - 0.02) {
       // EOT: stop → cue (R2.11)
@@ -402,24 +492,40 @@ export class DeckStore {
     if (t) this.position = t.position();
   }
 
-  /** After graph rebuild — recreate buffer from load-time PCM stash. */
-  adoptEngineRestore(): void {
-    const ctx = audioEngine.masterCtx;
-    const t = audioEngine.transport(this.id);
-    if (!ctx || !t || !this.pcmSnapshot) {
-      if (this.state !== 'empty' && !this.pcmSnapshot) {
-        this.state = 'stopped';
-      }
+  /** After graph rebuild — re-decode stashed file bytes into the new context. */
+  async adoptEngineRestore(): Promise<void> {
+    const bytes = this.fileBytes;
+    if (!bytes) {
+      if (this.state !== 'empty') this.state = 'stopped';
       return;
     }
     const keepPos = this.position;
-    t.setBuffer(bufferFromSnapshot(ctx, this.pcmSnapshot));
-    t.seek(keepPos);
-    this.duration = t.duration;
-    this.position = t.position();
-    this.state = 'stopped';
-    this.cuePreviewing = false;
-    this.pushGraph();
+    try {
+      await audioEngine.waitUntilDecodeReady();
+      audioEngine.beginDecode();
+      try {
+        await audioEngine.ensureRunning();
+        const buffer = await this.decodeIntoLiveContext(bytes);
+        const t = audioEngine.transport(this.id);
+        if (!t) return;
+        t.setBuffer(buffer);
+        t.seek(keepPos);
+        runInAction(() => {
+          this.duration = t.duration;
+          this.position = t.position();
+          this.state = 'stopped';
+          this.cuePreviewing = false;
+        });
+        this.pushGraph();
+      } finally {
+        audioEngine.endDecode();
+      }
+    } catch (err) {
+      console.error(`[deck ${this.id}] restore after rebuild failed`, err);
+      runInAction(() => {
+        this.state = 'stopped';
+      });
+    }
   }
 
   pushGraph(): void {

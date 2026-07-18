@@ -23,7 +23,7 @@ export class AudioDeviceStore {
 
   constructor(
     private readonly settingsStore: SettingsStore,
-    private readonly afterRebuild?: () => void,
+    private readonly afterRebuild?: () => void | Promise<void>,
     private readonly onDeviceLost?: () => void,
   ) {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -125,7 +125,7 @@ export class AudioDeviceStore {
       this.planReason = audioEngine.planReason;
       this.engineReady = true;
     });
-    this.afterRebuild?.();
+    await this.afterRebuild?.();
   }
 
   async saveAndRebuild(patch: Partial<Settings['audio']>): Promise<void> {

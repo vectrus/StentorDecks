@@ -174,3 +174,22 @@
   font-size: 0.8rem;
   color: var(--text-dim);
 }
+
+.browse-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  max-height: 8rem;
+  overflow: auto;
+  font-size: 0.9rem;
+}
+
+.browse-list li {
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.3rem;
+}
+
+.browse-list li.sel {
+  background: var(--sel, #243041);
+  color: var(--text);
+}

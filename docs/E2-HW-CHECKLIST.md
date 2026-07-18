@@ -1,9 +1,11 @@
-# E2 — READY FOR HW VERIFICATION
+# E2 — HW VERIFICATION COMPLETE
 
 Owner-only checks on the physical Hercules DJConsole RMX2.  
-**Do not mark these passed in code/CI.** Confirm each item, then update `docs/ROADMAP.md` + `CHANGELOG.md`.
+**Do not mark these passed in code/CI** — owner confirms, then docs are updated.
 
-Software hooks exist (Plan A/B, cue bus, device-loss banner/rebuild). This list is the epic gate before E4+.
+Software hooks exist (Plan A/B, cue bus, device-loss banner/rebuild). This list was the epic gate before E4+.
+
+**Status: owner signed off 2026-07-18 — all sections PASS. E2 `[HW]` gate cleared.**
 
 ---
 
@@ -20,14 +22,14 @@ Software hooks exist (Plan A/B, cue bus, device-loss banner/rebuild). This list 
 
 | # | Action | Pass? |
 |---|---|---|
-| 1.1 | Audio setup shows **Plan A** (4-channel / single device). | ☐ |
-| 1.2 | Play Deck A → music on sound-system outs **1–2**. | ☐ |
-| 1.3 | Load different track on B; PFL **B** only → B audible in phones **3–4**, A still on 1–2. | ☐ |
-| 1.4 | PFL **A** + **B** → both in phones; channel faders still control master independently (PFL does not force fader to 0). | ☐ |
-| 1.5 | Sweep **HeadMix** cue → mix → cue: blend audibly changes phones content. | ☐ |
-| 1.6 | Cue hold (CDJ preview) on a stopped deck is audible in phones without a loud click on the PA. | ☐ |
+| 1.1 | Audio setup shows **Plan A** (4-channel / single device). | ☑ |
+| 1.2 | Play Deck A → music on sound-system outs **1–2**. | ☑ |
+| 1.3 | Load different track on B; PFL **B** only → B audible in phones **3–4**, A still on 1–2. | ☑ |
+| 1.4 | PFL **A** + **B** → both in phones; channel faders still control master independently (PFL does not force fader to 0). | ☑ |
+| 1.5 | Sweep **HeadMix** cue → mix → cue: blend audibly changes phones content. | ☑ |
+| 1.6 | Cue hold (CDJ preview) on a stopped deck is audible in phones without a loud click on the PA. | ☑ |
 
-Notes: _______________________________________________
+Notes: Owner confirmed 2026-07-18 (full checklist).
 
 ---
 
@@ -35,11 +37,11 @@ Notes: _______________________________________________
 
 | # | Action | Pass? |
 |---|---|---|
-| 2.1 | Settings / audio setup: force **Plan B**; UI shows active plan **B**. | ☐ |
-| 2.2 | Master device ≠ cue device; play + PFL behaviors match Plan A intent (master on master device, cue on cue device). | ☐ |
-| 2.3 | Return to **auto** (or Plan A) when done. | ☐ |
+| 2.1 | Settings / audio setup: force **Plan B**; UI shows active plan **B**. | ☑ |
+| 2.2 | Master device ≠ cue device; play + PFL behaviors match Plan A intent (master on master device, cue on cue device). | ☑ |
+| 2.3 | Return to **auto** (or Plan A) when done. | ☑ |
 
-Notes: _______________________________________________
+Notes: Owner confirmed 2026-07-18 (full checklist).
 
 ---
 
@@ -47,11 +49,11 @@ Notes: _______________________________________________
 
 | # | Action | Pass? |
 |---|---|---|
-| 3.1 | While playing, unplug RMX2 USB → banner appears; decks **pause**; playhead positions kept. | ☐ |
-| 3.2 | Replug USB → banner clears / “reconnected”; time/position kept; **Press Play** → audio within ~2 s without restarting the app. | ☐ |
-| 3.3 | No crash; audio resumes cleanly after rebuild. | ☐ |
+| 3.1 | While playing, unplug RMX2 USB → banner appears; decks **pause**; playhead positions kept. | ☑ |
+| 3.2 | Replug USB → banner clears / “reconnected”; time/position kept; **Press Play** → audio within ~2 s without restarting the app. | ☑ |
+| 3.3 | No crash; audio resumes cleanly after rebuild. | ☑ |
 
-Notes: _______________________________________________
+Notes: Owner confirmed 2026-07-18 (full checklist).
 
 ---
 
@@ -59,13 +61,13 @@ Notes: _______________________________________________
 
 | Field | Value |
 |---|---|
-| Date | |
+| Date | 2026-07-18 |
 | Owner | Julius |
-| Plan A | PASS / FAIL |
-| Plan B | PASS / FAIL |
-| Unplug/replug | PASS / FAIL |
+| Plan A | **PASS** |
+| Plan B | **PASS** |
+| Unplug/replug | **PASS** |
 
-When all three are **PASS**, set E2 `[HW]` to DONE in `ROADMAP.md` and allow E4+ merges per `.cursorrules`.
+E2 `[HW]` is **DONE** in `ROADMAP.md`. E4+ merges are unblocked for the audio-routing gate (E3 MIDI `[HW]` remains separate).
 
 ---
 

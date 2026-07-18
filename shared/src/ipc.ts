@@ -81,6 +81,7 @@ export type IpcInvokeMap = {
   'midi:mapping:set': { req: MidiMapping; res: { ok: true } };
   'midi:mapping:export': { req: void; res: string };
   'midi:mapping:import': { req: { json: string }; res: MidiMapping };
+  'midi:mapping:reset': { req: void; res: MidiMapping };
   'app:mode:get': { req: void; res: AppModeState };
   'app:mode:set': { req: Partial<AppModeState>; res: AppModeState };
   'app:fullscreen:toggle': { req: void; res: { fullscreen: boolean } };
@@ -109,6 +110,7 @@ export const IPC_INVOKE_CHANNELS = [
   'midi:mapping:set',
   'midi:mapping:export',
   'midi:mapping:import',
+  'midi:mapping:reset',
   'app:mode:get',
   'app:mode:set',
   'app:fullscreen:toggle',

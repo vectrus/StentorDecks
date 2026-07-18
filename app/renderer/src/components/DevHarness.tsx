@@ -1,22 +1,49 @@
 import { observer } from 'mobx-react-lite';
+import { useEffect } from 'react';
+import { CONTROL_IDS, type ControlId } from '@stentordeck/shared';
 import {
   audioDeviceStore,
+  browseStore,
   deckA,
   deckB,
+  midiStore,
   mixerStore,
   settingsStore,
 } from '../stores/root';
 import { formatUserError } from '../util/formatUserError';
 
 export const DevHarness = observer(function DevHarness() {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && midiStore.learnActive) {
+        e.preventDefault();
+        midiStore.cancelLearn();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
     <div className="harness">
       <header className="harness-hd">
-        <h1>E2 Dev harness</h1>
+        <h1>E2/E3 Dev harness</h1>
         <span className="mono">
           Plan {audioDeviceStore.activePlan} · {audioDeviceStore.planReason}
         </span>
       </header>
+      <section className="sec">
+        <div className="hd">Browse (MIDI cluster / fixture until E4)</div>
+        <div className="mono hint">{browseStore.breadcrumb}</div>
+        <ul className="browse-list">
+          {browseStore.entries.map((e, i) => (
+            <li key={e.id} className={i === browseStore.cursor ? 'sel' : ''}>
+              {e.kind === 'folder' ? '[dir] ' : ''}
+              {e.name}
+            </li>
+          ))}
+        </ul>
+      </section>
       <p className="hint">
         Manual soak (not CI): 30 min two-deck + FX toggles; renderer working set &lt; ~400 MB;
         heap snapshot after rebuilds should not accumulate nodes. HW gate:{' '}
@@ -70,6 +97,165 @@ export const DevHarness = observer(function DevHarness() {
           Auto-gain
         </label>
       </section>
+
+      <section className="sec">
+        <div className="hd">MIDI map (E3 persist)</div>
+        <p className="hint mono">
+          {Object.keys(midiStore.mapping).length} bindings
+          {midiStore.mappingReady ? '' : ' · loading…'} · SQLite midi_map
+        </p>
+        <div className="row">
+          <button
+            type="button"
+            onClick={() => {
+              void midiStore.exportMappingJson().then((json) => {
+                void navigator.clipboard?.writeText(json);
+                alert('MIDI map JSON copied to clipboard.');
+              }).catch((err: unknown) => {
+                alert(formatUserError(err, 'Couldn’t export MIDI map'));
+              });
+            }}
+          >
+            Export → clipboard
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const json = window.prompt('Paste MIDI map JSON to import:');
+              if (json == null || json.trim() === '') return;
+              void midiStore.importMappingJson(json).catch((err: unknown) => {
+                alert(formatUserError(err, 'Couldn’t import MIDI map'));
+              });
+            }}
+          >
+            Import…
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!window.confirm('Reset MIDI map to RMX2 factory defaults?')) return;
+              void midiStore.resetMapping().catch((err: unknown) => {
+                alert(formatUserError(err, 'Couldn’t reset MIDI map'));
+              });
+            }}
+          >
+            Reset to RMX2 defaults
+          </button>
+        </div>
+        <label>
+          <input
+            type="checkbox"
+            checked={settingsStore.settings.midi.sendLeds}
+            onChange={(e) => {
+              void settingsStore.set({ midi: { sendLeds: e.target.checked } });
+            }}
+          />
+          Send MIDI LEDs
+        </label>
+      </section>
+
+      <section className="sec">
+        <div className="hd">MIDI learn (E3)</div>
+        <p className="hint mono">
+          Phase: {midiStore.learn.phase.phase}
+          {midiStore.learn.phase.phase === 'listen'
+            ? ` · ${midiStore.learn.phase.controlId}`
+            : ''}
+          {midiStore.learn.phase.phase === 'confirm' || midiStore.learn.phase.phase === 'steal'
+            ? ` · ${midiStore.learn.phase.controlId} ← ${JSON.stringify(midiStore.learn.phase.binding)}`
+            : ''}
+          {midiStore.learn.phase.phase === 'confirm' && midiStore.learn.phase.conflict
+            ? ` · conflict ${midiStore.learn.phase.conflict}`
+            : ''}
+          {midiStore.learn.phase.phase === 'steal'
+            ? ` · steal from ${midiStore.learn.phase.conflict}`
+            : ''}
+        </p>
+        <div className="row">
+          {!midiStore.learnActive ? (
+            <button
+              type="button"
+              onClick={() => {
+                midiStore.startLearn();
+                midiStore.selectLearnControl('deckA.wet');
+              }}
+            >
+              Start learn
+            </button>
+          ) : (
+            <button type="button" onClick={() => midiStore.cancelLearn()}>
+              Cancel (Esc)
+            </button>
+          )}
+          <label>
+            Target control
+            <select
+              disabled={!midiStore.learnActive || midiStore.learn.phase.phase === 'steal'}
+              value={
+                midiStore.learn.phase.phase === 'listen' ||
+                midiStore.learn.phase.phase === 'confirm' ||
+                midiStore.learn.phase.phase === 'steal'
+                  ? midiStore.learn.phase.controlId
+                  : 'deckA.wet'
+              }
+              onChange={(e) => {
+                midiStore.selectLearnControl(e.target.value as ControlId);
+              }}
+            >
+              {CONTROL_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {id}
+                </option>
+              ))}
+            </select>
+          </label>
+          {(midiStore.learn.phase.phase === 'confirm' &&
+            midiStore.learn.phase.conflict == null) && (
+            <button
+              type="button"
+              onClick={() => {
+                void midiStore.confirmLearn().catch((err: unknown) => {
+                  alert(formatUserError(err, 'Couldn’t save learned binding'));
+                });
+              }}
+            >
+              Confirm bind
+            </button>
+          )}
+          {(midiStore.learn.phase.phase === 'confirm' &&
+            midiStore.learn.phase.conflict != null) && (
+            <button
+              type="button"
+              onClick={() => {
+                void midiStore.confirmLearn();
+              }}
+            >
+              Review steal…
+            </button>
+          )}
+          {midiStore.learn.phase.phase === 'steal' && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  void midiStore.acceptLearnSteal().catch((err: unknown) => {
+                    alert(formatUserError(err, 'Couldn’t steal binding'));
+                  });
+                }}
+              >
+                Steal &amp; save
+              </button>
+              <button type="button" onClick={() => midiStore.rejectLearnSteal()}>
+                Keep previous
+              </button>
+            </>
+          )}
+        </div>
+        <p className="hint">
+          Tip: learn <code>deckA.wet</code> / <code>deckA.filter</code> on spare knobs — twist
+          until ≥3 values in 500 ms. LSB CCs are ignored as standalone. Esc cancels.
+        </p>
+      </section>
     </div>
   );
 });
@@ -107,6 +293,22 @@ const DeckPanel = observer(function DeckPanel(props: {
       <div className="mono">
         BPM {deck.effectiveBpm?.toFixed(1) ?? '—'} · {fmt(deck.position)} / {fmt(deck.duration)}
       </div>
+      <label>
+        File BPM
+        <input
+          type="number"
+          min={60}
+          max={200}
+          step={0.1}
+          placeholder="e.g. 128"
+          value={deck.fileBpm ?? ''}
+          onChange={(e) => {
+            const v = e.target.value;
+            deck.setFileBpm(v === '' ? null : Number(v));
+          }}
+          title="Needed for Sync to beatmatch different tracks (E5 will fill this)"
+        />
+      </label>
       <div className="row">
         <button type="button" onClick={() => deck.togglePlay()}>
           {deck.state === 'playing' ? 'Pause' : 'Play'}
@@ -129,14 +331,16 @@ const DeckPanel = observer(function DeckPanel(props: {
         <button
           type="button"
           className={deck.syncArmed ? 'on' : undefined}
-          onClick={() => deck.syncTo(other)}
+          onClick={() => deck.toggleSync(other)}
           title={
             other.state === 'empty'
               ? 'Load the other deck first'
-              : 'Match tempo to the other deck'
+              : deck.syncArmed
+                ? 'SYNC on — press to turn off'
+                : 'SYNC off — press to match tempo and latch on'
           }
         >
-          SYNC{deck.syncArmed ? ' ·' : ''}
+          SYNC{deck.syncArmed ? ' ON' : ''}
         </button>
         <button type="button" className={deck.pfl ? 'on' : ''} onClick={() => deck.togglePfl()}>
           PFL

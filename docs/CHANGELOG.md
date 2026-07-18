@@ -5,6 +5,50 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — README roadmap with timestamps
+
+Root [`README.md`](../README.md) now carries a dated epic status table (DONE/DOING/TODO), same-day milestones, in-progress, and next-up — mirrored from this ROADMAP. Update both when epic status changes.
+
+---
+
+## 2026-07-18 — E3 MIDI learn mode
+
+Pure learn state machine (`shared/midiLearn`): button note-on, continuous ≥3 distinct CC values / 500 ms, cc14 auto-pair, LSB rejection, steal flow, Esc cancel. Harness UI + persist on confirm. Unit-tested without hardware. R-IDs: R8.2, docs/04, E3 learn AC.
+
+---
+
+## 2026-07-18 — E3 MIDI map persist (SQLite)
+
+`midi_map` is loaded/saved via better-sqlite3; empty DB seeds `RMX2_FACTORY_MAP`. IPC: get/set/export/import/reset with zod validation (`shared/midiMappingSchema`). Renderer hydrates on boot; E2 harness has Export / Import / Reset. LEDs follow the live mapping + `settings.midi.sendLeds`. R-IDs: R8.2, docs/04.
+
+---
+
+## 2026-07-18 — E2 `[HW]` PASS (owner)
+
+Julius verified Plan A (dual out + PFL + HeadMix), Plan B (forced dual stereo), and unplug/replug mid-playback on the physical RMX2. Sign-off in [`E2-HW-CHECKLIST.md`](./E2-HW-CHECKLIST.md). E2 epic **DONE**; audio-routing gate cleared for E4+. E3 MIDI `[HW]` still outstanding. R-IDs: R1.3, R1.4, R2.8, docs/02 failure stance.
+
+---
+
+## 2026-07-18 — Automated testing pyramid
+
+Unit + component (Vitest/RTL) and Playwright end-user e2e (`npm run test:e2e`) with mocked IPC — no RMX2 in CI. Documented in `docs/TESTING.md`; CI runs `test` then `test:e2e` then doc screenshots.
+
+---
+
+## 2026-07-18 — SYNC latching on/off + real tempo match
+
+SYNC is a latching control: press on → match partner tempo and stay lit (follow while on); press again → off. Pitch fader move or load still releases. Without file BPM, Sync only matched rates (useless across different tracks) — harness now has File BPM fields; with BPM, Sync matches effective BPM (R2.3).
+
+---
+
+## 2026-07-18 — E3 MIDI: holds, browse fixture, LEDs
+
+- FF/RW seek-hold, pitch bend ±0.5% while held, browse cluster → `BrowseStore` fixture (until E4).
+- MIDI LED out for play / sync / PFL / kills (silent if no output port).
+- Dev harness shows browse cursor for RMX2 cluster testing.
+
+---
+
 ## 2026-07-18 — Cue jump+stop; Sync without file BPM
 
 - **Cue (R2.10):** while playing, Cue jumps to cue point and **stops** (Pioneer-style). Spec table in docs/03 updated. MIDI/UI no longer start cue-preview on the same press after a playing jump (that kept audio running).
@@ -37,7 +81,7 @@ Electron DedicatedWorkers often lack `OfflineAudioContext`. Decode falls back to
 ## 2026-07-18 — E2 software close + E3 MIDI scaffold
 
 - **E2 (R2.10 / R2.13 / docs/03):** pure CDJ cue state table + tests; auto-gain load tests; off-main-thread decode worker; filter/flanger AudioParam ramps (≥15 ms); cue/PFL soft-edge polish (no fader coupling).
-- **E2 [HW]:** owner checklist [`E2-HW-CHECKLIST.md`](./E2-HW-CHECKLIST.md) — READY FOR HW VERIFICATION (Plan A cue/PFL/HeadMix, Plan B, unplug/replug). Do not self-pass.
+- **E2 [HW]:** owner checklist [`E2-HW-CHECKLIST.md`](./E2-HW-CHECKLIST.md) — **PASS** 2026-07-18 (supersedes READY FOR HW VERIFICATION).
 - **E3 scaffold:** `midiDecode` / factory map / soft takeover (shared, fixture-tested); `MidiEngine` + `MidiStore` dispatch into same deck/mixer actions; minimal MIDI monitor in UI.
 
 ---

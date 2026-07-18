@@ -61,14 +61,18 @@ Dev starts windowed (`STENTOR_WINDOWED=1`). For fullscreen like production, set 
 If you see `NODE_MODULE_VERSION` errors for better-sqlite3, run `npm run rebuild:native` again (fetches the Electron prebuild; no VS Build Tools required when a prebuild exists).
 
 ```bash
-npm test
-npm run docs:screenshots   # mockup PNGs → docs/mockups/screenshots/
+npm test                 # unit + component (Vitest)
+npm run test:coverage
+npm run test:e2e         # Playwright end-user (no RMX2)
+npm run docs:screenshots # mockup PNGs → docs/mockups/screenshots/
 npm run lint
 npm run typecheck
 npm run build
 npm run dist:dir   # unpackaged win build
 npm run dist       # NSIS installer → release/
 ```
+
+See [`docs/TESTING.md`](docs/TESTING.md).
 
 ## Workspaces
 
@@ -79,6 +83,54 @@ npm run dist       # NSIS installer → release/
 | `app/renderer` | React/MobX UI + audio/MIDI engines |
 | `app/analysis` | Hidden analysis window (E5; stub in E1) |
 
-## Epic status
+## Roadmap & status
 
-E1 skeleton done. E2 audio engine in progress — do not start E4+ until E2 `[HW]` routing passes on the real RMX2.
+Living tracker (mirrors [`docs/ROADMAP.md`](docs/ROADMAP.md)). Decision detail: [`docs/CHANGELOG.md`](docs/CHANGELOG.md).
+
+**Legend:** `DONE` · `DOING` · `TODO` · `BACKLOG`
+
+### Build order
+
+```
+E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW]
+                → E4 library  ⎤
+                → E5 analysis ⎦ parallel
+                → E6 UI [HW mix]
+                → E7 polish
+```
+
+| Epic | Status | When | What landed / what’s left |
+|---|---|---|---|
+| **E1** Skeleton | DONE | 2026-07-18 | Shell, typed IPC, settings, SQLite, workspaces |
+| **E2** Audio engine | DONE | 2026-07-18 | Dual-deck engine, Plan A/B, cue/PFL, USB rebuild. **`[HW]` PASS** (owner Julius) — Plan A, Plan B, unplug/replug. Checklist: [`docs/E2-HW-CHECKLIST.md`](docs/E2-HW-CHECKLIST.md) |
+| **E3** MIDI layer | **DOING** | 2026-07-18 → | **Done:** decode, factory map, dispatch, soft takeover, monitor, LEDs, FF/RW/bend, browse fixture, **map persist** (SQLite + export/import/reset), **learn mode** (harness). **Left:** pad note `[HW]`, inverse-curve takeover polish, full E3 `[HW]` on RMX2 |
+| **E4** Library | TODO | — | Scanner, Prep corrections; after E3 per path (audio gate already clear) |
+| **E5** Analysis | TODO | — | BPM/key/waveform/loudness (stub today; File BPM is manual in harness) |
+| **E6** Decks/mixer UI | TODO | — | Performance UI from mockups; beat ticks, EOT, `[HW]` mix |
+| **E7** Polish | TODO | — | Packaging, soak, failure drills |
+
+### Same-day milestones (2026-07-18)
+
+| Time context | Milestone |
+|---|---|
+| Spec lock | Requirements + docs/01–07; Sync stays SYNC; library sort/duplicates |
+| E1 | Greenfield app shell shipped |
+| E2 software | Load/play, Plan A/B probe, CDJ cue, auto-gain, reconnect fixes |
+| E2 `[HW]` | Owner verified on physical RMX2 — **gate cleared for E4+ audio** |
+| E3 scaffold | MIDI decode/map/dispatch/monitor/LEDs |
+| E3 persist + learn | SQLite `midi_map`, export/import/reset, learn SM + harness UI |
+| Testing | Vitest unit/component + Playwright e2e (`docs/TESTING.md`) |
+
+### In progress right now
+
+- **E3 MIDI** — finish remaining software (inverse-curve takeover / pickup readout), then owner `[HW]` pad notes + full control sweep on RMX2.
+
+### Next up (after E3)
+
+- E4 library + E5 analysis (can run in parallel once E3 software is solid)
+- E6 performance UI from mockups
+- E7 polish / installer
+
+### Parked (not v1)
+
+v2 Spotify + AI mixmatch — [`docs/BACKLOG-v2-spotify-ai.md`](docs/BACKLOG-v2-spotify-ai.md) (locked 2026-07-18).

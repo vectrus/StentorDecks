@@ -4,13 +4,19 @@ import type {
   DeepPartial,
   IpcEventMap,
   IpcInvokeMap,
-  MidiMapping,
   Settings,
 } from '@stentordeck/shared';
 import { createAnalysisSupervisor } from './analysisSupervisor';
+import { getDb } from './db/database';
+import {
+  exportMidiMappingJson,
+  importMidiMappingJson,
+  loadMidiMapping,
+  resetMidiMapping,
+  saveMidiMapping,
+} from './db/midiMapRepo';
 import {
   FIXTURE_FOLDERS,
-  FIXTURE_MIDI_MAP,
   FIXTURE_TRACKS,
   fixtureTrackDetail,
 } from './fixtures';
@@ -25,7 +31,6 @@ type Ctx = {
   setMode: (m: AppModeState) => void;
 };
 
-let midiMap: MidiMapping = { ...FIXTURE_MIDI_MAP };
 const analysis = createAnalysisSupervisor();
 
 export function broadcast<K extends keyof IpcEventMap>(channel: K, payload: IpcEventMap[K]): void {
@@ -79,16 +84,14 @@ export function registerIpcHandlers(ctx: Ctx): void {
     return next;
   });
 
-  handle('midi:mapping:get', () => midiMap);
+  handle('midi:mapping:get', () => loadMidiMapping(getDb()));
   handle('midi:mapping:set', (mapping) => {
-    midiMap = mapping;
+    saveMidiMapping(getDb(), mapping);
     return { ok: true as const };
   });
-  handle('midi:mapping:export', () => JSON.stringify(midiMap, null, 2));
-  handle('midi:mapping:import', (req) => {
-    midiMap = JSON.parse(req.json) as MidiMapping;
-    return midiMap;
-  });
+  handle('midi:mapping:export', () => exportMidiMappingJson(getDb()));
+  handle('midi:mapping:import', (req) => importMidiMappingJson(getDb(), req.json));
+  handle('midi:mapping:reset', () => resetMidiMapping(getDb()));
 
   handle('app:mode:get', () => ctx.getMode());
   handle('app:mode:set', (partial) => {

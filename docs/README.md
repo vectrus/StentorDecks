@@ -32,6 +32,7 @@ Explicitly out of scope for v1: scratching, keylock/master tempo, recording, hot
 | [ROADMAP.md](./ROADMAP.md) | Build order, open todos, backlog, open questions |
 | [CHANGELOG.md](./CHANGELOG.md) | Dated owner decisions and spec diffs |
 | [BACKLOG-v2-spotify-ai.md](./BACKLOG-v2-spotify-ai.md) | v2 Spotify browse + AI mixmatch/autoplay (parked; decisions + why) |
+| [TESTING.md](./TESTING.md) | Unit, component, Playwright e2e, doc screenshots |
 | [`mockups/`](./mockups/MOCKUPS.md) | Approved HTML mockups (design contract for E2/E6) |
 | [`playwright/`](./playwright/README.md) | Doc screenshots (`npm run docs:screenshots`) |
 

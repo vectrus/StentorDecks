@@ -16,6 +16,7 @@ Every non-trivial change must cite the R-ID or epic criterion it serves in the c
 - v1 exclusions stand (README): no scratching, keylock, recording, hotcues, loops, echo, playlists, streaming. Park ideas as backlog issues, never as code.
 - Accessibility floors (R7.1) are hard: never shrink type/rows/targets below spec to "fit more in".
 - Epic gating: E2's [HW] routing criteria must be owner-confirmed before any E4+ work merges.
+  (Confirmed PASS 2026-07-18 — see `docs/E2-HW-CHECKLIST.md`. E3/E6/E7 `[HW]` items still owner-only.)
 - [HW] acceptance criteria are verified by the owner on the physical RMX2. Never simulate, mock, or self-declare them passed. Mark them "READY FOR HW VERIFICATION" and stop.
 
 ## 2. Workflow per task
@@ -26,17 +27,17 @@ Every non-trivial change must cite the R-ID or epic criterion it serves in the c
 4. Update docs/ only when the owner approved a spec change; code comments never replace spec.
 5. PR description: criteria targeted, criteria met, criteria remaining, R-IDs touched, model(s) used.
 
-## 2b. Documentation screenshots (Playwright)
+## 2b. Testing (unit, component, end-user) + doc screenshots
 
-Visual docs are maintained with Playwright — not hand-cropped ad-hoc PNGs.
+See `docs/TESTING.md`. Agents add/extend tests with every non-trivial behavior change.
 
-- **Mockup contract shots:** `docs/mockups/*.html` → `docs/mockups/screenshots/` via `npm run docs:screenshots`.
-- **When to regenerate:** any change to mockup HTML/CSS, docs/06 layout tokens that the mockups reflect, or owner-requested doc refresh.
-- **When implementing UI (E6 etc.):** compare against both the HTML mockup *and* the checked-in screenshot; if you change a mockup, re-run `docs:screenshots` in the same change.
-- **App/runtime shots** (dev harness, first-run, fault banners): use Playwright specs under `docs/playwright/` (or Electron launch helpers when added). Prefer deterministic fixtures over live RMX2 for CI.
-- **CI:** mockup screenshots may run headless on Windows CI; never require the physical RMX2 for doc screenshot jobs.
-- **Do not** commit one-off screenshots from the OS Snipping Tool into `docs/` when a Playwright path exists — extend the suite instead.
-- Agents: after editing mockups, run `npm run docs:screenshots` and include the updated PNGs in the change set.
+- **Unit (Vitest/node):** pure logic — curves, CDJ, MIDI decode, takeover, stores. `npm test`.
+- **Component (Vitest/jsdom + Testing Library):** `*.component.test.tsx`. Mock `stores/root` singletons when needed.
+- **End-user (Playwright):** `npm run test:e2e` — mockup journeys + app smoke with mocked `window.stentor` / devices. **No RMX2 in CI.**
+- **Doc screenshots:** `docs/mockups/*.html` → `docs/mockups/screenshots/` via `npm run docs:screenshots` (separate Playwright config).
+- **When implementing UI (E6 etc.):** compare HTML mockup + screenshot; regenerate screenshots in the same change.
+- **`[HW]` criteria:** never auto-pass; owner checklist only.
+- Agents: after mockup edits run `docs:screenshots`; after behavior changes run `npm test` and extend `test:e2e` when a user-visible path is added.
 
 ## 3. Expertise personas — adopt the right hat per file area
 

@@ -29,11 +29,17 @@ export class AudioEngine {
   plan: RoutingPlan = 'B';
   planReason = '';
   deviceLost = false;
+  /** Bumps on every rebuild — load/decode paths must re-check after await. */
+  epoch = 0;
 
   private deckA: DeckGraph | null = null;
   private deckB: DeckGraph | null = null;
   private transportA: DeckTransport | null = null;
   private transportB: DeckTransport | null = null;
+  private decodeInFlight = 0;
+  private decodeIdleWaiters: Array<() => void> = [];
+  private rebuildGate: Promise<void> | null = null;
+  private rebuildGateResolve: (() => void) | null = null;
 
   private masterBus: GainNode | null = null;
   private masterGain: GainNode | null = null;
@@ -59,14 +65,64 @@ export class AudioEngine {
     }
   }
 
+  /** Call around every decodeAudioData so rebuild cannot tear down mid-decode. */
+  beginDecode(): void {
+    this.decodeInFlight += 1;
+  }
+
+  endDecode(): void {
+    this.decodeInFlight = Math.max(0, this.decodeInFlight - 1);
+    if (this.decodeInFlight === 0) {
+      const waiters = this.decodeIdleWaiters;
+      this.decodeIdleWaiters = [];
+      for (const w of waiters) w();
+    }
+  }
+
+  private waitForDecodes(): Promise<void> {
+    if (this.decodeInFlight === 0) return Promise.resolve();
+    return new Promise((resolve) => {
+      this.decodeIdleWaiters.push(resolve);
+    });
+  }
+
+  /** Load/restore waits here so they never decode into a mid-teardown context. */
+  async waitUntilDecodeReady(): Promise<void> {
+    while (this.rebuildGate) {
+      await this.rebuildGate;
+    }
+    if (!this.masterCtx) {
+      throw new Error('Audio engine not ready');
+    }
+  }
+
   async rebuild(opts: {
     settings: Settings;
     devices: AudioDeviceInfo[];
   }): Promise<void> {
-    // Decks restore PCM from their own snapshots in afterRebuild — do not
-    // clone from a dying AudioContext (that caused ~tens-of-seconds truncations).
-    await this.teardown();
+    // Wait for in-flight loads — closing a context under decodeAudioData was
+    // the ~25–28s truncated-buffer bug (dying-context PCM).
+    await this.waitForDecodes();
+    this.rebuildGate = new Promise<void>((resolve) => {
+      this.rebuildGateResolve = resolve;
+    });
+    this.epoch += 1;
+    try {
+      // Decks re-decode stashed file bytes in afterRebuild — never clone PCM
+      // from a context that is about to close.
+      await this.teardown();
+      await this.buildGraph(opts);
+    } finally {
+      this.rebuildGateResolve?.();
+      this.rebuildGateResolve = null;
+      this.rebuildGate = null;
+    }
+  }
 
+  private async buildGraph(opts: {
+    settings: Settings;
+    devices: AudioDeviceInfo[];
+  }): Promise<void> {
     const { settings, devices } = opts;
     const resolved = resolveRoutingPlan({
       preference: settings.audio.routingPlan,
