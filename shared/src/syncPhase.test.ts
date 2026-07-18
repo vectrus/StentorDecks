@@ -4,6 +4,7 @@ import {
   beatPhaseSec,
   phaseAssistDeltaSec,
   phaseAssistDeltaTrackSec,
+  phaseAssistRateBias,
   phaseSnapDeltaSec,
   phaseSnapDeltaTrackSec,
   rescaleBeatGridOffsetSec,
@@ -108,5 +109,20 @@ describe('phaseSnapDeltaTrackSec (file BPM / track time)', () => {
     expect(
       phaseAssistDeltaTrackSec(10.1, 4.3, 120, 120, 0, 0, err),
     ).toBeCloseTo(0, 10);
+  });
+});
+
+describe('phaseAssistRateBias', () => {
+  it('returns 1 inside deadband', () => {
+    expect(phaseAssistRateBias(0)).toBe(1);
+    expect(phaseAssistRateBias(0.001)).toBe(1);
+  });
+
+  it('slows when this is ahead (positive delta)', () => {
+    expect(phaseAssistRateBias(0.02)).toBeLessThan(1);
+  });
+
+  it('speeds when this is behind (negative delta)', () => {
+    expect(phaseAssistRateBias(-0.02)).toBeGreaterThan(1);
   });
 });

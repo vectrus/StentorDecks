@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — Gig feel: unified frame clock + quieter SYNC assist
+
+Waveform A/B crawl and jog fight came from multi-rAF sampling + assist seeks, not Soft numbers. One rAF ticks transport then draws both decks from latency-compensated `visualPosSec`; detail draw steps ~CSS px; SYNC assist uses rate bias for small errors, throttled micro-seeks, longer jog mute (~800 ms); micro seek fade ~10 ms. R2.2, R2.3, R7.5, E7, docs/03.
+
+---
+
 ## 2026-07-18 — FX amount: factory relative AMT + Shift WET
 
 RMX2 FX Mode encoder (`54`/`55`) and Shift+FX (`5C`/`5D`) are factory `ccRel` for filter AMT / flanger WET. Main SQLite load migrates mistaken `cc7` learns so relative decode sticks after restart. R3.1, docs/04.

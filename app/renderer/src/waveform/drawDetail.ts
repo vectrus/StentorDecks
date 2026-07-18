@@ -26,6 +26,8 @@ export type DetailDrawOpts = {
   /** Analyzed first-beat offset (sec); default 0 = legacy 0:00 grid. */
   beatGridOffsetSec?: number | null;
   showBeatTicks: boolean;
+  /** Device pixel ratio — column step ≈ 1 CSS px (E7). */
+  devicePixelRatio?: number;
 };
 
 export type DetailSample = { min: number; max: number; rms: number };
