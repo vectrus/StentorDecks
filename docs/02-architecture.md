@@ -31,8 +31,9 @@ Decisions:
 Typed channel definitions shared via a `shared/ipc.ts` package. Style: `domain:verb`. Initial set:
 
 ```
-library:query            (filter, folder, search, sort) → TrackRow[]
+library:query            (filter, folder, search, sort, limit?) → TrackRow[]
 library:folders          () → FolderNode[]
+library:stats            () → { trackCount }
 library:track            (id) → TrackDetail (incl. waveform blob refs)
 library:rescan           (path?) → ack            (progress via library:progress events)
 library:read             (id) → { path, bytes, tags… } | null   (deck load; path must be under a library root)

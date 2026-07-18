@@ -40,8 +40,17 @@ export class LibraryStore {
   /** Last analysis:enqueue / progress hint for Prep Detect (E5 fills this in). */
   detectStatus: string | null = null;
   analysisProgress: AnalysisProgress | null = null;
+  /** Live library size for Perf strip summary. */
+  trackCount = 0;
 
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
+
+  get analyzingCount(): number {
+    const p = this.analysisProgress;
+    if (!p) return 0;
+    if (p.stage !== 'idle') return Math.max(1, p.queueDepth);
+    return p.queueDepth;
+  }
 
   constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -144,7 +153,7 @@ export class LibraryStore {
     try {
       const sort = settingsStore.settings.library.sort;
       const searching = Boolean(this.search.trim());
-      const [folders, tracks] = await Promise.all([
+      const [folders, tracks, stats] = await Promise.all([
         invoke('library:folders'),
         searching || this.openFolder != null
           ? invoke('library:query', {
@@ -153,10 +162,12 @@ export class LibraryStore {
               sort,
             })
           : Promise.resolve([] as TrackRow[]),
+        invoke('library:stats'),
       ]);
       runInAction(() => {
         this.folders = folders;
         this.tracks = tracks;
+        this.trackCount = stats.trackCount;
         this.clampCursor();
         this.error = null;
       });
@@ -264,7 +275,14 @@ export class LibraryStore {
   requestLoad(deck: {
     load: (
       file: File,
-      meta?: { title?: string; artist?: string; fileBpm?: number | null },
+      meta?: {
+        title?: string;
+        artist?: string;
+        fileBpm?: number | null;
+        loudnessLufs?: number | null;
+        libraryTrackId?: number | null;
+        durationMs?: number | null;
+      },
     ) => Promise<void>;
   }): void {
     void this.loadSelected(deck).catch((err: unknown) => {
@@ -278,7 +296,14 @@ export class LibraryStore {
   async loadSelected(deck: {
     load: (
       file: File,
-      meta?: { title?: string; artist?: string; fileBpm?: number | null },
+      meta?: {
+        title?: string;
+        artist?: string;
+        fileBpm?: number | null;
+        loudnessLufs?: number | null;
+        libraryTrackId?: number | null;
+        durationMs?: number | null;
+      },
     ) => Promise<void>;
   }): Promise<void> {
     const row = this.selectedTrack;
@@ -298,6 +323,9 @@ export class LibraryStore {
       title: payload.title ?? name,
       artist: payload.artist ?? '',
       fileBpm: payload.bpm,
+      loudnessLufs: payload.loudnessLufs,
+      libraryTrackId: payload.id,
+      durationMs: payload.durationMs,
     });
     runInAction(() => {
       this.loadError = null;

@@ -6,6 +6,7 @@ import './styles/tokens.css';
 import './styles/shell.css';
 import './styles/audio.css';
 import './styles/prep.css';
+import './styles/perf.css';
 
 async function boot(): Promise<void> {
   await settingsStore.hydrate();

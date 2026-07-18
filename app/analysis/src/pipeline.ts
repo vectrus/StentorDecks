@@ -1,8 +1,11 @@
 import {
   ANALYSIS_VERSION,
+  concatPcmBuffers,
+  decodeMpegResilient,
   type AnalysisJob,
   type AnalysisJobOutcome,
   type AnalysisStage,
+  type PcmBuffer,
 } from '@stentordeck/shared';
 import { detectBpm } from './bpm';
 import { detectKey } from './key';
@@ -91,29 +94,24 @@ async function decodeToMono(
           .webkitOfflineAudioContext;
   if (!Offline) throw new Error('OfflineAudioContext unavailable');
 
-  // Probe length via a tiny context decode
-  const probe = new Offline(1, 128, 44100);
-  const decoded = await probe.decodeAudioData(fileBytes.slice(0));
-  const sampleRate = 44100;
-  const length = Math.ceil(decoded.duration * sampleRate);
-  const offline = new Offline(decoded.numberOfChannels, Math.max(1, length), sampleRate);
+  const decodeCtx = new Offline(2, 128, 44100);
+  const pcm = await decodeMpegResilient(
+    fileBytes,
+    {
+      decode: async (ab) => decodeCtx.decodeAudioData(ab.slice(0)),
+      concat: (parts) => concatPcmToAudioBuffer(decodeCtx, parts),
+    },
+    {},
+  );
 
-  // Re-decode into target rate context when possible
-  let buffer: AudioBuffer;
-  try {
-    buffer = await offline.decodeAudioData(fileBytes.slice(0));
-  } catch {
-    buffer = decoded;
-  }
-
-  const chans = buffer.numberOfChannels;
-  const n = buffer.length;
+  const chans = pcm.numberOfChannels;
+  const n = pcm.length;
   const mono = new Float32Array(n);
   if (chans === 1) {
-    mono.set(buffer.getChannelData(0));
+    mono.set(pcm.getChannelData(0));
   } else {
-    const left = buffer.getChannelData(0);
-    const right = buffer.getChannelData(1);
+    const left = pcm.getChannelData(0);
+    const right = pcm.getChannelData(1);
     for (let i = 0; i < n; i++) {
       mono[i] = ((left[i] ?? 0) + (right[i] ?? 0)) * 0.5;
     }
@@ -121,7 +119,16 @@ async function decodeToMono(
 
   return {
     mono,
-    sampleRate: buffer.sampleRate,
-    durationMs: Math.round(buffer.duration * 1000),
+    sampleRate: pcm.sampleRate,
+    durationMs: Math.round(pcm.duration * 1000),
   };
+}
+
+function concatPcmToAudioBuffer(ctx: BaseAudioContext, parts: PcmBuffer[]): AudioBuffer {
+  const merged = concatPcmBuffers(parts);
+  const out = ctx.createBuffer(merged.numberOfChannels, merged.length, merged.sampleRate);
+  for (let c = 0; c < merged.numberOfChannels; c++) {
+    out.getChannelData(c).set(merged.getChannelData(c));
+  }
+  return out;
 }

@@ -4,13 +4,14 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import type {
-  AnalysisResult,
-  FolderNode,
-  LibraryQuery,
-  LibraryReadResult,
-  TrackDetail,
-  TrackRow,
+import {
+  ANALYSIS_VERSION,
+  type AnalysisResult,
+  type FolderNode,
+  type LibraryQuery,
+  type LibraryReadResult,
+  type TrackDetail,
+  type TrackRow,
 } from '@stentordeck/shared';
 import type { DbHandle } from './database';
 
@@ -81,15 +82,32 @@ export function queryTracks(db: DbHandle, q: LibraryQuery): TrackRow[] {
     ? `(artist IS NULL), artist COLLATE NOCASE ASC, (title IS NULL), title COLLATE NOCASE ASC`
     : orderByClause(q.sort ?? 'filename');
 
+  const limit =
+    q.limit != null && Number.isFinite(q.limit) && q.limit > 0
+      ? Math.min(Math.floor(q.limit), 10_000)
+      : null;
+
   const sql = `
     SELECT id, path, title, artist, bpm, key_camelot, duration_ms, bpm_source, low_confidence,
            album, genre
     FROM tracks
     WHERE ${where.join(' AND ')}
     ORDER BY ${order}
+    ${limit != null ? 'LIMIT ?' : ''}
   `;
-  const rows = db.prepare(sql).all(...params) as TrackRowDb[];
+  const rows = (
+    limit != null
+      ? db.prepare(sql).all(...params, limit)
+      : db.prepare(sql).all(...params)
+  ) as TrackRowDb[];
   return rows.map(toTrackRow);
+}
+
+export function countLiveTracks(db: DbHandle): number {
+  const r = db
+    .prepare(`SELECT COUNT(*) AS n FROM tracks WHERE missing_since IS NULL`)
+    .get() as { n: number };
+  return r.n;
 }
 
 function orderByClause(sort: LibraryQuery['sort']): string {
@@ -140,10 +158,19 @@ export function readTrackFile(
 ): LibraryReadResult | null {
   const r = db
     .prepare(
-      `SELECT id, path, title, artist, bpm FROM tracks WHERE id = ? AND missing_since IS NULL`,
+      `SELECT id, path, title, artist, bpm, loudness_lufs, duration_ms
+       FROM tracks WHERE id = ? AND missing_since IS NULL`,
     )
     .get(id) as
-    | { id: number; path: string; title: string | null; artist: string | null; bpm: number | null }
+    | {
+        id: number;
+        path: string;
+        title: string | null;
+        artist: string | null;
+        bpm: number | null;
+        loudness_lufs: number | null;
+        duration_ms: number | null;
+      }
     | undefined;
   if (!r) return null;
   const filePath = normalizePath(r.path);
@@ -156,6 +183,8 @@ export function readTrackFile(
     title: r.title,
     artist: r.artist,
     bpm: r.bpm,
+    loudnessLufs: r.loudness_lufs,
+    durationMs: r.duration_ms,
     bytes: new Uint8Array(buf),
   };
 }
@@ -353,16 +382,67 @@ export type TrackAnalysisHints = {
   key_source: 'tag' | 'analysis' | 'manual' | null;
   analyzed_at: number | null;
   analysis_version: number | null;
+  hasWaveform: boolean;
 };
 
 export function getTrackAnalysisHints(db: DbHandle, id: number): TrackAnalysisHints | null {
   const r = db
     .prepare(
-      `SELECT path, bpm_source, key_source, analyzed_at, analysis_version
-       FROM tracks WHERE id = ? AND missing_since IS NULL`,
+      `SELECT t.path, t.bpm_source, t.key_source, t.analyzed_at, t.analysis_version,
+              CASE WHEN w.track_id IS NULL THEN 0 ELSE 1 END AS has_wave
+       FROM tracks t
+       LEFT JOIN waveforms w ON w.track_id = t.id
+       WHERE t.id = ? AND t.missing_since IS NULL`,
     )
-    .get(id) as TrackAnalysisHints | undefined;
-  return r ?? null;
+    .get(id) as
+    | {
+        path: string;
+        bpm_source: 'tag' | 'analysis' | 'manual' | null;
+        key_source: 'tag' | 'analysis' | 'manual' | null;
+        analyzed_at: number | null;
+        analysis_version: number | null;
+        has_wave: number;
+      }
+    | undefined;
+  if (!r) return null;
+  return {
+    path: r.path,
+    bpm_source: r.bpm_source,
+    key_source: r.key_source,
+    analyzed_at: r.analyzed_at,
+    analysis_version: r.analysis_version,
+    hasWaveform: r.has_wave !== 0,
+  };
+}
+
+/** Tracks needing analysis / waveform (idle backfill). */
+export function listUnanalyzedTrackIds(db: DbHandle, limit: number): number[] {
+  const rows = db
+    .prepare(
+      `SELECT t.id FROM tracks t
+       LEFT JOIN waveforms w ON w.track_id = t.id
+       WHERE t.missing_since IS NULL
+         AND (t.analyzed_at IS NULL OR w.track_id IS NULL
+              OR t.analysis_version IS NULL OR t.analysis_version < ?)
+       ORDER BY t.id ASC
+       LIMIT ?`,
+    )
+    .all(ANALYSIS_VERSION, Math.max(1, Math.min(limit, 64))) as Array<{ id: number }>;
+  return rows.map((r) => r.id);
+}
+
+export function getWaveformBlob(
+  db: DbHandle,
+  trackId: number,
+  kind: 'overview' | 'detail',
+): Uint8Array | null {
+  const sql =
+    kind === 'overview'
+      ? `SELECT overview AS blob FROM waveforms WHERE track_id = ?`
+      : `SELECT detail AS blob FROM waveforms WHERE track_id = ?`;
+  const r = db.prepare(sql).get(trackId) as { blob: Buffer } | undefined;
+  if (!r?.blob) return null;
+  return new Uint8Array(r.blob);
 }
 
 /** Commit analysis blobs + fields in one transaction (E5). */

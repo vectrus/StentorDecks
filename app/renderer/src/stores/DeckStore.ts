@@ -1,7 +1,9 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import {
   autoGainTrimDb,
+  beatPeriodSec,
   endOfTrackWarnLevel,
+  phaseSnapDeltaSec,
   pitchPosFromRate,
   pitchRate,
   resolveCueHoldEnd,
@@ -13,6 +15,7 @@ import {
 import { audioEngine } from '../audio/AudioEngine';
 import { decodeArrayBufferOffThread } from '../audio/decodeAudio';
 import type { DeckId } from '../audio/DeckGraph';
+import { invoke } from '../ipc/client';
 
 export class DeckPlayingError extends Error {
   constructor(public readonly deckId: DeckId) {
@@ -26,6 +29,10 @@ export type LoadedTrackMeta = {
   artist: string;
   fileBpm: number | null;
   loudnessLufs: number | null;
+  /** Library row id when loaded via Prep/Perf browse (E4/E6). */
+  libraryTrackId: number | null;
+  /** Hint for resilient MP3 decode when Chromium truncates (docs/E5 follow-up). */
+  durationMs: number | null;
 };
 
 export class DeckStore {
@@ -35,6 +42,12 @@ export class DeckStore {
   artist = '';
   fileBpm: number | null = null;
   loudnessLufs: number | null = null;
+  libraryTrackId: number | null = null;
+  /** Overview waveform 800×(min,max,rms) u8 — null until analysis / fetch. */
+  overviewWaveform: Uint8Array | null = null;
+  /** Detail waveform 50 pps × (min,max,rms) u8 — scrolling well. */
+  detailWaveform: Uint8Array | null = null;
+  detailPps = 50;
   loading = false;
 
   /** Logical pitch fader 0..1 */
@@ -59,8 +72,6 @@ export class DeckStore {
   flangerOn = false;
   flangerWet = 0;
   pfl = false;
-  /** True when we auto-started transport so a stopped deck can be heard in PFL. */
-  private pflMonitor = false;
 
   position = 0;
   duration = 0;
@@ -129,14 +140,15 @@ export class DeckStore {
     }
     this.loading = true;
     try {
-      await audioEngine.waitUntilDecodeReady();
-      audioEngine.beginDecode();
+      await audioEngine.acquireDecode();
       try {
         await audioEngine.ensureRunning();
         const ab = await file.arrayBuffer();
         // Independent copy — decodeAudioData may detach its argument.
         const fileBytes = ab.slice(0);
-        const buffer = await this.decodeIntoLiveContext(fileBytes);
+        const expectedDurationSec =
+          meta?.durationMs != null && meta.durationMs > 0 ? meta.durationMs / 1000 : null;
+        const buffer = await this.decodeIntoLiveContext(fileBytes, expectedDurationSec);
         const transport = audioEngine.transport(this.id);
         if (!transport) throw new Error('No transport');
 
@@ -148,6 +160,10 @@ export class DeckStore {
           this.artist = meta?.artist ?? '';
           this.fileBpm = meta?.fileBpm ?? null;
           this.loudnessLufs = meta?.loudnessLufs ?? null;
+          this.libraryTrackId = meta?.libraryTrackId ?? null;
+          this.overviewWaveform = null;
+          this.detailWaveform = null;
+          this.detailPps = 50;
           this.duration = buffer.duration;
           this.position = 0;
           this.state = 'stopped';
@@ -156,6 +172,9 @@ export class DeckStore {
         });
         this.pushGraph();
         this.takeoverLoaded?.(this.id);
+        if (this.libraryTrackId != null) {
+          void this.fetchWaveforms(this.libraryTrackId);
+        }
       } finally {
         audioEngine.endDecode();
       }
@@ -171,13 +190,16 @@ export class DeckStore {
    * Decode file bytes into the current master context.
    * If the engine rebuilds mid-await, retry on the new context (epoch guard).
    */
-  private async decodeIntoLiveContext(fileBytes: ArrayBuffer): Promise<AudioBuffer> {
+  private async decodeIntoLiveContext(
+    fileBytes: ArrayBuffer,
+    expectedDurationSec?: number | null,
+  ): Promise<AudioBuffer> {
     for (let attempt = 0; attempt < 4; attempt++) {
       await audioEngine.waitUntilDecodeReady();
       const epoch = audioEngine.epoch;
       const ctx = audioEngine.masterCtx;
       if (!ctx) throw new Error('Audio engine not ready');
-      const buffer = await decodeArrayBufferOffThread(ctx, fileBytes);
+      const buffer = await decodeArrayBufferOffThread(ctx, fileBytes, { expectedDurationSec });
       if (audioEngine.epoch === epoch && audioEngine.masterCtx === ctx) {
         return buffer;
       }
@@ -199,7 +221,6 @@ export class DeckStore {
     this.cueOffset = 0;
     this.cuePreviewing = false;
     this.pfl = false;
-    this.pflMonitor = false;
     this.eotWarn = 0;
     if (meta?.loudnessLufs != null) this.loudnessLufs = meta.loudnessLufs;
     // pitchPos kept (soft takeover re-arm is MIDI-layer concern)
@@ -316,9 +337,36 @@ export class DeckStore {
     }, 28);
   }
 
+  /** Fetch / refresh overview + detail blobs for the loaded library track (E6). */
+  async fetchWaveforms(trackId?: number): Promise<void> {
+    const id = trackId ?? this.libraryTrackId;
+    if (id == null) return;
+    try {
+      const [overview, detail] = await Promise.all([
+        invoke('library:waveform', { id, kind: 'overview' }),
+        invoke('library:waveform', { id, kind: 'detail' }),
+      ]);
+      if (this.libraryTrackId !== id) return;
+      runInAction(() => {
+        this.overviewWaveform = overview?.bytes ?? null;
+        this.detailWaveform = detail?.bytes ?? null;
+        this.detailPps = detail?.detailPps ?? 50;
+      });
+    } catch (err) {
+      console.warn('[deck] waveform fetch failed', err);
+    }
+  }
+
+  /** After analysis commit — refresh if this deck holds that track. */
+  refreshOverviewIf(trackId: number): void {
+    if (this.libraryTrackId !== trackId) return;
+    void this.fetchWaveforms(trackId);
+  }
+
   seek(offset: number): void {
-    audioEngine.transport(this.id)?.seek(offset);
-    this.position = offset;
+    const clamped = Math.max(0, Math.min(this.duration || 0, offset));
+    audioEngine.transport(this.id)?.seek(clamped);
+    this.position = clamped;
   }
 
   setPitchPos(pos: number): void {
@@ -338,7 +386,7 @@ export class DeckStore {
 
   /**
    * SYNC is a latching on/off control (docs/06 lit until released).
-   * On → match other deck tempo and stay armed (follow while on).
+   * On → match tempo, one-shot beat phase snap, stay armed (tempo follow while on).
    * Off → clear armed; leave pitch where it is.
    */
   toggleSync(other: DeckStore): void {
@@ -350,6 +398,7 @@ export class DeckStore {
     this.syncPartner = other.id;
     this.syncArmed = true;
     this.applySyncTo(other);
+    this.snapPhaseTo(other);
   }
 
   /**
@@ -360,16 +409,16 @@ export class DeckStore {
     if (this.syncMode === 'bpm') {
       const bpm = this.effectiveBpm?.toFixed(1) ?? '?';
       return this.syncClamped
-        ? `SYNC: matching BPM (~${bpm}) — target outside ±pitch range (clamped)`
-        : `SYNC: matching partner BPM (~${bpm})`;
+        ? `SYNC: BPM+phase (~${bpm}) — target outside ±pitch range (clamped)`
+        : `SYNC: BPM + phase snap (~${bpm})`;
     }
     if (this.fileBpm == null) {
-      return 'SYNC: pitch-% only — set File BPM on THIS deck to match tempo by BPM';
+      return 'SYNC: pitch-% only — set File BPM on THIS deck for BPM + phase';
     }
-    return 'SYNC: pitch-% only — partner needs File BPM too';
+    return 'SYNC: pitch-% only — partner needs File BPM for BPM + phase';
   }
 
-  /** Match tempo to `other` (BPM when known; else pitch fader %). */
+  /** Match tempo to `other` (BPM when known; else pitch fader %). Called while armed too. */
   applySyncTo(other: DeckStore): void {
     if (this.state === 'empty' || other.state === 'empty') return;
     const s = this.getSettings();
@@ -393,6 +442,23 @@ export class DeckStore {
     audioEngine.transport(this.id)?.setRate(this.effectiveRate);
   }
 
+  /**
+   * One-shot phase snap after tempo match (R2.3). Aligns beat phase at playheads
+   * using the 0:00 beat grid (same as visual ticks). Not called from tick follow.
+   */
+  snapPhaseTo(other: DeckStore): void {
+    if (this.syncMode !== 'bpm') return;
+    const bpm = other.effectiveBpm;
+    const period = bpm != null ? beatPeriodSec(bpm) : null;
+    if (period == null) return;
+
+    const thisPos = audioEngine.transport(this.id)?.position() ?? this.position;
+    const otherPos = audioEngine.transport(other.id)?.position() ?? other.position;
+    const delta = phaseSnapDeltaSec(thisPos, otherPos, period);
+    if (Math.abs(delta) < 1e-4) return;
+    this.seek(thisPos + delta);
+  }
+
   setFileBpm(bpm: number | null): void {
     if (bpm == null || !Number.isFinite(bpm) || bpm <= 0) {
       this.fileBpm = null;
@@ -408,6 +474,7 @@ export class DeckStore {
     this.syncPartner = other.id;
     this.syncArmed = true;
     this.applySyncTo(other);
+    this.snapPhaseTo(other);
   }
 
   nudge(velocity: number): void {
@@ -488,20 +555,11 @@ export class DeckStore {
     this.notify('wet');
   }
 
+  /** Headphones cue only (R2.8) — never starts/stops transport. */
   togglePfl(): void {
     this.pfl = !this.pfl;
     // PFL gain ramps in DeckGraph (≥20 ms). Never touch channel fader (pre-fader listen).
     this.pushGraph();
-    if (this.pfl) {
-      // Stopped decks have no source — soft-start transport for cue bus only.
-      if (this.state === 'stopped' && this.duration > 0) {
-        this.pflMonitor = true;
-        this.play({ soft: true });
-      }
-      return;
-    }
-    // Turning PFL off does not pause or steal the fader.
-    this.pflMonitor = false;
   }
 
   tick(other?: DeckStore): void {
@@ -549,7 +607,6 @@ export class DeckStore {
       this.state = 'stopped';
       this.cuePreviewing = false;
     }
-    this.pflMonitor = false;
     const t = audioEngine.transport(this.id);
     if (t) this.position = t.position();
   }
@@ -563,11 +620,11 @@ export class DeckStore {
     }
     const keepPos = this.position;
     try {
-      await audioEngine.waitUntilDecodeReady();
-      audioEngine.beginDecode();
+      await audioEngine.acquireDecode();
       try {
         await audioEngine.ensureRunning();
-        const buffer = await this.decodeIntoLiveContext(bytes);
+        // Prefer Xing inside fileBytes — do not pass this.duration (may be truncated).
+        const buffer = await this.decodeIntoLiveContext(bytes, null);
         const t = audioEngine.transport(this.id);
         if (!t) return;
         t.setBuffer(buffer);

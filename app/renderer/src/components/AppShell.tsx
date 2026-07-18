@@ -7,6 +7,7 @@ import { TempSettingsPanel } from './TempSettingsPanel';
 import { AudioSetupScreen } from './AudioSetupScreen';
 import { DevHarness } from './DevHarness';
 import { PrepMode } from './prep/PrepMode';
+import { PerformanceMode } from './perf/PerformanceMode';
 import { BrandMark } from './BrandMark';
 import { MidiMonitor } from './MidiMonitor';
 import { midiStore } from '../stores/root';
@@ -41,7 +42,10 @@ export const AppShell = observer(function AppShell() {
           <button
             type="button"
             className={uiStore.mode === 'performance' ? 'mode on' : 'mode'}
-            onClick={() => void uiStore.setMode('performance')}
+            onClick={() => {
+              setShowHarness(false);
+              void uiStore.setMode('performance');
+            }}
           >
             Performance
           </button>
@@ -132,10 +136,7 @@ export const AppShell = observer(function AppShell() {
         ) : uiStore.mode === 'prep' ? (
           <PrepMode />
         ) : (
-          <Placeholder
-            title="Performance mode"
-            body="Waveforms · decks · mixer · 3-row browser land in E6. Use Prep for library; E2 Harness for audio soak."
-          />
+          <PerformanceMode />
         )}
         {showMidi ? <MidiMonitor /> : null}
       </main>
@@ -144,12 +145,3 @@ export const AppShell = observer(function AppShell() {
     </div>
   );
 });
-
-function Placeholder(props: { title: string; body: string }) {
-  return (
-    <section className="placeholder">
-      <h1>{props.title}</h1>
-      <p>{props.body}</p>
-    </section>
-  );
-}

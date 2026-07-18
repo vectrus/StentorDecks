@@ -7,6 +7,8 @@ export * from './controlIds.js';
 export * from './midiDecode.js';
 export * from './camelot.js';
 export * from './analysisContract.js';
+export * from './mp3ResilientDecode.js';
+export * from './syncPhase.js';
 export {
   RMX2_FACTORY_MAP,
   RMX2_PAD_NOTES_STATUS,

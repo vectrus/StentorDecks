@@ -23,7 +23,8 @@ function readFileBuffer(filePath: string): ArrayBuffer {
   const buf = fs.readFileSync(filePath) as Buffer;
   const copy = new Uint8Array(buf.byteLength);
   copy.set(buf);
-  return copy.buffer;
+  // Slice to the view — never return a pooled Buffer's oversized .buffer.
+  return copy.buffer.slice(copy.byteOffset, copy.byteOffset + copy.byteLength);
 }
 
 const bus = ipc();

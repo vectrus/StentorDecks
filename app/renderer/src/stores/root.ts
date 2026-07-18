@@ -8,6 +8,7 @@ import { audioEngine } from '../audio/AudioEngine';
 import { MidiStore } from '../midi/MidiStore';
 import { MidiEngine } from '../midi/MidiEngine';
 import { MidiLeds } from '../midi/MidiLeds';
+import { onIpc } from '../ipc/client';
 
 export const deckA = new DeckStore('A', () => settingsStore.settings);
 export const deckB = new DeckStore('B', () => settingsStore.settings);
@@ -82,6 +83,13 @@ export async function bootAudio(): Promise<void> {
   if (!audioDeviceStore.needsSetup) {
     await audioDeviceStore.rebuildEngine();
   }
+  // E6: refresh overview when analysis commits for a loaded deck.
+  onIpc('analysis:progress', (p) => {
+    if (p.stage === 'commit' || (p.stage === 'idle' && p.trackId > 0)) {
+      deckA.refreshOverviewIf(p.trackId);
+      deckB.refreshOverviewIf(p.trackId);
+    }
+  });
   startAudioClock();
   void midiEngine.start();
 }

@@ -79,6 +79,19 @@ export class AudioEngine {
     }
   }
 
+  /**
+   * Atomically wait for rebuild gate then take a decode slot (closes TOCTOU
+   * between waitUntilDecodeReady and beginDecode that truncated buffers).
+   */
+  async acquireDecode(): Promise<void> {
+    for (;;) {
+      await this.waitUntilDecodeReady();
+      this.beginDecode();
+      if (!this.rebuildGate) return;
+      this.endDecode();
+    }
+  }
+
   private waitForDecodes(): Promise<void> {
     if (this.decodeInFlight === 0) return Promise.resolve();
     return new Promise((resolve) => {

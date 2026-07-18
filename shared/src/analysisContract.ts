@@ -1,6 +1,7 @@
 /** Internal main ↔ analysis-window contract (not UI StentorApi). E5 / docs/05. */
 
-export const ANALYSIS_VERSION = 1;
+/** Bump when decode/analysis output must be recomputed (v2: resilient MP3 decode). */
+export const ANALYSIS_VERSION = 2;
 
 export type AnalysisPriority = 'deck' | 'new' | 'backfill';
 

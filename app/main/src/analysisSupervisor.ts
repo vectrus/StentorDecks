@@ -13,11 +13,17 @@ import {
   type AnalysisStage,
 } from '@stentordeck/shared';
 import { getDb } from './db/database';
-import { commitAnalysis, getTrackAnalysisHints } from './db/tracksRepo';
+import {
+  commitAnalysis,
+  getTrackAnalysisHints,
+  listUnanalyzedTrackIds,
+} from './db/tracksRepo';
 
 export type AnalysisSupervisor = {
   ensureAnalysisWindow: () => void;
   enqueue: (trackIds: number[], priority: AnalysisPriority) => number;
+  /** Idle backfill kick (after scan / on timer). */
+  kickBackfill: () => void;
   destroy: () => void;
 };
 
@@ -35,6 +41,9 @@ export function setAnalysisProgressBroadcast(fn: ProgressBroadcast): void {
   broadcastProgress = fn;
 }
 
+const BACKFILL_BATCH = 8;
+const BACKFILL_INTERVAL_MS = 4000;
+
 export function createAnalysisSupervisor(): AnalysisSupervisor {
   let win: BrowserWindow | null = null;
   let ready = false;
@@ -42,6 +51,7 @@ export function createAnalysisSupervisor(): AnalysisSupervisor {
   let seq = 0;
   const queue: QueueItem[] = [];
   let current: QueueItem | null = null;
+  let backfillTimer: ReturnType<typeof setInterval> | null = null;
 
   const priorityRank = (p: AnalysisPriority): number => {
     if (p === 'deck') return 0;
@@ -120,10 +130,10 @@ export function createAnalysisSupervisor(): AnalysisSupervisor {
     for (const id of trackIds) {
       const hints = getTrackAnalysisHints(db, id);
       if (!hints) continue;
-      // Skip backfill if already analyzed at current version (Detect/deck forces).
+      // Skip backfill when waveform + current analysis version already present.
       if (
         priority === 'backfill' &&
-        hints.analyzed_at != null &&
+        hints.hasWaveform &&
         hints.analysis_version != null &&
         hints.analysis_version >= ANALYSIS_VERSION
       ) {
@@ -155,11 +165,26 @@ export function createAnalysisSupervisor(): AnalysisSupervisor {
     return queueDepth();
   }
 
+  function kickBackfill(): void {
+    if (busy || queue.length > 0) return;
+    const ids = listUnanalyzedTrackIds(getDb(), BACKFILL_BATCH);
+    if (ids.length === 0) return;
+    enqueue(ids, 'backfill');
+  }
+
+  function startBackfillLoop(): void {
+    if (backfillTimer != null) return;
+    backfillTimer = setInterval(() => kickBackfill(), BACKFILL_INTERVAL_MS);
+    // First kick shortly after boot so library roots already scanned fill in.
+    setTimeout(() => kickBackfill(), 1500);
+  }
+
   function pump(): void {
     if (busy || !ready || !win || win.isDestroyed()) return;
     const next = queue.shift();
     if (!next) {
       emit(0, 'idle');
+      // Next batch comes from the idle timer / post-scan kick — avoid re-entrancy.
       return;
     }
     busy = true;
@@ -203,13 +228,20 @@ export function createAnalysisSupervisor(): AnalysisSupervisor {
   ipcMain.on('analysis:stage', onStage);
   ipcMain.on('analysis:result', onResult);
 
+  startBackfillLoop();
+
   return {
     ensureAnalysisWindow,
     enqueue,
+    kickBackfill,
     destroy() {
       ipcMain.removeListener('analysis:ready', onReady);
       ipcMain.removeListener('analysis:stage', onStage);
       ipcMain.removeListener('analysis:result', onResult);
+      if (backfillTimer != null) {
+        clearInterval(backfillTimer);
+        backfillTimer = null;
+      }
       if (win && !win.isDestroyed()) win.destroy();
       win = null;
       ready = false;

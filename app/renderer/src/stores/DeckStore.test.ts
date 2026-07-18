@@ -9,6 +9,19 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     await expect(deck.load(new File([], 'x.wav'))).rejects.toBeInstanceOf(DeckPlayingError);
   });
 
+  it('togglePfl only flips headphone cue — never starts play (R2.8)', () => {
+    const deck = new DeckStore('A', () => defaultSettings);
+    deck.state = 'stopped';
+    deck.duration = 120;
+    expect(deck.pfl).toBe(false);
+    deck.togglePfl();
+    expect(deck.pfl).toBe(true);
+    expect(deck.state).toBe('stopped');
+    deck.togglePfl();
+    expect(deck.pfl).toBe(false);
+    expect(deck.state).toBe('stopped');
+  });
+
   it('resetOnLoad clears FX, kills, sync, cue, nudge, PFL', () => {
     const deck = new DeckStore('B', () => defaultSettings);
     deck.filterOn = true;
@@ -92,7 +105,25 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     expect(deck.syncArmed).toBe(true);
     expect(deck.syncMode).toBe('bpm');
     expect(deck.effectiveBpm).toBeCloseTo(132, 1);
-    expect(deck.syncStatusLine).toMatch(/matching partner BPM/i);
+    expect(deck.syncStatusLine).toMatch(/BPM \+ phase/i);
+  });
+
+  it('toggleSync one-shot phase snap aligns beat phase (R2.3)', () => {
+    const deck = new DeckStore('A', () => defaultSettings);
+    const other = new DeckStore('B', () => defaultSettings);
+    deck.state = 'stopped';
+    other.state = 'stopped';
+    deck.duration = 120;
+    other.duration = 120;
+    deck.fileBpm = 120;
+    other.fileBpm = 120;
+    other.pitchPos = 0.5;
+    // 120 BPM → 0.5 s period; phases 0.1 vs 0.3 → snap +0.2
+    deck.position = 10.1;
+    other.position = 4.3;
+    deck.toggleSync(other);
+    expect(deck.syncMode).toBe('bpm');
+    expect(deck.position).toBeCloseTo(10.3, 5);
   });
 
   it('manual trim sticks until next applyAutoGain/load reset cycle', () => {

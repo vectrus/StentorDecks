@@ -24,8 +24,9 @@ body{background:var(--bg);color:var(--tx);font-family:Bahnschrift,"Segoe UI",san
 .bpm{font-size:46px;line-height:1.1;}
 .key{font-size:20px;background:var(--raised);border-radius:6px;padding:2px 9px;}
 .rem{font-size:24px;margin-left:auto;}
-.prog{height:7px;background:var(--raised);border-radius:4px;margin-bottom:6px;}
-.prog i{display:block;height:7px;border-radius:4px;}
+/* Per-deck full-track overview (seekable in app) */
+.ov{height:28px;background:var(--raised);border-radius:4px;margin:6px 0 8px;position:relative;overflow:hidden;}
+.ov canvas{width:100%;height:28px;display:block;}
 .pitch{height:4px;background:var(--raised);border-radius:2px;position:relative;margin:0 0 10px;}
 .pitch .zero{position:absolute;left:50%;top:-3px;width:2px;height:10px;background:var(--faint);}
 .pitch .cap{position:absolute;top:-4px;width:10px;height:12px;background:var(--tx);border-radius:3px;}
@@ -57,6 +58,7 @@ tr.sel td{background:var(--sel);} tr.sel td:first-child{border-radius:6px 0 0 6p
 <span style="border:0.5px solid var(--bd);border-radius:5px;padding:3px 8px;">Master 1-2 · Cue 3-4</span>
 <i class="ti ti-settings"></i></span></div>
 
+<!-- Waveform well: scrolling detail (±4s) under fixed center playhead; overviews live in each deck -->
 <div class="well"><canvas id="wa" width="1240" height="56"></canvas><canvas id="wb" width="1240" height="56" style="margin-top:5px;"></canvas><div class="ph"></div></div>
 
 <div class="mid">
@@ -66,7 +68,7 @@ tr.sel td{background:var(--sel);} tr.sel td:first-child{border-radius:6px 0 0 6p
     <div class="big"><span class="bpm mono" style="color:var(--a);">126.4</span><span class="key mono">8A</span>
       <span style="display:flex;align-items:center;gap:5px;color:var(--a);"><i class="ti ti-headphones" style="font-size:18px;"></i></span>
       <span class="rem mono">-3:52</span></div>
-    <div class="prog"><i style="width:41%;background:var(--a);"></i></div>
+    <div class="ov"><canvas id="ova" width="400" height="28"></canvas></div>
     <div class="pitch"><span class="zero"></span><span class="cap" style="left:57%;"></span></div>
     <div class="fx"><span class="pad on">FILTER</span>
       <div><div class="knob" style="transform:rotate(-55deg);"></div><div class="kl">AMT</div></div>
@@ -99,7 +101,7 @@ tr.sel td{background:var(--sel);} tr.sel td:first-child{border-radius:6px 0 0 6p
     <div class="big"><span class="bpm mono" style="color:var(--b);">126.4</span><span class="key mono">9A</span>
       <span style="color:var(--dis);"><i class="ti ti-headphones" style="font-size:18px;"></i></span>
       <span class="rem mono">-6:07</span></div>
-    <div class="prog"><i style="width:4%;background:var(--b);"></i></div>
+    <div class="ov"><canvas id="ovb" width="400" height="28"></canvas></div>
     <div class="pitch"><span class="zero"></span><span class="cap" style="left:calc(50% - 5px);"></span></div>
     <div class="fx"><span class="pad">FILTER</span>
       <div><div class="knob"></div><div class="kl">AMT</div></div>
@@ -123,8 +125,14 @@ tr.sel td{background:var(--sel);} tr.sel td:first-child{border-radius:6px 0 0 6p
 </div>
 </div>
 <script>
-function wf(id,c,p){var cv=document.getElementById(id),x=cv.getContext('2d');
+function detail(id,c,p){var cv=document.getElementById(id),x=cv.getContext('2d'),mid=28;
 for(var i=0;i<248;i++){var t=i*5,h=8+20*Math.abs(Math.sin(i*0.31+p))+12*Math.abs(Math.sin(i*0.052+p*2))+(i%8===0?12:0);
-x.fillStyle=(t<620)?c:c+'55';x.fillRect(t,28-h/2,3.5,h);}}
-wf('wa','#FFB454',0.4);wf('wb','#5BD0FF',1.7);
+x.fillStyle=c+(t<620?'':'66');x.fillRect(t,mid-h/2,3.5,h);}
+x.fillStyle='#8A94A666';for(var b=0;b<248;b+=12)x.fillRect(b*5,0,1,56);}
+function overview(id,c,played){var cv=document.getElementById(id),x=cv.getContext('2d'),w=cv.width,mid=14;
+for(var i=0;i<100;i++){var px=i*(w/100),h=4+10*Math.abs(Math.sin(i*0.4));
+x.globalAlpha=i<played?1:0.4;x.fillStyle=c;x.fillRect(px,mid-h/2,Math.max(1,w/100-0.5),h);}
+x.globalAlpha=1;x.fillStyle=c;x.fillRect(played/100*w-1,0,2,28);}
+detail('wa','#FFB454',0.4);detail('wb','#5BD0FF',1.7);
+overview('ova','#FFB454',41);overview('ovb','#5BD0FF',4);
 </script></body></html>

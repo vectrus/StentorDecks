@@ -13,7 +13,7 @@ Source: design sessions with the owner (DJ, 54, declining eyesight, RMX2 hardwar
 ## R2 Playback & mixing
 - R2.1 Two decks, MP3 + FLAC + WAV.
 - R2.2 Jog wheels: nudge (temporary tempo bend while playing) and seek (while paused) only. No scratching. Latency target ≤ 40 ms output; no ASIO requirement.
-- R2.3 Beatmatching is manual-first: pitch faders, pitch-bend buttons, jog nudge. SYNC button per deck sets that deck's rate so its BPM equals the other deck's current effective BPM. No beatgrid phase-locking. No keylock (pitch changes tone; acceptable). Factory SYNC mapping stays on the hardware Sync buttons (not reused for tap tempo).
+- R2.3 Beatmatching is manual-first: pitch faders, pitch-bend buttons, jog nudge. SYNC button per deck sets that deck's rate so its BPM equals the other deck's current effective BPM, then performs a **one-shot beat phase snap** (shortest seek so playhead beat phases align on the 0:00-origin grid used by visual ticks). No continuous phase-lock while armed; no editable beatgrids. No keylock (pitch changes tone; acceptable). Factory SYNC mapping stays on the hardware Sync buttons (not reused for tap tempo).
 - R2.4 No crossfader. The engine contains a bypassed crossfader stage; hardware crossfader MIDI is ignored; no crossfader appears in the UI. A settings toggle (default off) can enable it for guests.
 - R2.5 Channel faders are the mixing instrument. Per-fader response: position→dB mapping with a user-adjustable curve (presets linear/smooth/sharp + continuous shape control); A and B curves mirrored by default, unlinkable.
 - R2.6 Pitch faders: near-linear curve, plus configurable center dead-zone that snaps to exactly 0.00 %. Pitch range is user-selectable **±8 %** or **±16 %** (SL-1200-style). Default ±8 %. At ±16 %, the same short RMX2 fader travel is coarser — dead-zone and soft-takeover remain mandatory.
@@ -60,7 +60,7 @@ Source: design sessions with the owner (DJ, 54, declining eyesight, RMX2 hardwar
 - R7.2 UI scale setting: 100 / 125 / 150 %.
 - R7.3 Deck accent colors configurable (defaults: A amber `#FFB454`, B cyan `#5BD0FF`).
 - R7.4 Two modes, both fullscreen: Performance (waveforms + decks + mixer + 3-row browser) and Prep (compact deck strips + folder tree + large browser). Toggle via UI and mappable hardware control.
-- R7.5 Waveform strip: both decks stacked, fixed center playhead, deck-colored. **Visual beat ticks** derived from file BPM × rate (phase aids only — not editable beatgrids, not phase-locked SYNC). Cue point marker on overview + detail.
+- R7.5 Waveform strip: both decks stacked, fixed center playhead, deck-colored. **Visual beat ticks** derived from file BPM × rate from an origin of 0:00 (not editable beatgrids). SYNC engage may seek this deck for a one-shot phase snap onto that same grid (R2.3); ticks themselves are not dragged. Cue point marker on overview + detail.
 - R7.6 VU meters beside channel faders: green → amber, red only at clipping.
 - R7.7 Size = importance: mid-mix data (BPM, remaining time, key, VU) is the largest; prep-time data is smaller or moved to Prep mode.
 

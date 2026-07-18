@@ -17,7 +17,9 @@ import {
 } from './db/midiMapRepo';
 import {
   buildFolderTree,
+  countLiveTracks,
   getTrackDetail,
+  getWaveformBlob,
   queryTracks,
   readTrackFile,
   updateManualMeta,
@@ -67,10 +69,21 @@ export function registerIpcHandlers(ctx: Ctx): void {
     const roots = ctx.getSettingsState().settings.library.roots;
     return buildFolderTree(getDb(), roots);
   });
+  handle('library:stats', () => ({ trackCount: countLiveTracks(getDb()) }));
   handle('library:track', (req) => getTrackDetail(getDb(), req.id));
   handle('library:read', (req) => {
     const roots = ctx.getSettingsState().settings.library.roots;
     return readTrackFile(getDb(), req.id, roots);
+  });
+  handle('library:waveform', (req) => {
+    const bytes = getWaveformBlob(getDb(), req.id, req.kind);
+    if (!bytes) return null;
+    return {
+      trackId: req.id,
+      kind: req.kind,
+      bytes,
+      detailPps: req.kind === 'detail' ? 50 : null,
+    };
   });
   handle('library:pickRoot', async () => {
     const win = getMainWindow();
@@ -104,6 +117,7 @@ export function registerIpcHandlers(ctx: Ctx): void {
       markMissing: !partial,
     });
     libraryWatcher?.setRoots(settings.library.roots);
+    analysis.kickBackfill();
     return { ok: true as const };
   });
 

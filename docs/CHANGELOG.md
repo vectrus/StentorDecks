@@ -5,6 +5,42 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — SYNC one-shot beat phase snap (R2.3)
+
+Owner change: SYNC still matches tempo and latches for tempo follow, and on **engage** also seeks the synced deck by the shortest delta so playhead beat phases align (0:00-origin grid, same as visual ticks). No continuous phase-lock. Spec updated in R2.3 / R7.5 / docs/03 / docs/05.
+
+---
+
+## 2026-07-18 — E6 Perf detail well + per-deck overview
+
+Performance mode: stacked **scrolling detail** waveforms (±4 s @ 50 pps) under a shared white center playhead with beat ticks + cue; each deck panel hosts the **full-track overview** (click-seek, EOT tint). Minimal deck-accent bars only. R-IDs: R7.5, docs/05 §rendering, docs/06, E6 §2, mockup 01.
+
+---
+
+## 2026-07-18 — PFL is headphones-only (no auto-play)
+
+`togglePfl` no longer soft-starts a stopped deck. PFL only opens/closes the pre-fader headphone tap (R2.8); Play and Cue remain the transport controls. Supersedes the earlier “PFL starts monitor playback” note. R-IDs: R2.8.
+
+---
+
+## 2026-07-18 — Fix Chromium MP3 truncate (~32s of long tracks)
+
+`decodeAudioData` stops at the first bad MPEG frame on some library MP3s (Phenomenon was ~32s of an 8:08 file; file on disk and `<audio>` were fine). Added resilient resume-at-next-sync decode (`decodeMpegResilient`); analysis `ANALYSIS_VERSION` → **2** so idle backfill rewrites short durations/waveforms. Also closed a decode/rebuild TOCTOU via `acquireDecode()`. R-IDs: R2.*, R5.5, E5.
+
+---
+
+## 2026-07-18 — E5 idle backfill + E6 overview waveforms
+
+Analysis supervisor auto-enqueues unanalyzed tracks (`backfill` priority) on a 4 s idle timer and after library rescan. Perf well draws **overview** canvases from `library:waveform` (800× min/max/rms u8): played opacity, cue marker, EOT tint, click-seek; refreshes when analysis commits for the loaded track. Scrolling detail + full deck chrome still TODO. R-IDs: R5.5, R6.*, docs/05 §rendering, E5/E6.
+
+---
+
+## 2026-07-18 — E4 Performance 3-row library strip
+
+Performance mode shell: waveform placeholder well, compact A/mixer/B, **3-row browser** with search + `library:stats` track count + analyzing counter (same LibraryStore cursor as MIDI/Prep). Load A/B + keyboard browse. Full waveforms/deck chrome remain E6. R-IDs: R5.*, docs/06, E4 §6, mockup 01.
+
+---
+
 ## 2026-07-18 — Living status rule (§2c)
 
 `.cursorrules` now **requires** agents to update `README.md` roadmap + `docs/ROADMAP.md` + `docs/CHANGELOG.md` in the same change whenever epic progress moves — no waiting for the owner to ask. README refreshed to match E4/E5 DOING state.
@@ -172,7 +208,7 @@ Replaced all-caps `STENTORDECK` chrome with dual-fader mark + **StentorDeck** / 
 
 - HeadMix default **0** (cue only) so master no longer drowns PFL at 50/50.
 - Phones/master/HeadMix use linear ramps; phones hits true mute at 0.
-- PFL on a **stopped** deck starts monitor playback (pre-fader cue, fader forced 0 to master).
+- ~~PFL on a stopped deck starts monitor playback~~ — **reverted 2026-07-18** (PFL is headphones tap only).
 - Mixer gains re-applied after every engine rebuild.
 
 ---
@@ -257,7 +293,7 @@ Greenfield implementation of epic E1: npm workspaces (`shared`, `app/main`, `app
 | 4 | Filter vs wet | Separate ControlIds; filter factory-unmapped (learn); no mode-sharing | R3.1 |
 | 5 | EQ | Settable max dB, default ±12; non-linear + soft edge at extremes | R2.12 |
 | 6 | BPM/key fix | Tap + half/double + key override in v1; Prep UI required; factory Sync stays Sync; Performance chrome nice-to-have | R2.3, R6.6 |
-| 7 | Beat aids | Visual beat ticks only (not editable grids, not phase SYNC) | R7.5 |
+| 7 | Beat aids | Visual beat ticks; SYNC engage one-shot phase snap (not continuous lock) | R7.5 / R2.3 |
 | 8 | Split cue | Nice-to-have / backlog | R2.8 |
 | 9 | Pitch range | Selectable ±8 % / ±16 % (SL-1200-style); mind short RMX2 faders | R2.6 |
 | 10 | Renderer crash | Music stopping is acceptable; no session restore in v1 | R1.6 |
