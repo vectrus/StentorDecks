@@ -119,4 +119,10 @@ Greenfield implementation of epic E1: npm workspaces (`shared`, `app/main`, `app
 
 Owner: “All of them, default is the Sync btn on the controller, Visible representation on console is a nice to have.”
 
-Recorded as: **all correction tools in v1**; **factory Sync buttons remain one-shot BPM SYNC** (not retasked as tap); Prep UI required; Performance-cons
+Recorded as: **all correction tools in v1**; **factory Sync buttons remain one-shot BPM SYNC** (not retasked as tap); Prep UI required; Performance-console chrome for tap/½/×2/key is nice-to-have. If the intent was “map tap to Sync by default,” correct this entry and R2.3/R6.6 explicitly.
+
+---
+
+## 2026-07-18 — Initial spec baseline
+
+Full v1 spec set present: README, docs/01–07, epics E1–E7 (under `docs/E*.md`). Product goals, stack lock, epic gating on RMX2 Plan A/B hardware proof.

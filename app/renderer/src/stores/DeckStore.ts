@@ -123,6 +123,8 @@ export class DeckStore {
     this.syncArmed = false;
     this.cueOffset = 0;
     this.cuePreviewing = false;
+    this.pfl = false;
+    this.pflMonitor = false;
     this.eotWarn = 0;
     if (meta?.loudnessLufs != null) this.loudnessLufs = meta.loudnessLufs;
     // pitchPos kept (soft takeover re-arm is MIDI-layer concern)
