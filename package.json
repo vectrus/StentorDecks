@@ -18,8 +18,9 @@
     "start": "node scripts/dev.mjs",
     "dev": "node scripts/dev.mjs",
     "build": "npm run build -w @stentordeck/shared && npm run build -w @stentordeck/main && npm run build -w @stentordeck/renderer && npm run build -w @stentordeck/analysis",
-    "dist": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64",
-    "dist:dir": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64 --dir",
+    "icons": "node scripts/make-windows-icon.mjs",
+    "dist": "npm run icons && npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64",
+    "dist:dir": "npm run icons && npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64 --dir",
     "shortcut": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Create-DesktopShortcut.ps1",
     "lint": "eslint .",
     "typecheck": "npm run typecheck -w @stentordeck/shared && npm run typecheck -w @stentordeck/main && npm run typecheck -w @stentordeck/renderer && npm run typecheck -w @stentordeck/analysis",
@@ -60,7 +61,7 @@
       }
     ],
     "win": {
-      "icon": "build/icon.png",
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -72,6 +73,7 @@
       "artifactName": "StentorDeck-Setup-${version}.${ext}",
       "signAndEditExecutable": false
     },
+    "afterPack": "./scripts/embed-win-icon.cjs",
     "forceCodeSigning": false,
     "nsis": {
       "oneClick": false,
@@ -108,6 +110,7 @@
     "globals": "^16.5.0",
     "jsdom": "^29.1.1",
     "prettier": "^3.4.2",
+    "rcedit": "^4.0.1",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.50.0",
     "vitest": "^2.1.8"

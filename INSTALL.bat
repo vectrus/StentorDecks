@@ -30,7 +30,7 @@ node -v
 npm -v
 echo.
 
-REM Full path: npm install (Electron ABI) → rebuild native → free port → start
+REM Full path: npm install → rebuild → Desktop shortcut → start packaged exe or dev
 call npm run setup
 set EXITCODE=%ERRORLEVEL%
 
@@ -40,5 +40,12 @@ if not %EXITCODE%==0 (
   echo Tip: use Node 22 LTS, close apps locking node_modules, delete node_modules, run again.
   echo.
   pause
+  exit /b %EXITCODE%
 )
-exit /b %EXITCODE%
+
+echo.
+echo Done. Desktop shortcut: StentorDeck
+echo If the window flashed and closed, another copy may already be running — check the taskbar.
+echo For a branded installer: npm run dist
+echo.
+exit /b 0

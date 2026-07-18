@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — Windows icon + Desktop shortcut after install
+
+Packaged `StentorDeck.exe` kept the default Electron icon because `signAndEditExecutable: false` skips builder’s rcedit (and turning it on pulls `winCodeSign`, which fails on Windows without symlink privileges). Fix: `build/icon.ico` (`npm run icons`) + `afterPack` [`scripts/embed-win-icon.cjs`](../scripts/embed-win-icon.cjs) via devDep `rcedit` (justification: only reliable way to embed icon/metadata without winCodeSign). `npm run setup` / INSTALL.bat create a Desktop `.lnk` and prefer packaged exe; boot failures show a dialog. E7 / R1.1.
+
+---
+
 ## 2026-07-18 — INSTALL.bat one-shot setup
 
 Root [`INSTALL.bat`](../INSTALL.bat) / `npm run setup` installs deps (Electron ABI), rebuilds native, frees Vite port, and starts the app. `Start StentorDeck.bat` delegates to it. E7 / R1.1.

@@ -54,7 +54,7 @@ Electron · React 18 · TypeScript strict · MobX · better-sqlite3 · Web Audio
 1. Install [Node.js 22 LTS](https://nodejs.org) once (recommended).
 2. Double-click **[`INSTALL.bat`](./INSTALL.bat)** in the repo root.
 
-That script installs dependencies (Electron ABI for `better-sqlite3`), rebuilds the native module, frees the Vite port, and starts the app. Same entry: `npm run setup`.
+That script installs dependencies (Electron ABI for `better-sqlite3`), rebuilds the native module, creates a **Desktop shortcut**, and starts the app (packaged `.exe` if present, otherwise source/dev). Same entry: `npm run setup`.
 
 [`Start StentorDeck.bat`](./Start%20StentorDeck.bat) launches a packaged `.exe` if present; otherwise it runs `INSTALL.bat`.
 
@@ -63,11 +63,13 @@ If it fails: close anything locking `node_modules`, delete that folder, run `INS
 ### Production-style (Explorer icon, no command window)
 
 ```bash
-npm run dist          # NSIS installer — Desktop + Start Menu shortcuts with app icon
+npm run dist          # NSIS installer — Desktop + Start Menu shortcuts with brand icon
 # or quick unpacked build:
 npm run dist:dir
-npm run shortcut      # Desktop StentorDeck.lnk → release/win-unpacked/StentorDeck.exe
+npm run shortcut      # Desktop StentorDeck.lnk → exe (or Launch-StentorDeck.vbs)
 ```
+
+Windows packaging embeds `build/icon.ico` via an `afterPack` rcedit hook (avoids winCodeSign symlink issues).
 
 Double-click **StentorDeck** on the Desktop. Closing the window shuts down analysis, DB, and MIDI cleanly. Boot shows a short branded splash.
 

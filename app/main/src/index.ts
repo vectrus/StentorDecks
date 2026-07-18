@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import path from 'node:path';
 import { createAnalysisSupervisor } from './analysisSupervisor';
 import { getSchemaVersion, openDatabase } from './db/database';
@@ -9,14 +9,29 @@ import { closeSplash, showSplash } from './splash';
 import { createMainWindow, preloadPathFromDist } from './windows';
 import type { AppModeState, Settings } from '@stentordeck/shared';
 
+// Windows taskbar / jump-list identity (must match electron-builder appId).
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.stentordeck.app');
+}
+
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   console.info('[app] another instance is running — focusing it and exiting');
   app.quit();
 } else {
-  void boot().catch((err) => {
+  void boot().catch(async (err) => {
     console.error('[app] boot failed', err);
     closeSplash();
+    const detail = err instanceof Error ? err.stack ?? err.message : String(err);
+    try {
+      await app.whenReady();
+      dialog.showErrorBox(
+        'StentorDeck failed to start',
+        `${detail}\n\nIf this mentions better-sqlite3, run: npm run rebuild:native\nThen try again (or reinstall from StentorDeck-Setup).`,
+      );
+    } catch {
+      /* dialog unavailable */
+    }
     gracefulShutdown('boot-failed');
     app.exit(1);
   });
