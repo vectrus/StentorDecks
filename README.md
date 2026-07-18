@@ -49,6 +49,15 @@ Electron · React 18 · TypeScript strict · MobX · better-sqlite3 · Web Audio
 
 ## Start the app
 
+**Fresh clone / other PC:** install deps once from the repo root before any build.
+
+```bash
+cd C:\Stentordecks   # or your clone path
+npm install          # required — installs TypeScript, Electron, etc.
+```
+
+If `npm run dist` fails with `'tsc' is not recognized`, you skipped `npm install` (or it failed). Fix install, then retry.
+
 ### Production-style (Explorer icon, no command window)
 
 ```bash

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "tsup && node ../../scripts/copy-analysis-html.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "npx tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@stentordeck/shared": "*"
