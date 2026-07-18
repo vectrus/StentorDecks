@@ -1,0 +1,344 @@
+import {
+  channelFaderGain,
+  eqKnobDb,
+  filterFromAmount,
+  trimDbToGain,
+} from '@stentordeck/shared';
+import { linearRampParam, rampParam } from './ramp';
+
+export type DeckId = 'A' | 'B';
+
+export type DeckGraphParams = {
+  trimDb: number;
+  eq: { low: number; mid: number; high: number }; // knobs 0..1
+  eqMaxDb: number;
+  kills: { low: boolean; mid: boolean; high: boolean };
+  faderPos: number;
+  faderShape: number;
+  filterOn: boolean;
+  filterAmount: number;
+  flangerOn: boolean;
+  flangerWet: number;
+  flanger: { rateHz: number; depthMs: number; feedback: number };
+  pfl: boolean;
+  crossfaderEnabled: boolean;
+  crossfaderGain: number; // 0..1 when enabled; else forced 1
+};
+
+/**
+ * Per-deck node chain (docs/03). Source is (re)created by transport layer.
+ */
+export class DeckGraph {
+  readonly input: GainNode;
+  readonly pflOut: GainNode;
+  readonly masterOut: GainNode;
+  readonly channelMeter: AnalyserNode;
+
+  private readonly trim: GainNode;
+  private readonly eqLow: BiquadFilterNode;
+  private readonly eqMid: BiquadFilterNode;
+  private readonly eqHigh: BiquadFilterNode;
+  private readonly filter: BiquadFilterNode;
+  private readonly filterDry: GainNode;
+  private readonly filterWet: GainNode;
+  private readonly flangerInput: GainNode;
+  private readonly flangerDry: GainNode;
+  private readonly flangerWetGain: GainNode;
+  private readonly delay: DelayNode;
+  private readonly feedback: GainNode;
+  private readonly lfo: OscillatorNode;
+  private readonly lfoGain: GainNode;
+  private readonly fader: GainNode;
+  private readonly xfader: GainNode;
+  private readonly pflGain: GainNode;
+  private readonly ctx: AudioContext;
+
+  constructor(ctx: AudioContext) {
+    this.ctx = ctx;
+    this.input = ctx.createGain();
+    this.trim = ctx.createGain();
+    this.eqLow = ctx.createBiquadFilter();
+    this.eqMid = ctx.createBiquadFilter();
+    this.eqHigh = ctx.createBiquadFilter();
+    this.filter = ctx.createBiquadFilter();
+    this.filterDry = ctx.createGain();
+    this.filterWet = ctx.createGain();
+    this.flangerInput = ctx.createGain();
+    this.flangerDry = ctx.createGain();
+    this.flangerWetGain = ctx.createGain();
+    this.delay = ctx.createDelay(0.05);
+    this.feedback = ctx.createGain();
+    this.lfo = ctx.createOscillator();
+    this.lfoGain = ctx.createGain();
+    this.pflGain = ctx.createGain();
+    this.fader = ctx.createGain();
+    this.xfader = ctx.createGain();
+    this.pflOut = ctx.createGain();
+    this.masterOut = ctx.createGain();
+    this.channelMeter = ctx.createAnalyser();
+    this.channelMeter.fftSize = 2048;
+
+    this.eqLow.type = 'lowshelf';
+    this.eqLow.frequency.value = 180;
+    this.eqMid.type = 'peaking';
+    this.eqMid.frequency.value = 1000;
+    this.eqMid.Q.value = 0.9;
+    this.eqHigh.type = 'highshelf';
+    this.eqHigh.frequency.value = 4500;
+
+    this.delay.delayTime.value = 0.002;
+    this.lfo.type = 'sine';
+    this.lfo.frequency.value = 0.25;
+    this.lfoGain.gain.value = 0.0015;
+    this.feedback.gain.value = 0.5;
+    this.lfo.connect(this.lfoGain);
+    this.lfoGain.connect(this.delay.delayTime);
+    this.lfo.start();
+
+    // input → trim → EQ → filter split → flanger → pfl tap / fader → xfader → master
+    this.input.connect(this.trim);
+    this.trim.connect(this.eqLow);
+    this.eqLow.connect(this.eqMid);
+    this.eqMid.connect(this.eqHigh);
+
+    this.eqHigh.connect(this.filterDry);
+    this.eqHigh.connect(this.filter);
+    this.filter.connect(this.filterWet);
+
+    const filterSum = ctx.createGain();
+    this.filterDry.connect(filterSum);
+    this.filterWet.connect(filterSum);
+    filterSum.connect(this.flangerInput);
+
+    this.flangerInput.connect(this.flangerDry);
+    this.flangerInput.connect(this.delay);
+    this.delay.connect(this.flangerWetGain);
+    this.delay.connect(this.feedback);
+    this.feedback.connect(this.delay);
+
+    const flangerSum = ctx.createGain();
+    this.flangerDry.connect(flangerSum);
+    this.flangerWetGain.connect(flangerSum);
+
+    flangerSum.connect(this.pflGain);
+    this.pflGain.connect(this.pflOut);
+
+    flangerSum.connect(this.fader);
+    this.fader.connect(this.channelMeter);
+    this.fader.connect(this.xfader);
+    this.xfader.connect(this.masterOut);
+
+    this.apply({
+      trimDb: 0,
+      eq: { low: 0.5, mid: 0.5, high: 0.5 },
+      eqMaxDb: 12,
+      kills: { low: false, mid: false, high: false },
+      faderPos: 1,
+      faderShape: 35,
+      filterOn: false,
+      filterAmount: 0.5,
+      flangerOn: false,
+      flangerWet: 0,
+      flanger: { rateHz: 0.25, depthMs: 1.5, feedback: 0.5 },
+      pfl: false,
+      crossfaderEnabled: false,
+      crossfaderGain: 1,
+    });
+  }
+
+  apply(p: DeckGraphParams): void {
+    const ctx = this.ctx;
+    rampParam(this.trim.gain, trimDbToGain(p.trimDb), ctx);
+
+    const lowDb = p.kills.low ? -40 : eqKnobDb(p.eq.low, p.eqMaxDb);
+    const midDb = p.kills.mid ? -40 : eqKnobDb(p.eq.mid, p.eqMaxDb);
+    const highDb = p.kills.high ? -40 : eqKnobDb(p.eq.high, p.eqMaxDb);
+    rampParam(this.eqLow.gain, lowDb, ctx);
+    rampParam(this.eqMid.gain, midDb, ctx);
+    rampParam(this.eqHigh.gain, highDb, ctx);
+
+    // Filter bypass crossfade
+    const filt = filterFromAmount(p.filterAmount);
+    if (!p.filterOn || filt.mode === 'bypass') {
+      rampParam(this.filterDry.gain, 1, ctx);
+      rampParam(this.filterWet.gain, 0, ctx);
+    } else {
+      this.filter.type = filt.mode;
+      this.filter.frequency.value = filt.frequency;
+      this.filter.Q.value = filt.Q;
+      rampParam(this.filterDry.gain, 0, ctx);
+      rampParam(this.filterWet.gain, 1, ctx);
+    }
+
+    // Flanger
+    this.lfo.frequency.value = p.flanger.rateHz;
+    this.lfoGain.gain.value = p.flanger.depthMs / 1000;
+    this.feedback.gain.value = p.flanger.feedback;
+    const wet = p.flangerOn ? p.flangerWet : 0;
+    const dry = Math.cos((wet * Math.PI) / 2);
+    const wetG = Math.sin((wet * Math.PI) / 2);
+    rampParam(this.flangerDry.gain, dry, ctx);
+    rampParam(this.flangerWetGain.gain, wetG, ctx);
+
+    rampParam(this.pflGain.gain, p.pfl ? 1 : 0, ctx);
+    rampParam(this.fader.gain, channelFaderGain(p.faderPos, p.faderShape), ctx);
+    rampParam(this.xfader.gain, p.crossfaderEnabled ? p.crossfaderGain : 1, ctx);
+  }
+
+  disconnect(): void {
+    try {
+      this.lfo.stop();
+    } catch {
+      /* ignore */
+    }
+    // Best-effort; GC + context close handles the rest on rebuild
+  }
+}
+
+export type TransportSnapshot = {
+  playing: boolean;
+  /** Buffer offset in seconds at last start/pause. */
+  offset: number;
+  startCtxTime: number;
+  rate: number;
+};
+
+export class DeckTransport {
+  private source: AudioBufferSourceNode | null = null;
+  private buffer: AudioBuffer | null = null;
+  private snap: TransportSnapshot = {
+    playing: false,
+    offset: 0,
+    startCtxTime: 0,
+    rate: 1,
+  };
+  private rateAccumOffset = 0;
+  private rateAccumCtxTime = 0;
+  private rateAccumRate = 1;
+
+  constructor(
+    private readonly ctx: AudioContext,
+    private readonly dest: AudioNode,
+  ) {}
+
+  get isPlaying(): boolean {
+    return this.snap.playing;
+  }
+
+  get duration(): number {
+    return this.buffer?.duration ?? 0;
+  }
+
+  setBuffer(buffer: AudioBuffer | null): void {
+    this.stopImmediate();
+    this.buffer = buffer;
+    this.snap.offset = 0;
+    this.rateAccumOffset = 0;
+    this.rateAccumCtxTime = 0;
+  }
+
+  getBuffer(): AudioBuffer | null {
+    return this.buffer;
+  }
+
+  position(): number {
+    if (!this.buffer) return 0;
+    if (!this.snap.playing) return this.snap.offset;
+    const elapsed = (this.ctx.currentTime - this.rateAccumCtxTime) * this.rateAccumRate;
+    return Math.min(this.buffer.duration, this.rateAccumOffset + elapsed);
+  }
+
+  play(rate: number): void {
+    if (!this.buffer || this.snap.playing) return;
+    this.startSource(this.snap.offset, rate);
+  }
+
+  pause(): void {
+    if (!this.snap.playing) return;
+    const pos = this.position();
+    this.stopImmediate();
+    this.snap.offset = pos;
+    this.snap.playing = false;
+  }
+
+  seek(offset: number): void {
+    const dur = this.buffer?.duration ?? 0;
+    const next = Math.max(0, Math.min(dur, offset));
+    const wasPlaying = this.snap.playing;
+    const rate = this.snap.rate;
+    this.stopImmediate();
+    this.snap.offset = next;
+    if (wasPlaying) this.startSource(next, rate);
+  }
+
+  setRate(rate: number): void {
+    if (this.snap.playing) {
+      const pos = this.position();
+      this.rateAccumOffset = pos;
+      this.rateAccumCtxTime = this.ctx.currentTime;
+      this.rateAccumRate = rate;
+    }
+    this.snap.rate = rate;
+    if (this.source) {
+      linearRampParam(this.source.playbackRate, rate, this.ctx, 0.02);
+    }
+  }
+
+  /** Brake: ramp rate → 0 then stop. */
+  brake(ms: number): void {
+    if (!this.snap.playing || !this.source) {
+      this.pause();
+      return;
+    }
+    const src = this.source;
+    const t = this.ctx.currentTime;
+    src.playbackRate.cancelScheduledValues(t);
+    src.playbackRate.setValueAtTime(src.playbackRate.value, t);
+    src.playbackRate.linearRampToValueAtTime(0.001, t + ms / 1000);
+    window.setTimeout(() => {
+      const pos = this.position();
+      this.stopImmediate();
+      this.snap.offset = pos;
+      this.snap.playing = false;
+    }, ms + 20);
+  }
+
+  stopImmediate(): void {
+    if (this.source) {
+      try {
+        this.source.onended = null;
+        this.source.stop();
+        this.source.disconnect();
+      } catch {
+        /* ignore */
+      }
+      this.source = null;
+    }
+    this.snap.playing = false;
+  }
+
+  private startSource(offset: number, rate: number): void {
+    if (!this.buffer) return;
+    this.stopImmediate();
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.buffer;
+    src.playbackRate.value = rate;
+    src.connect(this.dest);
+    const t = this.ctx.currentTime;
+    src.start(t, offset);
+    src.onended = () => {
+      if (this.source === src) {
+        this.snap.playing = false;
+        this.source = null;
+      }
+    };
+    this.source = src;
+    this.snap.playing = true;
+    this.snap.offset = offset;
+    this.snap.startCtxTime = t;
+    this.snap.rate = rate;
+    this.rateAccumOffset = offset;
+    this.rateAccumCtxTime = t;
+    this.rateAccumRate = rate;
+  }
+}

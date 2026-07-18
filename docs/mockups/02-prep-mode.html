@@ -1,0 +1,59 @@
+<!doctype html><html><head><meta charset="utf-8"><title>StentorDeck — Prep mode (authoritative)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<style>
+:root{--bg:#0E1115;--panel:#161B22;--panel2:#12161C;--raised:#262E39;--sel:#2A3340;--bd:#313A46;
+--tx:#F4F7FB;--dim:#AAB4C2;--faint:#8A94A6;--a:#FFB454;--b:#5BD0FF;}
+body{background:var(--bg);color:var(--tx);font-family:Bahnschrift,"Segoe UI",sans-serif;margin:0;padding:18px;}
+.mono{font-family:Consolas,monospace;}
+.app{max-width:1100px;margin:0 auto;}
+.strips{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.strip{background:var(--panel);border-radius:0 8px 8px 0;padding:8px 12px;display:flex;align-items:center;gap:12px;font-size:14px;}
+.strip.a{border-left:3px solid var(--a);} .strip.b{border-left:3px solid var(--b);}
+.main{display:grid;grid-template-columns:200px 1fr;gap:10px;}
+.tree{background:var(--panel2);border:0.5px solid var(--bd);border-radius:8px;padding:10px 8px;font-size:14px;}
+.node{display:flex;align-items:center;gap:7px;padding:7px 8px;color:#D5DCE5;border-radius:6px;}
+.node.open{background:var(--sel);color:var(--tx);}
+.node.child{margin-left:14px;}
+.list{background:var(--panel2);border:0.5px solid var(--bd);border-radius:8px;padding:10px 12px;}
+.crumb{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;color:var(--dim);}
+table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:16px;}
+th{padding:4px 8px;font-weight:400;color:var(--dim);font-size:12px;text-align:left;}
+td{padding:10px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#D5DCE5;}
+tr.sel td{background:var(--sel);color:var(--tx);}
+tr.sel td:first-child{border-radius:6px 0 0 6px;} tr.sel td:last-child{border-radius:0 6px 6px 0;}
+.foot{font-size:12px;color:var(--dim);margin-top:8px;display:flex;gap:14px;}
+</style></head><body><div class="app">
+<div class="strips">
+  <div class="strip a"><i class="ti ti-player-pause" style="font-size:18px;color:var(--a);"></i>
+    <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Amsterdam Nights</span>
+    <span class="mono" style="font-size:18px;color:var(--a);margin-left:auto;">126.4</span>
+    <span class="mono" style="color:var(--dim);">-3:52</span></div>
+  <div class="strip b"><i class="ti ti-player-play" style="font-size:18px;color:var(--b);"></i>
+    <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Polder Pressure</span>
+    <span class="mono" style="font-size:18px;color:var(--b);margin-left:auto;">126.4</span>
+    <span class="mono" style="color:var(--dim);">-6:07</span></div>
+</div>
+<div class="main">
+  <div class="tree">
+    <div class="node"><i class="ti ti-folder"></i>House</div>
+    <div class="node"><i class="ti ti-folder"></i>Techno</div>
+    <div class="node child open"><i class="ti ti-folder-open" style="color:var(--a);"></i>NL classics</div>
+    <div class="node child"><i class="ti ti-folder"></i>Peak time</div>
+    <div class="node"><i class="ti ti-folder"></i>Disco edits</div>
+    <div class="node"><i class="ti ti-folder"></i>Downtempo</div>
+  </div>
+  <div class="list">
+    <div class="crumb"><span>Techno</span><i class="ti ti-chevron-right" style="font-size:13px;"></i>
+      <span style="color:var(--tx);">NL classics</span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:6px;"><i class="ti ti-search" style="font-size:15px;"></i>Search</span></div>
+    <table>
+      <tr><th>Track</th><th style="width:84px;">BPM</th><th style="width:58px;">Key</th><th style="width:68px;">Time</th></tr>
+      <tr class="sel"><td>Speedy J — Pullover</td><td class="mono">128.0</td><td class="mono">9A</td><td class="mono">5:44</td></tr>
+      <tr><td>Secret Cinema — Timeless Altitude</td><td class="mono">130.2</td><td class="mono">4A</td><td class="mono">6:12</td></tr>
+      <tr><td>Orlando Voorn — Flash</td><td class="mono">127.8</td><td class="mono">6A</td><td class="mono">5:03</td></tr>
+      <tr><td>2000 and One — Wan Poko Moro</td><td class="mono">125.9</td><td class="mono">11A</td><td class="mono">7:18</td></tr>
+    </table>
+    <div class="foot"><span>Encoder: up/down browse · right open · left back</span><span style="margin-left:auto;">Load: deck buttons</span></div>
+  </div>
+</div>
+</div></body></html>

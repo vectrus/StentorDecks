@@ -1,0 +1,62 @@
+<!doctype html><html><head><meta charset="utf-8"><title>StentorDeck — Deck panel states (authoritative)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<style>
+:root{--bg:#0E1115;--panel:#161B22;--raised:#262E39;--bd:#313A46;--bds:#4A5563;--tx:#F4F7FB;
+--dim:#AAB4C2;--faint:#8A94A6;--dis:#39424E;--dist:#6B7787;--a:#FFB454;--b:#5BD0FF;}
+body{background:var(--bg);color:var(--tx);font-family:Bahnschrift,"Segoe UI",sans-serif;margin:0;padding:18px;}
+.mono{font-family:Consolas,monospace;}
+.wrap{max-width:1000px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.deck{background:var(--panel);border:0.5px solid var(--bd);border-radius:0 0 8px 8px;padding:12px 14px;}
+.hd{display:flex;align-items:flex-start;gap:10px;}
+.tt{font-size:16px;font-weight:500;} .ar{font-size:14px;color:var(--dim);}
+.knob{width:36px;height:36px;border-radius:50%;background:var(--raised);border:1px solid var(--bds);margin:0 auto;position:relative;}
+.knob:after{content:"";position:absolute;left:50%;top:4px;width:3px;height:11px;background:var(--tx);transform:translateX(-50%);}
+.kl{font-size:11px;color:var(--dim);letter-spacing:1px;text-align:center;}
+.big{display:flex;align-items:baseline;gap:10px;margin:2px 0 8px;}
+.prog{height:7px;background:var(--raised);border-radius:4px;margin-bottom:10px;}
+.fx{display:flex;gap:8px;align-items:center;margin-bottom:10px;}
+.pad{border:1px solid var(--bds);border-radius:8px;padding:8px 12px;font-size:14px;color:#D5DCE5;}
+.pad.on{border-color:var(--a);background:#2B2314;color:var(--a);}
+.row{display:flex;gap:10px;align-items:center;}
+.play{width:44px;height:44px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:21px;}
+.btn{border:1px solid var(--bds);border-radius:8px;padding:10px 15px;font-size:15px;letter-spacing:1px;}
+.cap{font-size:12px;color:var(--dim);margin-top:8px;text-align:center;}
+</style></head><body>
+<div class="wrap">
+  <div>
+    <div class="deck" style="border-top:3px solid var(--a);">
+      <div class="hd"><div style="flex:1;"><div class="tt">Amsterdam Nights</div><div class="ar">De Sluwe Vos</div></div>
+        <div><div class="knob"></div><div class="kl">GAIN</div></div></div>
+      <div class="big"><span class="mono" style="font-size:46px;color:var(--a);">126.4</span>
+        <span class="mono" style="font-size:20px;background:var(--raised);border-radius:6px;padding:2px 9px;">8A</span>
+        <span class="mono" style="font-size:24px;margin-left:auto;">-3:52</span></div>
+      <div class="prog"><div style="height:7px;width:41%;background:var(--a);border-radius:4px;"></div></div>
+      <div class="fx"><span class="pad on">FILTER</span>
+        <div><div class="knob" style="transform:rotate(-55deg);"></div><div class="kl">AMT</div></div>
+        <span class="pad">FLANGER</span>
+        <div style="margin-left:auto;"><div class="knob"></div><div class="kl">WET</div></div></div>
+      <div class="row"><span class="play" style="background:var(--a);color:#412402;"><i class="ti ti-player-pause"></i></span>
+        <span class="btn">CUE</span><span class="btn">SYNC</span>
+        <span class="btn" style="margin-left:auto;color:var(--faint);display:flex;align-items:center;gap:6px;"><i class="ti ti-lock"></i>LOAD</span></div>
+    </div>
+    <div class="cap">Playing: FILTER pad on + AMT knob (LP/HP) · LOAD locked (R4.3)</div>
+  </div>
+  <div>
+    <div class="deck" style="border-top:3px solid var(--b);">
+      <div class="hd"><div style="flex:1;"><div class="tt" style="color:var(--dist);">— empty —</div><div class="ar" style="color:var(--dist);">Load a track</div></div>
+        <div><div class="knob"></div><div class="kl">GAIN</div></div></div>
+      <div class="big"><span class="mono" style="font-size:46px;color:var(--dis);">---.-</span>
+        <span class="mono" style="font-size:24px;margin-left:auto;color:var(--dis);">-:--</span></div>
+      <div class="prog"></div>
+      <div class="fx"><span class="pad" style="border-color:var(--dis);color:var(--dist);">FILTER</span>
+        <div><div class="knob"></div><div class="kl" style="color:var(--dist);">AMT</div></div>
+        <span class="pad" style="border-color:var(--dis);color:var(--dist);">FLANGER</span>
+        <div style="margin-left:auto;"><div class="knob"></div><div class="kl" style="color:var(--dist);">WET</div></div></div>
+      <div class="row"><span class="play" style="border:2px solid var(--dis);color:var(--dis);"><i class="ti ti-player-play"></i></span>
+        <span class="btn" style="border-color:var(--dis);color:var(--dist);">CUE</span>
+        <span class="btn" style="border-color:var(--dis);color:var(--dist);">SYNC</span>
+        <span class="btn" style="margin-left:auto;border-color:var(--b);color:var(--b);background:#12262F;">LOAD</span></div>
+    </div>
+    <div class="cap">Empty: chrome in disabled tones, placeholders, LOAD ready-accented</div>
+  </div>
+</div></body></html>

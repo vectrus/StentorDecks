@@ -1,0 +1,138 @@
+import type { DeepPartial, Settings } from './settings.js';
+
+/** Fixture track row until E4. */
+export type TrackRow = {
+  id: number;
+  path: string;
+  title: string | null;
+  artist: string | null;
+  bpm: number | null;
+  keyCamelot: string | null;
+  durationMs: number | null;
+  bpmSource: 'tag' | 'analysis' | 'manual' | null;
+  lowConfidence: boolean;
+};
+
+export type TrackDetail = TrackRow & {
+  album: string | null;
+  genre: string | null;
+  waveformOverviewRef: string | null;
+  waveformDetailRef: string | null;
+};
+
+export type FolderNode = {
+  path: string;
+  name: string;
+  children: FolderNode[];
+};
+
+export type LibraryQuery = {
+  folder?: string | null;
+  search?: string | null;
+  sort?: Settings['library']['sort'];
+};
+
+export type AnalysisProgress = {
+  trackId: number;
+  stage: 'decode' | 'waveform' | 'bpm' | 'key' | 'loudness' | 'commit' | 'idle';
+  queueDepth: number;
+};
+
+export type LibraryProgress = {
+  phase: 'scan' | 'watch';
+  current?: string;
+  scanned: number;
+  total?: number;
+};
+
+export type AppModeState = {
+  fullscreen: boolean;
+  mode: 'performance' | 'prep';
+};
+
+export type MidiBinding =
+  | { kind: 'button'; ch: number; note: number }
+  | { kind: 'cc7'; ch: number; cc: number }
+  | { kind: 'cc14'; ch: number; msb: number; lsb: number }
+  | { kind: 'ccRel'; ch: number; cc: number };
+
+export type MidiMapping = Record<string, MidiBinding>;
+
+export type SettingsLoadResult = {
+  settings: Settings;
+  /** True when settings.json was corrupt and defaults were used. */
+  recoveredFromCorruption: boolean;
+  corruptionNotice: string | null;
+};
+
+/** Request/response IPC (invoke). docs/02 */
+export type IpcInvokeMap = {
+  'library:query': { req: LibraryQuery; res: TrackRow[] };
+  'library:folders': { req: void; res: FolderNode[] };
+  'library:track': { req: { id: number }; res: TrackDetail | null };
+  'library:rescan': { req: { path?: string }; res: { ok: true } };
+  'analysis:enqueue': {
+    req: { trackIds: number[]; priority: 'deck' | 'new' | 'backfill' };
+    res: { ok: true; queueDepth: number };
+  };
+  'settings:get': { req: void; res: SettingsLoadResult };
+  'settings:set': { req: DeepPartial<Settings>; res: Settings };
+  'midi:mapping:get': { req: void; res: MidiMapping };
+  'midi:mapping:set': { req: MidiMapping; res: { ok: true } };
+  'midi:mapping:export': { req: void; res: string };
+  'midi:mapping:import': { req: { json: string }; res: MidiMapping };
+  'app:mode:get': { req: void; res: AppModeState };
+  'app:mode:set': { req: Partial<AppModeState>; res: AppModeState };
+  'app:fullscreen:toggle': { req: void; res: { fullscreen: boolean } };
+};
+
+/** Event channels (main → renderer). */
+export type IpcEventMap = {
+  'settings:changed': Settings;
+  'analysis:progress': AnalysisProgress;
+  'library:progress': LibraryProgress;
+  'app:mode:changed': AppModeState;
+};
+
+export type IpcChannel = keyof IpcInvokeMap;
+export type IpcEventChannel = keyof IpcEventMap;
+
+export const IPC_INVOKE_CHANNELS = [
+  'library:query',
+  'library:folders',
+  'library:track',
+  'library:rescan',
+  'analysis:enqueue',
+  'settings:get',
+  'settings:set',
+  'midi:mapping:get',
+  'midi:mapping:set',
+  'midi:mapping:export',
+  'midi:mapping:import',
+  'app:mode:get',
+  'app:mode:set',
+  'app:fullscreen:toggle',
+] as const satisfies readonly IpcChannel[];
+
+export const IPC_EVENT_CHANNELS = [
+  'settings:changed',
+  'analysis:progress',
+  'library:progress',
+  'app:mode:changed',
+] as const satisfies readonly IpcEventChannel[];
+
+export function assertNever(x: never): never {
+  throw new Error(`Unexpected value: ${String(x)}`);
+}
+
+/** Preload → renderer bridge (implemented in app/main preload). */
+export type StentorApi = {
+  invoke<K extends keyof IpcInvokeMap>(
+    channel: K,
+    ...args: IpcInvokeMap[K]['req'] extends void ? [] : [IpcInvokeMap[K]['req']]
+  ): Promise<IpcInvokeMap[K]['res']>;
+  on<K extends IpcEventChannel>(
+    channel: K,
+    listener: (payload: IpcEventMap[K]) => void,
+  ): () => void;
+};

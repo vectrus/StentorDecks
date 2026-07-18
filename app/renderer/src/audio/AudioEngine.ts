@@ -1,0 +1,290 @@
+import { equalPowerCrossfade, type Settings } from '@stentordeck/shared';
+import {
+  type AudioDeviceInfo,
+  type RoutingPlan,
+  resolveRoutingPlan,
+} from './devices';
+import { DeckGraph, DeckTransport, type DeckId } from './DeckGraph';
+import { linearRampParam, rampParam } from './ramp';
+import { playStereoTestTone } from './testTone';
+
+export type MeterLevels = {
+  aDb: number;
+  bDb: number;
+  masterDb: number;
+};
+
+export type EngineTransportState = {
+  playing: boolean;
+  position: number;
+  duration: number;
+};
+
+/**
+ * Master AudioEngine — Plan A (4-ch) or Plan B (dual stereo + MediaStream bridge).
+ */
+export class AudioEngine {
+  masterCtx: AudioContext | null = null;
+  cueCtx: AudioContext | null = null;
+  plan: RoutingPlan = 'B';
+  planReason = '';
+  deviceLost = false;
+
+  private deckA: DeckGraph | null = null;
+  private deckB: DeckGraph | null = null;
+  private transportA: DeckTransport | null = null;
+  private transportB: DeckTransport | null = null;
+
+  private masterBus: GainNode | null = null;
+  private masterGain: GainNode | null = null;
+  private limiter: DynamicsCompressorNode | null = null;
+  private masterMeter: AnalyserNode | null = null;
+  private cueSum: GainNode | null = null;
+  private cueFromMaster: GainNode | null = null;
+  private cueFromPfl: GainNode | null = null;
+  private headGain: GainNode | null = null;
+  private merger: ChannelMergerNode | null = null;
+
+  private cueBridgeDest: MediaStreamAudioDestinationNode | null = null;
+  private cueBridgeSrc: MediaStreamAudioSourceNode | null = null;
+
+  private meterBuf = new Float32Array(2048);
+
+  async ensureRunning(): Promise<void> {
+    if (this.masterCtx?.state === 'suspended') {
+      await this.masterCtx.resume();
+    }
+    if (this.cueCtx?.state === 'suspended') {
+      await this.cueCtx.resume();
+    }
+  }
+
+  async rebuild(opts: {
+    settings: Settings;
+    devices: AudioDeviceInfo[];
+  }): Promise<void> {
+    const saved = this.captureTransport();
+    this.teardown();
+
+    const { settings, devices } = opts;
+    const resolved = resolveRoutingPlan({
+      preference: settings.audio.routingPlan,
+      masterDeviceId: settings.audio.masterDevice,
+      cueDeviceId: settings.audio.cueDevice,
+      masterChannels: settings.audio.masterChannels,
+      cueChannels: settings.audio.cueChannels,
+      devices,
+    });
+    this.plan = resolved.plan;
+    this.planReason = resolved.reason;
+
+    const latencyHint = Math.max(0.005, settings.audio.bufferHintMs / 1000);
+    const masterCtx = new AudioContext({ latencyHint });
+    this.masterCtx = masterCtx;
+    await this.setSink(masterCtx, settings.audio.masterDevice);
+
+    this.masterBus = masterCtx.createGain();
+    this.masterGain = masterCtx.createGain();
+    this.limiter = masterCtx.createDynamicsCompressor();
+    this.limiter.threshold.value = -1;
+    this.limiter.knee.value = 0;
+    this.limiter.ratio.value = 20;
+    this.limiter.attack.value = 0.003;
+    this.limiter.release.value = 0.1;
+    this.masterMeter = masterCtx.createAnalyser();
+    this.masterMeter.fftSize = 2048;
+
+    this.deckA = new DeckGraph(masterCtx);
+    this.deckB = new DeckGraph(masterCtx);
+    this.transportA = new DeckTransport(masterCtx, this.deckA.input);
+    this.transportB = new DeckTransport(masterCtx, this.deckB.input);
+
+    this.deckA.masterOut.connect(this.masterBus);
+    this.deckB.masterOut.connect(this.masterBus);
+    this.masterBus.connect(this.masterGain);
+    this.masterGain.connect(this.masterMeter);
+    this.masterGain.connect(this.limiter);
+
+    this.cueSum = masterCtx.createGain();
+    this.cueFromPfl = masterCtx.createGain();
+    this.cueFromMaster = masterCtx.createGain();
+    this.headGain = masterCtx.createGain();
+    this.deckA.pflOut.connect(this.cueFromPfl);
+    this.deckB.pflOut.connect(this.cueFromPfl);
+    this.cueFromPfl.connect(this.cueSum);
+    this.masterBus.connect(this.cueFromMaster);
+    this.cueFromMaster.connect(this.cueSum);
+    this.cueSum.connect(this.headGain);
+
+    // Default cue-only so PFL isn't drowned by the master bus (HeadMix 0 = cue, 1 = master).
+    this.setHeadMix(0);
+    this.setMasterGain(1);
+    this.setPhonesGain(1);
+
+    if (this.plan === 'A') {
+      masterCtx.destination.channelCount = Math.min(4, masterCtx.destination.maxChannelCount);
+      masterCtx.destination.channelCountMode = 'explicit';
+      this.merger = masterCtx.createChannelMerger(4);
+      const masterSplit = masterCtx.createChannelSplitter(2);
+      const headSplit = masterCtx.createChannelSplitter(2);
+      this.limiter.connect(masterSplit);
+      this.headGain.connect(headSplit);
+      masterSplit.connect(this.merger, 0, 0);
+      masterSplit.connect(this.merger, 1, 1);
+      headSplit.connect(this.merger, 0, 2);
+      headSplit.connect(this.merger, 1, 3);
+      this.merger.connect(masterCtx.destination);
+    } else {
+      this.limiter.connect(masterCtx.destination);
+      // Cue on second context
+      const cueCtx = new AudioContext({ latencyHint });
+      this.cueCtx = cueCtx;
+      await this.setSink(cueCtx, settings.audio.cueDevice);
+      this.cueBridgeDest = masterCtx.createMediaStreamDestination();
+      this.headGain.connect(this.cueBridgeDest);
+      this.cueBridgeSrc = cueCtx.createMediaStreamSource(this.cueBridgeDest.stream);
+      this.cueBridgeSrc.connect(cueCtx.destination);
+    }
+
+    this.deviceLost = false;
+    await this.ensureRunning();
+    this.restoreTransport(saved);
+  }
+
+  private async setSink(ctx: AudioContext, deviceId: string | null): Promise<void> {
+    const setSinkId = (ctx as AudioContext & { setSinkId?: (id: string) => Promise<void> }).setSinkId;
+    if (!setSinkId || !deviceId) return;
+    try {
+      await setSinkId.call(ctx, deviceId);
+    } catch (err) {
+      console.warn('[audio] setSinkId failed', deviceId, err);
+    }
+  }
+
+  teardown(): void {
+    this.transportA?.stopImmediate();
+    this.transportB?.stopImmediate();
+    this.deckA?.disconnect();
+    this.deckB?.disconnect();
+    void this.masterCtx?.close();
+    void this.cueCtx?.close();
+    this.masterCtx = null;
+    this.cueCtx = null;
+    this.deckA = null;
+    this.deckB = null;
+    this.transportA = null;
+    this.transportB = null;
+    this.merger = null;
+    this.cueBridgeDest = null;
+    this.cueBridgeSrc = null;
+  }
+
+  graph(id: DeckId): DeckGraph | null {
+    return id === 'A' ? this.deckA : this.deckB;
+  }
+
+  transport(id: DeckId): DeckTransport | null {
+    return id === 'A' ? this.transportA : this.transportB;
+  }
+
+  setMasterGain(linear: number): void {
+    if (this.masterGain && this.masterCtx) {
+      linearRampParam(this.masterGain.gain, clamp01(linear), this.masterCtx, 0.02);
+    }
+  }
+
+  setPhonesGain(linear: number): void {
+    if (this.headGain && this.masterCtx) {
+      const g = clamp01(linear);
+      linearRampParam(this.headGain.gain, g, this.masterCtx, 0.02);
+      // setTarget-style ramps never hit exact 0 — force mute at the bottom.
+      if (g <= 0.001) {
+        const t = this.masterCtx.currentTime;
+        this.headGain.gain.setValueAtTime(0, t + 0.025);
+      }
+    }
+  }
+
+  /** headMix 0 = full cue (PFL), 1 = full master (equal-power). */
+  setHeadMix(t: number): void {
+    if (!this.cueFromPfl || !this.cueFromMaster || !this.masterCtx) return;
+    const { a, b } = equalPowerCrossfade(t);
+    linearRampParam(this.cueFromPfl.gain, a, this.masterCtx, 0.02);
+    linearRampParam(this.cueFromMaster.gain, b, this.masterCtx, 0.02);
+  }
+
+  readMeters(): MeterLevels {
+    return {
+      aDb: this.readAnalyser(this.deckA?.channelMeter ?? null),
+      bDb: this.readAnalyser(this.deckB?.channelMeter ?? null),
+      masterDb: this.readAnalyser(this.masterMeter),
+    };
+  }
+
+  private readAnalyser(node: AnalyserNode | null): number {
+    if (!node) return -120;
+    node.getFloatTimeDomainData(this.meterBuf);
+    let sum = 0;
+    for (let i = 0; i < this.meterBuf.length; i++) {
+      const v = this.meterBuf[i]!;
+      sum += v * v;
+    }
+    const rms = Math.sqrt(sum / this.meterBuf.length);
+    if (rms < 1e-8) return -120;
+    return 20 * Math.log10(rms);
+  }
+
+  async testMaster(): Promise<void> {
+    if (!this.masterCtx || !this.limiter) return;
+    await this.ensureRunning();
+    await playStereoTestTone(this.masterCtx, this.limiter);
+  }
+
+  async testCue(): Promise<void> {
+    if (!this.masterCtx || !this.headGain) return;
+    await this.ensureRunning();
+    await playStereoTestTone(this.masterCtx, this.headGain);
+  }
+
+  markDeviceLost(): void {
+    this.deviceLost = true;
+    this.transportA?.pause();
+    this.transportB?.pause();
+  }
+
+  private captureTransport(): {
+    a: { buffer: AudioBuffer | null; offset: number; playing: boolean };
+    b: { buffer: AudioBuffer | null; offset: number; playing: boolean };
+  } {
+    return {
+      a: {
+        buffer: this.transportA?.getBuffer() ?? null,
+        offset: this.transportA?.position() ?? 0,
+        playing: this.transportA?.isPlaying ?? false,
+      },
+      b: {
+        buffer: this.transportB?.getBuffer() ?? null,
+        offset: this.transportB?.position() ?? 0,
+        playing: this.transportB?.isPlaying ?? false,
+      },
+    };
+  }
+
+  private restoreTransport(saved: ReturnType<AudioEngine['captureTransport']>): void {
+    if (saved.a.buffer && this.transportA) {
+      this.transportA.setBuffer(saved.a.buffer);
+      this.transportA.seek(saved.a.offset);
+      // Do not auto-resume after device loss — user presses play (docs/02: decks pause)
+    }
+    if (saved.b.buffer && this.transportB) {
+      this.transportB.setBuffer(saved.b.buffer);
+      this.transportB.seek(saved.b.offset);
+    }
+  }
+}
+
+function clamp01(x: number): number {
+  return Math.min(1, Math.max(0, x));
+}
+
+export const audioEngine = new AudioEngine();

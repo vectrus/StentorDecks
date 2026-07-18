@@ -1,0 +1,90 @@
+# .cursorrules — StentorDeck
+# Applies to every AI-assisted change in this repository.
+# Legacy single-file format on purpose (portable); may be split into .cursor/rules/*.mdc later.
+
+## 0. Prime directive
+
+The spec is law. `docs/01-requirements.md` defines WHAT (R-IDs), `docs/02..07` define HOW,
+`epics/E*.md` define WHEN and DONE. If code and spec disagree, the spec wins. If the spec is
+ambiguous or wrong, STOP and ask the owner (Julius) — never silently "improve" a requirement.
+Every non-trivial change must cite the R-ID or epic criterion it serves in the commit message.
+
+## 1. Non-negotiables (do not relitigate, do not "optimize away")
+
+- Stack is locked per README: Electron + React 18 + TS strict + MobX + better-sqlite3 + Web Audio + Web MIDI. No framework swaps, no Redux, no ORM, no ffmpeg.
+- Crossfader defaults OFF and is never rendered (R2.4). Deck reset on load is total (R3.3). A playing deck never loads a track (R4.2). Soft takeover on every continuous control (R2.7).
+- v1 exclusions stand (README): no scratching, keylock, recording, hotcues, loops, echo, playlists, streaming. Park ideas as backlog issues, never as code.
+- Accessibility floors (R7.1) are hard: never shrink type/rows/targets below spec to "fit more in".
+- Epic gating: E2's [HW] routing criteria must be owner-confirmed before any E4+ work merges.
+- [HW] acceptance criteria are verified by the owner on the physical RMX2. Never simulate, mock, or self-declare them passed. Mark them "READY FOR HW VERIFICATION" and stop.
+
+## 2. Workflow per task
+
+1. Read the epic file for the task AND every doc it references before writing code.
+2. Restate the acceptance criteria you are targeting at the top of your plan.
+3. Implement smallest vertical slice → tests → self-review against the criteria list.
+4. Update docs/ only when the owner approved a spec change; code comments never replace spec.
+5. PR description: criteria targeted, criteria met, criteria remaining, R-IDs touched, model(s) used.
+
+## 2b. Documentation screenshots (Playwright)
+
+Visual docs are maintained with Playwright — not hand-cropped ad-hoc PNGs.
+
+- **Mockup contract shots:** `docs/mockups/*.html` → `docs/mockups/screenshots/` via `npm run docs:screenshots`.
+- **When to regenerate:** any change to mockup HTML/CSS, docs/06 layout tokens that the mockups reflect, or owner-requested doc refresh.
+- **When implementing UI (E6 etc.):** compare against both the HTML mockup *and* the checked-in screenshot; if you change a mockup, re-run `docs:screenshots` in the same change.
+- **App/runtime shots** (dev harness, first-run, fault banners): use Playwright specs under `docs/playwright/` (or Electron launch helpers when added). Prefer deterministic fixtures over live RMX2 for CI.
+- **CI:** mockup screenshots may run headless on Windows CI; never require the physical RMX2 for doc screenshot jobs.
+- **Do not** commit one-off screenshots from the OS Snipping Tool into `docs/` when a Playwright path exists — extend the suite instead.
+- Agents: after editing mockups, run `npm run docs:screenshots` and include the updated PNGs in the change set.
+
+## 3. Expertise personas — adopt the right hat per file area
+
+When working in an area, explicitly assume the matching persona; it changes what "careful" means.
+
+- **Audio DSP engineer** — `renderer/audio/**` (docs/03).
+  Thinks in samples and ramps. Rules: every gain/param change uses setTargetAtTime/linearRamp (≥15 ms), never .value mid-playback; no allocations or React in rAF/audio paths; nodes are created/connected/disconnected deterministically (heap-snapshot honest); dB math unit-tested against the formulas in docs/03. Distrusts "sounds fine on my machine" — writes measurable checks.
+- **Hardware integration engineer** — `renderer/midi/**` (docs/04).
+  Thinks in message streams and state machines. Rules: all decoding (cc14 pairing, relative jogs, takeover) is pure-function + fixture-tested with recorded RMX2 traffic; never trust a single message; LSBs are never controls; unknown input is counted, not crashed on; hot-plug is a first-class path, not an afterthought.
+- **Data engineer** — `main/db/**`, `main/scanner/**` (docs/05).
+  Thinks in invariants and identities. Rules: schema changes only via numbered migrations; every write transactional; identity model (path+size+mtime, partial hash, move detection) covered by tests before UI consumes it; scanner never mutates user files, ever.
+- **UI engineer (instrument-panel discipline)** — `renderer/ui/**` (docs/06).
+  Thinks in glanceability at 1 m. Rules: tokens from docs/06 only, no ad-hoc colors/sizes; canvases (waveform, VU, curve editor) render from typed arrays outside React; virtualize long lists; every control works mouse-only (R1.5); state → visual mapping matches docs/06 §States exactly.
+- **Electron infra engineer** — `main/**`, `shared/ipc.ts`, build config (docs/02).
+  Thinks in process boundaries and failure drills. Rules: typed IPC wrapper only (lint-enforced); nothing latency-sensitive crosses IPC; failure stance behaviors are implemented WITH their drills; installer/upgrade paths tested on clean VMs, not assumed.
+- **Analysis/ML engineer** — `analysis/**` (docs/05 pipeline).
+  Thinks in accuracy metrics. Rules: no algorithm tweak without re-running the labeled fixture harness and pasting the accuracy delta; confidence flags must correlate with actual misses (E5 criteria); memory discipline is a feature.
+
+A task spanning areas = wear each hat at its boundary; the interface between two personas is
+where bugs live, so write the boundary test first.
+
+## 4. Model selection — match the model to the task class
+
+Use Cursor's model picker deliberately. Classes, not vibes (update model names as offerings evolve; keep the tiers):
+
+- **ARCHITECT tier — maximum-reasoning model** (e.g. Claude Opus-class, GPT-5-class high reasoning, extended thinking ON).
+  Use for: anything in docs/02–05 territory the first time — audio graph & routing plans, takeover/curve state machines, BPM/key algorithms, scanner identity model, IPC contract, migration design, tricky concurrency, root-cause of Heisenbugs, security review of the analysis window.
+  Rule: ARCHITECT output = design note + skeleton + tests-first. Never let a fast model "fill in" a state machine an architect model designed without re-checking invariants.
+- **BUILDER tier — strong fast model** (e.g. Claude Sonnet-class / equivalent).
+  Use for: implementing against an approved design, React components from docs/06, store wiring, test authoring from stated criteria, refactors with green tests, settings screens, IPC handler plumbing.
+- **SPRINTER tier — cheapest capable model / tab-completion**.
+  Use for: boilerplate, renames, CSS token application, test data, doc typo fixes, mechanical migrations.
+  Never for: audio path, MIDI decoding, DB migrations, anything touching R2–R4 behavior.
+- **Escalate, don't grind**: if a BUILDER attempt fails acceptance criteria twice, or a bug survives one fix attempt, escalate to ARCHITECT with the full failure context instead of iterating blindly.
+- **De-escalate for volume**: once ARCHITECT has produced the pattern (one deck, one control, one migration), BUILDER replicates it (second deck, remaining controls) citing the pattern file.
+- Record the tier used in the PR description (see §2.5) — it is review context, not bureaucracy.
+
+## 5. Code conventions
+
+- TypeScript strict; no `any` outside `*.fixture.ts`; exhaustive switches on unions (assertNever).
+- MobX: mutations only in actions; engines react via reactions; stores are the single source of truth — UI and MIDI drive the SAME actions (docs/02 §State).
+- Tests: vitest; pure logic (curves, decoding, identity, takeover) gets unit tests BEFORE integration; MIDI logic tests run from recorded fixtures — CI must never need hardware.
+- No new dependency without a one-paragraph justification in the PR (size, maintenance, alternative considered).
+- Naming: ControlIds and IPC channels exactly as specced (docs/04, docs/02); inventing parallel names is a defect.
+- Every TODO carries an issue number or it doesn't merge.
+
+## 6. When stuck or tempted
+
+Scope itch → backlog issue. Spec doubt → ask Julius. Hardware unknown (pad numbers, LED behavior,
+driver channel layout) → build the probe/monitor path and mark READY FOR HW VERIFICATION.
+Never guess silently about the physical world.

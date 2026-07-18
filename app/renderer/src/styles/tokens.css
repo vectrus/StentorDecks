@@ -1,0 +1,50 @@
+:root {
+  /* docs/06 — palette */
+  --bg-app: #0e1115;
+  --bg-well: #080a0d;
+  --bg-panel: #161b22;
+  --bg-panel-2: #12161c;
+  --bg-raised: #262e39;
+  --bg-selected: #2a3340;
+  --border: #313a46;
+  --border-strong: #4a5563;
+  --text: #f4f7fb;
+  --text-dim: #aab4c2;
+  --text-faint: #8a94a6;
+  --disabled: #39424e;
+  --disabled-text: #6b7787;
+  --deck-a: #ffb454;
+  --deck-b: #5bd0ff;
+  --deck-a-on: #412402;
+  --vu-ok: #57c98a;
+  --vu-hot: #ffb454;
+  --vu-clip: #ff5d5d;
+
+  /* rem root — 100% scale = 16px; ui.scale multiplies */
+  font-size: 16px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: var(--bg-app);
+  color: var(--text);
+  font-family: Bahnschrift, 'Segoe UI', sans-serif;
+}
+
+.mono {
+  font-family: Consolas, 'Courier New', monospace;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}

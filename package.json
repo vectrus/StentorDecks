@@ -1,0 +1,82 @@
+{
+  "name": "stentordeck",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Two-deck DJ application for Windows — Hercules DJConsole RMX2",
+  "author": "Julius",
+  "main": "app/main/dist/index.js",
+  "workspaces": [
+    "shared",
+    "app/main",
+    "app/renderer",
+    "app/analysis"
+  ],
+  "scripts": {
+    "start": "node scripts/dev.mjs",
+    "dev": "node scripts/dev.mjs",
+    "build": "npm run build -w @stentordeck/shared && npm run build -w @stentordeck/main && npm run build -w @stentordeck/renderer && npm run build -w @stentordeck/analysis",
+    "dist": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64",
+    "dist:dir": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64 --dir",
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "npm run typecheck -w @stentordeck/shared && npm run typecheck -w @stentordeck/main && npm run typecheck -w @stentordeck/renderer && npm run typecheck -w @stentordeck/analysis",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "docs:screenshots": "playwright test -c playwright.config.ts",
+    "docs:screenshots:ui": "playwright test -c playwright.config.ts --ui",
+    "postinstall": "npm run rebuild:native",
+    "rebuild:native": "node scripts/rebuild-native.mjs"
+  },
+  "build": {
+    "appId": "com.stentordeck.app",
+    "productName": "StentorDeck",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "app/main/dist/**/*",
+      "app/renderer/dist/**/*",
+      "app/analysis/dist/**/*",
+      "shared/dist/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "StentorDeck-Setup-${version}.${ext}",
+      "signAndEditExecutable": false
+    },
+    "forceCodeSigning": false,
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "extraMetadata": {
+      "main": "app/main/dist/index.js"
+    }
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.7.1",
+    "@playwright/test": "^1.61.1",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

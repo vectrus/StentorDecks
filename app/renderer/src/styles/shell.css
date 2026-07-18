@@ -1,0 +1,151 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 0.5px solid var(--border);
+  background: var(--bg-panel);
+}
+
+.brand {
+  letter-spacing: 0.15em;
+  font-size: 0.85rem;
+  color: var(--text-faint);
+}
+
+.modes {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.mode {
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-dim);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.9rem;
+}
+
+.mode.on {
+  border-color: var(--deck-a);
+  color: var(--deck-a);
+  background: #2b2314;
+}
+
+.top-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--text-faint);
+}
+
+.corner {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-raised);
+  color: var(--text);
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 1rem;
+  background: #3a1515;
+  border-bottom: 1px solid var(--vu-clip);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.banner button {
+  border: 1px solid var(--border-strong);
+  background: var(--bg-raised);
+  color: var(--text);
+  border-radius: 0.4rem;
+  padding: 0.35rem 0.7rem;
+}
+
+.stage {
+  flex: 1;
+  padding: 1.25rem;
+  overflow: auto;
+}
+
+.placeholder {
+  background: var(--bg-panel);
+  border: 0.5px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 2rem;
+  max-width: 40rem;
+}
+
+.placeholder h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.placeholder p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 1rem;
+}
+
+.temp-settings {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  width: 16rem;
+  background: var(--bg-panel-2);
+  border: 0.5px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.85rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.temp-title {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 0.6rem;
+}
+
+.temp-settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.temp-settings select {
+  background: var(--bg-raised);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.95rem;
+}
+
+.temp-meta {
+  margin-top: 0.65rem;
+  font-size: 0.75rem;
+  color: var(--text-faint);
+}

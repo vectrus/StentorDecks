@@ -1,0 +1,67 @@
+<!doctype html><html><head><meta charset="utf-8"><title>StentorDeck — Fader curve editor (authoritative, functional)</title>
+<style>
+:root{--bg:#0E1115;--panel:#161B22;--well:#080A0D;--raised:#262E39;--bd:#313A46;--bds:#4A5563;
+--tx:#F4F7FB;--dim:#AAB4C2;--faint:#8A94A6;--a:#FFB454;}
+body{background:var(--bg);color:var(--tx);font-family:Bahnschrift,"Segoe UI",sans-serif;margin:0;padding:24px;}
+.mono{font-family:Consolas,monospace;}
+.card{max-width:540px;margin:0 auto;background:var(--bg);}
+h1{font-size:14px;font-weight:500;margin:0 0 10px;}
+.presets{display:flex;gap:8px;margin-bottom:12px;}
+button{background:var(--raised);border:1px solid var(--bds);color:var(--tx);border-radius:7px;padding:7px 14px;font-size:13px;font-family:inherit;cursor:pointer;}
+button.on{border-color:var(--a);color:var(--a);}
+.grid{display:grid;grid-template-columns:1fr 130px;gap:14px;align-items:start;}
+canvas{width:100%;background:var(--well);border:0.5px solid var(--bd);border-radius:8px;}
+label{font-size:12px;color:var(--dim);display:block;margin-bottom:4px;}
+input[type=range]{width:100%;}
+.hint{font-size:11px;color:var(--faint);margin:2px 0 14px;}
+.out{background:var(--panel);border:0.5px solid var(--bd);border-radius:8px;padding:8px 10px;}
+.out .v{font-size:20px;}
+</style></head><body><div class="card">
+<h1>Channel fader curve — spec formula demo (docs/03)</h1>
+<div class="presets">
+  <button id="p-lin">Linear</button>
+  <button id="p-smooth" class="on">Smooth</button>
+  <button id="p-sharp">Sharp</button>
+</div>
+<div class="grid">
+  <canvas id="cv" width="360" height="240"></canvas>
+  <div>
+    <label>Fader position</label>
+    <input id="pos" type="range" min="0" max="100" value="70" step="1">
+    <div class="mono" style="font-size:13px;margin:2px 0 14px;"><span id="posv">70</span>%</div>
+    <label>Curve shape (s)</label>
+    <input id="shape" type="range" min="-100" max="100" value="35" step="1">
+    <div class="hint">← sharp low · fine top →</div>
+    <div class="out"><div style="font-size:11px;color:var(--dim);">Output</div>
+      <div class="mono v" id="outv">-4.2 dB</div></div>
+  </div>
+</div>
+</div>
+<script>
+var cv=document.getElementById('cv'),x=cv.getContext('2d');
+var pos=document.getElementById('pos'),shape=document.getElementById('shape');
+var posv=document.getElementById('posv'),outv=document.getElementById('outv');
+function curve(p,s){return Math.pow(p,Math.pow(2,s/50));}
+function db(v){return v<=0.001?-60:Math.max(-60,-60+v*60);}
+function draw(){
+var s=+shape.value,p=(+pos.value)/100;
+x.clearRect(0,0,360,240);
+x.strokeStyle='#262E39';x.lineWidth=1;
+for(var i=1;i<4;i++){x.beginPath();x.moveTo(0,i*60);x.lineTo(360,i*60);x.stroke();
+x.beginPath();x.moveTo(i*90,0);x.lineTo(i*90,240);x.stroke();}
+x.strokeStyle='#4A5563';x.setLineDash([4,4]);x.beginPath();x.moveTo(0,240);x.lineTo(360,0);x.stroke();x.setLineDash([]);
+x.strokeStyle='#FFB454';x.lineWidth=2.5;x.beginPath();
+for(var i=0;i<=360;i++){var v=curve(i/360,s);var y=240-v*240;i?x.lineTo(i,y):x.moveTo(i,y);}
+x.stroke();
+var vv=curve(p,s);
+x.fillStyle='#F4F7FB';x.beginPath();x.arc(p*360,240-vv*240,6,0,7);x.fill();
+posv.textContent=Math.round(p*100);
+var d=db(vv);outv.textContent=(d<=-60?'-inf':d.toFixed(1)+' dB');
+}
+pos.addEventListener('input',draw);shape.addEventListener('input',draw);
+function setP(id,v){document.getElementById(id).addEventListener('click',function(){
+shape.value=v;['p-lin','p-smooth','p-sharp'].forEach(function(b){
+document.getElementById(b).className=(b===id)?'on':'';});draw();});}
+setP('p-lin',0);setP('p-smooth',35);setP('p-sharp',-45);
+draw();
+</script></body></html>

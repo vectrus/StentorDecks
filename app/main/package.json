@@ -1,0 +1,20 @@
+{
+  "name": "@stentordeck/main",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsup && node ../../scripts/copy-migrations.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@stentordeck/shared": "*",
+    "better-sqlite3": "^11.7.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.2",
+    "electron": "^33.2.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@stentordeck/analysis",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsup src/stub.ts --format cjs --outDir dist --clean",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2"
+  }
+}
