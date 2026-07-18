@@ -80,7 +80,7 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
         <span className={`perf-pitch-pct mono${pctZero ? ' zero' : ''}`}>{pct}</span>
         <span className="perf-key-chip mono">{key}</span>
         <span className={`perf-deck-rem mono${eotClass}`}>
-          {empty ? '—' : fmtRemaining(deck.position, deck.duration)}
+          {empty ? '—' : fmtRemaining(deck.displayPosition, deck.duration)}
         </span>
       </div>
 

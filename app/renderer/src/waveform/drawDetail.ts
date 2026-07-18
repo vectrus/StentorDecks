@@ -123,7 +123,8 @@ export function sampleDetailLerped(
 
 /**
  * Draw scrolling detail into an already-sized canvas.
- * One column per device pixel + lerp — sharp on fullscreen / HiDPI.
+ * Column step ≈ CSS pixel (every `devicePixelRatio` device px) for E7 rAF budget.
+ * Data contract unchanged: ±4 s @ 50 pps (docs/05).
  */
 export function drawDetailWaveform(
   ctx: CanvasRenderingContext2D,
@@ -142,6 +143,7 @@ export function drawDetailWaveform(
     gridBpm,
     beatGridOffsetSec,
     showBeatTicks,
+    devicePixelRatio = 1,
   } = opts;
   ctx.clearRect(0, 0, width, height);
   if (detail.length < 3 || width <= 0 || height <= 0 || durationSec <= 0) return;
@@ -155,9 +157,12 @@ export function drawDetailWaveform(
   const span = t1 - t0;
   if (span <= 0) return;
 
+  // ~1 CSS px per column (min 2 device px on extreme DPR) — fills cover the gap.
+  const step = Math.max(2, Math.round(devicePixelRatio || 1));
+
   ctx.fillStyle = accent;
-  for (let x = 0; x < width; x++) {
-    const timeSec = t0 + ((x + 0.5) / width) * span;
+  for (let x = 0; x < width; x += step) {
+    const timeSec = t0 + ((x + step * 0.5) / width) * span;
     const sample = sampleDetailLerped(detail, bucketCount, timeSec * pps);
     if (!sample) continue;
 
@@ -170,11 +175,11 @@ export function drawDetailWaveform(
     const bot = Math.max(yMin, yMax);
 
     ctx.globalAlpha = alpha * 0.55;
-    ctx.fillRect(x, top, 1, Math.max(1, bot - top));
+    ctx.fillRect(x, top, step, Math.max(1, bot - top));
 
     const rmsH = sample.rms * mid * 0.75;
     ctx.globalAlpha = alpha;
-    ctx.fillRect(x, mid - rmsH, 1, Math.max(1, rmsH * 2));
+    ctx.fillRect(x, mid - rmsH, step, Math.max(1, rmsH * 2));
   }
 
   if (showBeatTicks && gridBpm != null && gridBpm > 0) {

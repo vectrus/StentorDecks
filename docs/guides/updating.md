@@ -6,7 +6,7 @@ Two paths — pick the one that matches how you run the app.
 
 This is the real product path (R1.1 / E7).
 
-1. On a build machine: bump `version` in `package.json`, then:
+1. On a build machine: follow the release checklist in [`../DEVELOPMENT.md`](../DEVELOPMENT.md) — bump `version` in `package.json`, then:
 
    ```bash
    npm run release

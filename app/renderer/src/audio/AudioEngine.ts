@@ -5,6 +5,7 @@ import {
   resolveRoutingPlan,
 } from './devices';
 import { DeckGraph, DeckTransport, type DeckId } from './DeckGraph';
+import { setVisualLatencySec } from './frameClock';
 import { linearRampParam } from './ramp';
 import { playStereoTestTone } from './testTone';
 
@@ -220,6 +221,22 @@ export class AudioEngine {
 
     this.deviceLost = false;
     await this.ensureRunning();
+    this.refreshVisualLatency();
+  }
+
+  /** Draw-only playhead offset (transport clock unchanged). */
+  refreshVisualLatency(): void {
+    const ctx = this.masterCtx;
+    if (!ctx) {
+      setVisualLatencySec(0);
+      return;
+    }
+    const base = typeof ctx.baseLatency === 'number' ? ctx.baseLatency : 0;
+    const out =
+      typeof (ctx as AudioContext & { outputLatency?: number }).outputLatency === 'number'
+        ? (ctx as AudioContext & { outputLatency: number }).outputLatency
+        : 0;
+    setVisualLatencySec(base + out);
   }
 
   private async setSink(ctx: AudioContext, deviceId: string | null): Promise<void> {
@@ -249,6 +266,7 @@ export class AudioEngine {
     this.merger = null;
     this.cueBridgeDest = null;
     this.cueBridgeSrc = null;
+    setVisualLatencySec(0);
     await Promise.all(closes);
   }
 

@@ -246,8 +246,10 @@ export type TransportSnapshot = {
   rate: number;
 };
 
-/** Playing seek overlap — docs/03 ≥15 ms; avoids cold BufferSource cuts (jog zipper). */
+/** Playing seek overlap — docs/03 ≥15 ms floor for large/cue jumps (jog zipper). */
 export const TRANSPORT_SEEK_CROSSFADE_SEC = 0.015;
+/** Micro-seeks (jog/assist) — shorter overlap; still ramped (not cold cut). */
+export const TRANSPORT_SEEK_MICRO_CROSSFADE_SEC = 0.01;
 
 type FadingSource = {
   src: AudioBufferSourceNode;
@@ -317,7 +319,7 @@ export class DeckTransport {
     this.snap.playing = false;
   }
 
-  seek(offset: number): void {
+  seek(offset: number, opts?: { micro?: boolean }): void {
     const dur = this.buffer?.duration ?? 0;
     const next = Math.max(0, Math.min(dur, offset));
     const wasPlaying = this.snap.playing && this.source != null;
@@ -328,7 +330,10 @@ export class DeckTransport {
       this.rateAccumOffset = next;
       return;
     }
-    this.seekPlayingCrossfade(next, rate);
+    const fade = opts?.micro
+      ? TRANSPORT_SEEK_MICRO_CROSSFADE_SEC
+      : TRANSPORT_SEEK_CROSSFADE_SEC;
+    this.seekPlayingCrossfade(next, rate, fade);
   }
 
   setRate(rate: number): void {
@@ -391,12 +396,12 @@ export class DeckTransport {
   }
 
   /**
-   * Playing seek: overlap old→new BufferSources (~15 ms) so jog sticky phase
-   * does not zipper (R2.2 / docs/03).
+   * Playing seek: overlap old→new BufferSources so jog sticky phase
+   * does not zipper (R2.2 / docs/03). Micro-seeks use a shorter fade.
    */
-  private seekPlayingCrossfade(next: number, rate: number): void {
+  private seekPlayingCrossfade(next: number, rate: number, fadeSec: number): void {
     const t = this.ctx.currentTime;
-    const fade = TRANSPORT_SEEK_CROSSFADE_SEC;
+    const fade = fadeSec;
     const oldSrc = this.source;
     const oldGain = this.sourceGain;
     if (!oldSrc || !oldGain) {

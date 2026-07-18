@@ -42,6 +42,19 @@ export function mockStentorInitScript(
       if (channel === 'app:fullscreen:toggle') {
         return { fullscreen: false };
       }
+      if (channel === 'app:update:status' || channel === 'app:update:check') {
+        return {
+          phase: 'disabled',
+          packaged: false,
+          currentVersion: '0.0.0-e2e',
+          availableVersion: null,
+          percent: null,
+          error: null,
+        };
+      }
+      if (channel === 'app:update:install') {
+        return { ok: false, reason: 'e2e mock — not packaged' };
+      }
       if (channel === 'midi:mapping:get') {
         return {
           'deckA.play': { kind: 'button', ch: 0, note: 0x21 },

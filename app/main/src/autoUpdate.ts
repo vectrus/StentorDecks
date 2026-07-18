@@ -92,9 +92,11 @@ export function startAutoUpdater(): void {
   void (async () => {
     try {
       const { autoUpdater } = await import('electron-updater');
+      autoUpdater.logger = console;
       autoUpdater.autoDownload = true;
       autoUpdater.autoInstallOnAppQuit = true;
       // Unsigned NSIS builds (no code-signing cert yet).
+      // electron-builder writes verifyUpdateCodeSignature:false into app-update.yml.
       autoUpdater.forceDevUpdateConfig = false;
 
       autoUpdater.on('checking-for-update', () => {

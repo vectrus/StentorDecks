@@ -9,7 +9,10 @@ import {
   PHASE_ASSIST_DEADBAND_SEC,
   PHASE_ASSIST_JOG_MUTE_MS,
   PHASE_ASSIST_MAX_SEEK_SEC,
+  PHASE_ASSIST_RATE_BIAS_MAX_ERR_SEC,
+  PHASE_ASSIST_SEEK_MIN_INTERVAL_MS,
   phaseAssistDeltaTrackSec,
+  phaseAssistRateBias,
   phaseErrorTrackSec,
   phaseSnapDeltaTrackSec,
   pitchPosFromRate,
@@ -25,6 +28,7 @@ import {
 import { audioEngine } from '../audio/AudioEngine';
 import { decodeArrayBufferOffThread } from '../audio/decodeAudio';
 import type { DeckId, DeckTransport } from '../audio/DeckGraph';
+import { visualPositionSec } from '../audio/frameClock';
 import { invoke } from '../ipc/client';
 
 export class DeckPlayingError extends Error {
@@ -104,6 +108,13 @@ export class DeckStore {
   position = 0;
   duration = 0;
   eotWarn: 0 | 30 | 15 | 10 = 0;
+  /**
+   * Ear-aligned playhead for waveforms (frame clock; not MobX).
+   * Updated every rAF after transport sample + visual latency.
+   */
+  visualPosSec = 0;
+  /** Throttled remaining-time readout (~10 Hz) so Perf UI isn't 60 Hz React. */
+  displayPosition = 0;
 
   private nudgeTimer: number | null = null;
   private seekHoldTimer: number | null = null;
@@ -113,6 +124,11 @@ export class DeckStore {
   private jogImpulse = createJogImpulse();
   /** Playing jog sticky seek coalesced to one transport.seek per rAF (R2.2 / clicks). */
   private jogSeekPendingSec = 0;
+  /** Last assist seek time (throttle large corrections). */
+  private lastAssistSeekMs = 0;
+  /** Soft phase rate bias while assisting (1 = none). */
+  private phaseAssistRateFactor = 1;
+  private lastDisplayPosMs = 0;
   /** Temporary pitch bend while held (docs/04: ±0.5%). */
   bendFactor = 1;
   private getSettings: () => Settings;
@@ -135,6 +151,13 @@ export class DeckStore {
         fileBytes: false,
         takeoverSoftwareChange: false,
         takeoverLoaded: false,
+        visualPosSec: false,
+        jogActivity: false,
+        jogImpulse: false,
+        jogSeekPendingSec: false,
+        lastAssistSeekMs: false,
+        phaseAssistRateFactor: false,
+        lastDisplayPosMs: false,
       },
       { autoBind: true },
     );
@@ -164,7 +187,12 @@ export class DeckStore {
   }
 
   get effectiveRate(): number {
-    return this.pitchOnlyRate * this.nudgeFactor * this.bendFactor;
+    return (
+      this.pitchOnlyRate *
+      this.nudgeFactor *
+      this.bendFactor *
+      this.phaseAssistRateFactor
+    );
   }
 
   get effectiveBpm(): number | null {
@@ -425,11 +453,15 @@ export class DeckStore {
     }
   }
 
-  seek(offset: number, opts?: { soft?: boolean }): void {
+  seek(
+    offset: number,
+    opts?: { soft?: boolean; micro?: boolean },
+  ): void {
     const clamped = Math.max(0, Math.min(this.duration || 0, offset));
     // Playing seek = transport overlap crossfade (docs/03); soft duck is optional legacy.
-    audioEngine.transport(this.id)?.seek(clamped);
+    audioEngine.transport(this.id)?.seek(clamped, { micro: opts?.micro });
     this.position = clamped;
+    this.visualPosSec = visualPositionSec(clamped);
     if (opts?.soft && this.state === 'playing') {
       audioEngine.graph(this.id)?.softStartInput(0.02);
     }
@@ -456,6 +488,10 @@ export class DeckStore {
     this.syncClamped = false;
     this.syncHasGrid = false;
     this.clearPhaseGlue();
+    if (this.phaseAssistRateFactor !== 1) {
+      this.phaseAssistRateFactor = 1;
+      audioEngine.transport(this.id)?.setRate(this.effectiveRate);
+    }
   }
 
   /**
@@ -564,23 +600,34 @@ export class DeckStore {
     const range = s.mixer.pitchFaders.range;
     const dead = s.mixer.pitchFaders.centerDeadZone;
 
+    let nextPos = this.pitchPos;
+    let nextMode: 'bpm' | 'pitchPercent' = 'bpm';
+    let nextClamped = this.syncClamped;
+
     // Follow partner pitch fader only — ignore their jog nudge / pitch-bend so
     // temporary master bends don't yank the slave (release SYNC to take over manually).
     if (other.pitchOnlyBpm != null && this.fileBpm != null && this.fileBpm !== 0) {
       const targetRate = other.pitchOnlyBpm / this.fileBpm;
       const minRate = 1 - range;
       const maxRate = 1 + range;
-      this.syncClamped = targetRate < minRate - 1e-9 || targetRate > maxRate + 1e-9;
-      this.pitchPos = pitchPosFromRate(targetRate, dead, range);
-      this.syncMode = 'bpm';
+      nextClamped = targetRate < minRate - 1e-9 || targetRate > maxRate + 1e-9;
+      nextPos = pitchPosFromRate(targetRate, dead, range);
+      nextMode = 'bpm';
     } else {
       // No analysis BPM yet — match pitch fader (same % rate). Set file BPM
       // on BOTH decks for real beatmatch across different tracks.
-      this.pitchPos = other.pitchPos;
-      this.syncMode = 'pitchPercent';
-      this.syncClamped = false;
+      nextPos = other.pitchPos;
+      nextMode = 'pitchPercent';
+      nextClamped = false;
     }
-    audioEngine.transport(this.id)?.setRate(this.effectiveRate);
+
+    const posChanged = Math.abs(nextPos - this.pitchPos) > 1e-6;
+    if (posChanged) this.pitchPos = nextPos;
+    this.syncMode = nextMode;
+    this.syncClamped = nextClamped;
+    if (posChanged || Math.abs(this.phaseAssistRateFactor - 1) > 1e-6) {
+      audioEngine.transport(this.id)?.setRate(this.effectiveRate);
+    }
   }
 
   /**
@@ -653,10 +700,43 @@ export class DeckStore {
       otherOff,
       target,
     );
-    if (Math.abs(delta) < PHASE_ASSIST_DEADBAND_SEC) return;
+    if (Math.abs(delta) < PHASE_ASSIST_DEADBAND_SEC) {
+      if (this.phaseAssistRateFactor !== 1) {
+        this.phaseAssistRateFactor = 1;
+        audioEngine.transport(this.id)?.setRate(this.effectiveRate);
+      }
+      return;
+    }
+
+    // Small error → rate bias (no seek zipper / crawl). Larger → throttled micro-seek.
+    if (Math.abs(delta) <= PHASE_ASSIST_RATE_BIAS_MAX_ERR_SEC) {
+      const bias = phaseAssistRateBias(delta);
+      if (Math.abs(bias - this.phaseAssistRateFactor) > 1e-5) {
+        this.phaseAssistRateFactor = bias;
+        audioEngine.transport(this.id)?.setRate(this.effectiveRate);
+      }
+      return;
+    }
+
+    if (this.phaseAssistRateFactor !== 1) {
+      this.phaseAssistRateFactor = 1;
+      audioEngine.transport(this.id)?.setRate(this.effectiveRate);
+    }
+
+    const now =
+      typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now();
+    if (
+      this.lastAssistSeekMs > 0 &&
+      now - this.lastAssistSeekMs < PHASE_ASSIST_SEEK_MIN_INTERVAL_MS
+    ) {
+      return;
+    }
+    this.lastAssistSeekMs = now;
     const step =
       Math.sign(delta) * Math.min(Math.abs(delta), PHASE_ASSIST_MAX_SEEK_SEC);
-    this.seek(thisPos + step);
+    this.seek(thisPos + step, { micro: true });
   }
 
   setFileBpm(bpm: number | null): void {
@@ -730,7 +810,7 @@ export class DeckStore {
     if (Math.abs(delta) < 1e-7) return;
     const pos = audioEngine.transport(this.id)?.position() ?? this.position;
     // Crossfade seek owns click-free (docs/03) — do not duck deck input.
-    this.seek(pos + delta);
+    this.seek(pos + delta, { micro: true });
   }
 
   /** Pitch bend ±0.5% while held (docs/04). */
@@ -815,6 +895,17 @@ export class DeckStore {
     const dur = t.duration;
     this.position = pos;
     this.duration = dur;
+    // Waveforms read visualPosSec from the shared frame clock (latency-compensated).
+    this.visualPosSec = visualPositionSec(pos);
+
+    const now =
+      typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now();
+    if (now - this.lastDisplayPosMs >= 100) {
+      this.lastDisplayPosMs = now;
+      this.displayPosition = pos;
+    }
 
     // SYNC armed: tempo follow. Armed or post-SYNC glue: soft phase assist.
     if (other && other.state !== 'empty') {
@@ -843,6 +934,7 @@ export class DeckStore {
       );
     } else {
       this.eotWarn = 0;
+      if (this.phaseAssistRateFactor !== 1) this.phaseAssistRateFactor = 1;
     }
 
     // Keep graph rate in sync (no-op inside setRate when already on target).

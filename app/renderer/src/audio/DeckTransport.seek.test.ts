@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DeckTransport, TRANSPORT_SEEK_CROSSFADE_SEC } from './DeckGraph';
+import {
+  DeckTransport,
+  TRANSPORT_SEEK_CROSSFADE_SEC,
+  TRANSPORT_SEEK_MICRO_CROSSFADE_SEC,
+} from './DeckGraph';
 
 type StubSource = {
   buffer: AudioBuffer | null;
@@ -148,5 +152,21 @@ describe('DeckTransport playing seek crossfade (R2.2 / docs/03)', () => {
     expect(ctx.sources).toHaveLength(0);
     expect(t.isPlaying).toBe(false);
     expect(t.position()).toBe(8);
+  });
+
+  it('micro seek uses shorter crossfade', () => {
+    vi.useFakeTimers();
+    const ctx = stubCtx();
+    const dest = { connect: vi.fn() } as unknown as AudioNode;
+    const t = new DeckTransport(ctx, dest);
+    t.setBuffer(stubBuffer(30));
+    t.play(1);
+    t.seek(5, { micro: true });
+    const oldGain = ctx.gains[0]!;
+    expect(oldGain.gain.linearRampToValueAtTime).toHaveBeenCalledWith(
+      0,
+      TRANSPORT_SEEK_MICRO_CROSSFADE_SEC,
+    );
+    expect(TRANSPORT_SEEK_MICRO_CROSSFADE_SEC).toBeLessThan(TRANSPORT_SEEK_CROSSFADE_SEC);
   });
 });

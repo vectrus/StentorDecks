@@ -9,6 +9,7 @@ import { MidiStore } from '../midi/MidiStore';
 import { MidiEngine } from '../midi/MidiEngine';
 import { MidiLeds } from '../midi/MidiLeds';
 import { onIpc } from '../ipc/client';
+import { runFrameDraws } from '../audio/frameClock';
 
 export const deckA = new DeckStore('A', () => settingsStore.settings);
 export const deckB = new DeckStore('B', () => settingsStore.settings);
@@ -70,8 +71,10 @@ let raf = 0;
 
 export function startAudioClock(): void {
   const loop = () => {
+    // One scheduling domain: transport → visual samples → waveforms (R7.5 / E7).
     deckA.tick(deckB);
     deckB.tick(deckA);
+    runFrameDraws();
     mixerStore.tickMeters();
     midiLeds.tick();
     raf = requestAnimationFrame(loop);

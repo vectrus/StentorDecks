@@ -132,7 +132,29 @@ export const PHASE_ASSIST_DEADBAND_SEC = 0.006;
 /** Max seek correction per assist tick (seconds) — glue, not teleport. */
 export const PHASE_ASSIST_MAX_SEEK_SEC = 0.012;
 /** After jog: pause assist so we don't fight the wheel. */
-export const PHASE_ASSIST_JOG_MUTE_MS = 300;
+export const PHASE_ASSIST_JOG_MUTE_MS = 800;
+/**
+ * Below this |error|, assist uses a tiny rate bias instead of seek
+ * (fewer crossfades; less crawl vs jog).
+ */
+export const PHASE_ASSIST_RATE_BIAS_MAX_ERR_SEC = 0.02;
+/** Max |rate − 1| applied for soft phase rate bias. */
+export const PHASE_ASSIST_RATE_BIAS_MAX = 0.004;
+/** Min ms between assist seeks (large errors only). */
+export const PHASE_ASSIST_SEEK_MIN_INTERVAL_MS = 64;
+
+/**
+ * Temporary playback-rate multiplier toward zero phase error.
+ * Positive delta (this ahead) → slow down slightly.
+ */
+export function phaseAssistRateBias(deltaSec: number): number {
+  if (!Number.isFinite(deltaSec) || Math.abs(deltaSec) < PHASE_ASSIST_DEADBAND_SEC) {
+    return 1;
+  }
+  const t = Math.min(1, Math.abs(deltaSec) / PHASE_ASSIST_RATE_BIAS_MAX_ERR_SEC);
+  const mag = PHASE_ASSIST_RATE_BIAS_MAX * t;
+  return deltaSec > 0 ? 1 - mag : 1 + mag;
+}
 
 /**
  * Correction to apply to `this` so phase error becomes `targetErr`

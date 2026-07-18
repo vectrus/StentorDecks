@@ -83,7 +83,8 @@ Silent helper: [`scripts/Launch-StentorDeck.vbs`](scripts/Launch-StentorDeck.vbs
 | Installed `.exe` (booth) | Settings → **Check for updates** (GitHub Releases), or run a new Setup.exe |
 | Source / `npm start` | [`UPDATE.bat`](./UPDATE.bat) — not GitHub Desktop |
 
-Details: [`docs/guides/updating.md`](docs/guides/updating.md).
+Details: [`docs/guides/updating.md`](docs/guides/updating.md).  
+Publish / release checklist: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
 ### Development (already installed)
 
