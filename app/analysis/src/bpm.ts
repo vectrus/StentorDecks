@@ -1,5 +1,6 @@
 /**
  * BPM via onset envelope + autocorrelation (docs/05 §3).
+ * Also estimates beat_grid_offset_sec (first-beat phase) for SYNC (R2.3).
  * Dance-floor prior 85–150; fold into 70–180.
  */
 
@@ -8,6 +9,8 @@ import { magSpectrum } from './fft';
 export type BpmResult = {
   bpm: number;
   lowConfidence: boolean;
+  /** First beat offset from file start, in [0, beatPeriod). */
+  beatGridOffsetSec: number;
 };
 
 const TARGET_SR = 11025;
@@ -66,11 +69,58 @@ export function detectBpm(mono: Float32Array, sampleRate: number): BpmResult | n
 
   const prominence = second > 0 ? bestScore / second : 10;
   const lowConfidence = prominence < 1.12;
+  const bpmRounded = Math.round(bpm * 10) / 10;
+  const beatGridOffsetSec = estimateBeatGridOffsetSec(envelope, bpmRounded);
 
   return {
-    bpm: Math.round(bpm * 10) / 10,
+    bpm: bpmRounded,
     lowConfidence,
+    beatGridOffsetSec,
   };
+}
+
+/**
+ * Score candidate grid origins by summing onset energy on the beat lattice.
+ * Returns offset in [0, period).
+ */
+export function estimateBeatGridOffsetSec(
+  envelope: Float32Array,
+  bpm: number,
+): number {
+  if (!(bpm > 0) || envelope.length < 8) return 0;
+  const periodSec = 60 / bpm;
+  const frameSec = HOP / TARGET_SR;
+  const periodFrames = periodSec / frameSec;
+  if (!(periodFrames > 2)) return 0;
+
+  const steps = 64;
+  let bestO = 0;
+  let bestScore = -Infinity;
+  for (let s = 0; s < steps; s++) {
+    const oFrames = (s / steps) * periodFrames;
+    let score = 0;
+    let n = 0;
+    for (let t = oFrames; t < envelope.length; t += periodFrames) {
+      const i0 = Math.floor(t);
+      const i1 = Math.min(envelope.length - 1, i0 + 1);
+      const frac = t - i0;
+      const e = (envelope[i0] ?? 0) * (1 - frac) + (envelope[i1] ?? 0) * frac;
+      score += e;
+      n++;
+      if (n > 400) break;
+    }
+    if (n > 0) score /= n;
+    // Prefer earlier downbeats slightly (intro silence → later first hit still wins on energy)
+    score += (1 - s / steps) * 0.02;
+    if (score > bestScore) {
+      bestScore = score;
+      bestO = oFrames * frameSec;
+    }
+  }
+  // wrap into [0, period)
+  let o = bestO % periodSec;
+  if (o < 0) o += periodSec;
+  return Math.round(o * 10000) / 10000;
 }
 
 function downsample(mono: Float32Array, from: number, to: number): Float32Array {

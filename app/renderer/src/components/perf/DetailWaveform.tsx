@@ -17,7 +17,7 @@ function token(name: string, fallback: string): string {
 
 /**
  * Scrolling detail strip — fixed center playhead via CSS; canvas scrolls under it.
- * docs/05 ±4 s @ 50 pps; beat ticks from effective BPM (R7.5).
+ * docs/05 ±4 s @ 50 pps; beat ticks from effective BPM + grid offset (R7.5).
  */
 export const DetailWaveform = observer(function DetailWaveform({ deck, accent }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -58,6 +58,7 @@ export const DetailWaveform = observer(function DetailWaveform({ deck, accent }:
             accent: accentCss,
             tickColor: tickCss,
             effectiveBpm: deck.effectiveBpm,
+            beatGridOffsetSec: deck.beatGridOffsetSec,
             showBeatTicks: settingsStore.settings.ui.showBeatTicks,
           });
         } else {

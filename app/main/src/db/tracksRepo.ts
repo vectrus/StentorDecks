@@ -45,6 +45,7 @@ type TrackRowDb = {
   duration_ms: number | null;
   bpm_source: 'tag' | 'analysis' | 'manual' | null;
   low_confidence: number;
+  beat_grid_offset_sec: number | null;
   album: string | null;
   genre: string | null;
 };
@@ -60,6 +61,7 @@ function toTrackRow(r: TrackRowDb): TrackRow {
     durationMs: r.duration_ms,
     bpmSource: r.bpm_source,
     lowConfidence: r.low_confidence !== 0,
+    beatGridOffsetSec: r.beat_grid_offset_sec,
   };
 }
 
@@ -89,7 +91,7 @@ export function queryTracks(db: DbHandle, q: LibraryQuery): TrackRow[] {
 
   const sql = `
     SELECT id, path, title, artist, bpm, key_camelot, duration_ms, bpm_source, low_confidence,
-           album, genre
+           beat_grid_offset_sec, album, genre
     FROM tracks
     WHERE ${where.join(' AND ')}
     ORDER BY ${order}
@@ -133,7 +135,7 @@ export function getTrackDetail(db: DbHandle, id: number): TrackDetail | null {
   const r = db
     .prepare(
       `SELECT id, path, title, artist, bpm, key_camelot, duration_ms, bpm_source, low_confidence,
-              album, genre
+              beat_grid_offset_sec, album, genre
        FROM tracks WHERE id = ? AND missing_since IS NULL`,
     )
     .get(id) as TrackRowDb | undefined;
@@ -158,7 +160,8 @@ export function readTrackFile(
 ): LibraryReadResult | null {
   const r = db
     .prepare(
-      `SELECT id, path, title, artist, bpm, key_camelot, loudness_lufs, duration_ms
+      `SELECT id, path, title, artist, bpm, key_camelot, loudness_lufs, duration_ms,
+              beat_grid_offset_sec
        FROM tracks WHERE id = ? AND missing_since IS NULL`,
     )
     .get(id) as
@@ -171,6 +174,7 @@ export function readTrackFile(
         key_camelot: string | null;
         loudness_lufs: number | null;
         duration_ms: number | null;
+        beat_grid_offset_sec: number | null;
       }
     | undefined;
   if (!r) return null;
@@ -187,6 +191,7 @@ export function readTrackFile(
     keyCamelot: r.key_camelot,
     loudnessLufs: r.loudness_lufs,
     durationMs: r.duration_ms,
+    beatGridOffsetSec: r.beat_grid_offset_sec,
     bytes: new Uint8Array(buf),
   };
 }
@@ -455,6 +460,7 @@ export function commitAnalysis(db: DbHandle, result: AnalysisResult): void {
         duration_ms = COALESCE(?, duration_ms),
         bpm = CASE WHEN ? IS NOT NULL THEN ? ELSE bpm END,
         bpm_source = CASE WHEN ? IS NOT NULL THEN ? ELSE bpm_source END,
+        beat_grid_offset_sec = CASE WHEN ? IS NOT NULL THEN ? ELSE beat_grid_offset_sec END,
         key_camelot = CASE WHEN ? IS NOT NULL THEN ? ELSE key_camelot END,
         key_name = CASE WHEN ? IS NOT NULL THEN ? ELSE key_name END,
         key_source = CASE WHEN ? IS NOT NULL THEN ? ELSE key_source END,
@@ -470,6 +476,8 @@ export function commitAnalysis(db: DbHandle, result: AnalysisResult): void {
       result.bpm,
       result.bpmSource,
       result.bpmSource,
+      result.beatGridOffsetSec,
+      result.beatGridOffsetSec,
       result.keyCamelot,
       result.keyCamelot,
       result.keyName,
@@ -509,6 +517,8 @@ export function updateManualMeta(
     bpm?: number | null;
     keyCamelot?: string | null;
     keyName?: string | null;
+    /** Omit = leave offset; null = clear; number = set. */
+    beatGridOffsetSec?: number | null;
   },
 ): TrackRow | null {
   const existing = db
@@ -520,13 +530,21 @@ export function updateManualMeta(
 
   if (patch.bpm !== undefined) {
     if (patch.bpm == null) {
-      db.prepare(`UPDATE tracks SET bpm = NULL, bpm_source = NULL WHERE id = ?`).run(id);
+      db.prepare(
+        `UPDATE tracks SET bpm = NULL, bpm_source = NULL, beat_grid_offset_sec = NULL WHERE id = ?`,
+      ).run(id);
     } else {
       db.prepare(`UPDATE tracks SET bpm = ?, bpm_source = 'manual' WHERE id = ?`).run(
         patch.bpm,
         id,
       );
     }
+  }
+  if (patch.beatGridOffsetSec !== undefined) {
+    db.prepare(`UPDATE tracks SET beat_grid_offset_sec = ? WHERE id = ?`).run(
+      patch.beatGridOffsetSec,
+      id,
+    );
   }
   if (patch.keyCamelot !== undefined || patch.keyName !== undefined) {
     if (patch.keyCamelot == null && patch.keyName == null) {

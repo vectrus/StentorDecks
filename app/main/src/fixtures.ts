@@ -11,6 +11,7 @@ export const FIXTURE_TRACKS: TrackRow[] = [
     durationMs: 344_000,
     bpmSource: 'tag',
     lowConfidence: false,
+    beatGridOffsetSec: 0.05,
   },
   {
     id: 2,
@@ -22,6 +23,7 @@ export const FIXTURE_TRACKS: TrackRow[] = [
     durationMs: 372_000,
     bpmSource: 'analysis',
     lowConfidence: false,
+    beatGridOffsetSec: 0.12,
   },
   {
     id: 3,
@@ -33,6 +35,7 @@ export const FIXTURE_TRACKS: TrackRow[] = [
     durationMs: 381_000,
     bpmSource: null,
     lowConfidence: false,
+    beatGridOffsetSec: null,
   },
 ];
 

@@ -26,10 +26,11 @@ CREATE TABLE tracks (
   size INTEGER NOT NULL, mtime INTEGER NOT NULL, partial_hash TEXT NOT NULL,
   title TEXT, artist TEXT, album TEXT, genre TEXT, duration_ms INTEGER,
   bpm REAL, bpm_source TEXT CHECK(bpm_source IN ('tag','analysis','manual')),
+  beat_grid_offset_sec REAL,    -- first-beat offset for SYNC + ticks (R2.3 / R7.5); migration 003
   key_camelot TEXT, key_name TEXT, key_source TEXT,
   loudness_lufs REAL,           -- integrated loudness for auto-gain (R2.13 / R6.5)
   peak_db REAL,                 -- true peak estimate; informational + clamp guard
-  analyzed_at INTEGER, analysis_version INTEGER,
+  analyzed_at INTEGER, analysis_version INTEGER,  -- v3+ writes beat_grid_offset_sec
   missing_since INTEGER
 );
 CREATE INDEX idx_tracks_folder ON tracks(folder);
@@ -58,13 +59,14 @@ Queue in main (priority: deck-load requests > newly added > backfill), one job a
    - Resample mono to 11 025 Hz; onset-energy envelope: half-wave-rectified spectral-flux over 1024-sample FFT frames, hop 256.
    - Autocorrelate envelope over lags for 70–180 BPM; comb-score candidate tempi including ×2/÷2 and ×3/2 relations; fold winner into 70–180; prefer 85–150 on near-ties (dance-floor prior).
    - Refine: quadratic-interpolate the autocorrelation peak → one decimal (e.g. 126.4). Confidence = peak prominence; below threshold store BPM with `low_confidence` flag (UI shows value dimmed, "≈").
+   - **Beatgrid offset:** score candidate first-beat phases on the onset lattice → store `beat_grid_offset_sec` ∈ [0, period). Used by SYNC snap/soft assist and waveform ticks (`ANALYSIS_VERSION` ≥ 3).
 4. **Key** (skip if source `tag`): FFT 8192 / hop 4096 over the middle 60 % of the track; fold spectrum 55 Hz–1.76 kHz into a 12-bin chroma with harmonic weighting; Pearson-correlate against Krumhansl-Kessler major/minor profiles ×12 rotations; best → key. Map to Camelot (`8A` = A minor wheel etc.). Same confidence/dim rule.
 5. **Loudness** (R6.5): compute integrated LUFS-ish loudness on the mono analysis buffer (gated RMS approximation acceptable in v1 if within ±1.5 LU of a reference meter on the fixture set) and true-peak estimate in dBFS; store `loudness_lufs` + `peak_db`. Used only for auto-gain suggestion (R2.13), not for rewriting files.
 6. **Commit**: main writes row + blobs in one transaction, emits `analysis:progress`.
 
 ### Manual corrections (R6.6)
 
-Prep mode (required): edit BPM (numeric), **tap tempo** (average last N taps, N≥4), **½ / ×2** buttons, key picker (Camelot wheel or list). Writes `bpm_source` / `key_source` = `manual`; does not re-queue analysis. Waveform beat ticks (R7.5) recompute from the corrected BPM. Performance-console affordances for the same actions are nice-to-have.
+Prep mode (required): edit BPM (numeric), **tap tempo** (average last N taps, N≥4), **½ / ×2** buttons, key picker (Camelot wheel or list). Writes `bpm_source` / `key_source` = `manual`; does not re-queue analysis. **½ / ×2** rescale `beat_grid_offset_sec` into the new period; numeric BPM replace clears offset until Detect. Waveform beat ticks (R7.5) use corrected BPM + offset. Performance-console affordances for the same actions are nice-to-have.
 
 Performance target on the reference laptop: ≤ 4 s per average track end-to-end, so a 2500-track backfill completes in ≈ 2–3 h of idle time. Browser stays interactive: results appear per-track, `… ` placeholders until then.
 
@@ -72,4 +74,4 @@ Performance target on the reference laptop: ≤ 4 s per average track end-to-end
 
 - Overview strip: draw all 800 buckets, played portion full-opacity in deck accent, remainder 40 %. Cue marker: 2 px vertical in deck accent at `cueOffset`. End-of-track warning: remaining region tints toward `vu-clip` when ≤ 30 s (stronger at 15 / 10).
 - Scrolling detail: fixed center playhead; window = ±4 s at 50 pps → 400 buckets; canvas redraw per rAF from typed arrays (no React in the draw path). RMS drawn as inner bright bar, min/max as outer dim bar — reads as "energy" at a glance.
-- **Beat ticks** (R7.5): light vertical lines at `n × (60 / effectiveBpm)` relative to an origin of 0:00 (not a movable grid). Visual phase aid; SYNC engage one-shot seeks the synced deck onto this same grid phase (R2.3) — ticks are not edited or dragged.
+- **Beat ticks** (R7.5): light vertical lines at `beatGridOffset + n × (60 / effectiveBpm)` (analyzed first-beat offset; not editable/dragable). Same grid as SYNC snap + soft phase assist (R2.3).

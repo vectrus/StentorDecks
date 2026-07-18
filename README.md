@@ -107,8 +107,8 @@ E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW ✓]
 | **E2** Audio engine | DONE | 2026-07-18 | Dual-deck engine, Plan A/B, cue/PFL, USB rebuild. **`[HW]` PASS** (owner Julius). Checklist: [`docs/E2-HW-CHECKLIST.md`](docs/E2-HW-CHECKLIST.md) |
 | **E3** MIDI layer | DONE | 2026-07-18 | Decode/map/dispatch/learn/persist/takeover/LEDs + FX pads + Load pending. **`[HW]` PASS** (owner Julius) — pads, Sync takeover, OOTB sweep, LEDs. Checklist: [`docs/E3-HW-CHECKLIST.md`](docs/E3-HW-CHECKLIST.md) |
 | **E4** Library | DOING | 2026-07-18 | Schema/scan/watcher, IPC/read/load, MIDI browse, root picker, Prep UI, **Perf 3-row strip** + analyzing counter. Left: large-library soak ACs |
-| **E5** Analysis | DOING | 2026-07-18 | Queue + pipeline commit + **idle backfill**. Prep Detect wired. Left: accuracy harness |
-| **E6** Decks/mixer UI | DOING | 2026-07-18 | Perf **detail well** + per-deck overview (cue/EOT/ticks/seek). Left: full decks/mixer chrome, `[HW]` mix |
+| **E5** Analysis | DOING | 2026-07-18 | Queue + pipeline + idle backfill + **beatgrid offset (v3)** for SYNC. Prep Detect wired. Left: accuracy harness |
+| **E6** Decks/mixer UI | DOING | 2026-07-18 | Perf **v2** handoff (header MST/CUE/PHN, GAIN/FX/pitch decks, slim mixer). Left: polish + `[HW]` mix |
 | **E7** Polish | TODO | — | Packaging, soak, failure drills |
 
 ### Same-day milestones (2026-07-18)

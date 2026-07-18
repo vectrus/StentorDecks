@@ -3,6 +3,12 @@ import {
   autoGainTrimDb,
   beatPeriodSec,
   endOfTrackWarnLevel,
+  JOG_PLAYING_SEEK_SEC,
+  PHASE_ASSIST_DEADBAND_SEC,
+  PHASE_ASSIST_JOG_MUTE_MS,
+  PHASE_ASSIST_MAX_SEEK_SEC,
+  phaseAssistDeltaSec,
+  phaseErrorSec,
   phaseSnapDeltaSec,
   pitchPosFromRate,
   pitchRate,
@@ -30,6 +36,8 @@ export type LoadedTrackMeta = {
   fileBpm: number | null;
   keyCamelot: string | null;
   loudnessLufs: number | null;
+  /** Analyzed first-beat offset (sec); null → tempo-only SYNC. */
+  beatGridOffsetSec: number | null;
   /** Library row id when loaded via Prep/Perf browse (E4/E6). */
   libraryTrackId: number | null;
   /** Hint for resilient MP3 decode when Chromium truncates (docs/E5 follow-up). */
@@ -44,6 +52,8 @@ export class DeckStore {
   fileBpm: number | null = null;
   keyCamelot: string | null = null;
   loudnessLufs: number | null = null;
+  /** First-beat offset from analysis; null if unknown. */
+  beatGridOffsetSec: number | null = null;
   libraryTrackId: number | null = null;
   /** Overview waveform 800×(min,max,rms) u8 — null until analysis / fetch. */
   overviewWaveform: Uint8Array | null = null;
@@ -63,6 +73,18 @@ export class DeckStore {
   syncMode: 'off' | 'bpm' | 'pitchPercent' = 'off';
   /** True when BPM target was outside ±pitch range (clamped). */
   syncClamped = false;
+  /** True while armed and both decks had beatgrid offsets at engage. */
+  syncHasGrid = false;
+  /**
+   * After SYNC off: keep soft phase assist toward this error (jogged musical offset).
+   * Cleared by pitch fader, load, or re-engaging SYNC.
+   */
+  phaseGluePartner: DeckId | null = null;
+  phaseGlueTargetSec: number | null = null;
+  /** performance.now() until which assist is muted (jog). */
+  phaseAssistMuteUntil = 0;
+  /** After jog while glue active — retarget to new phase error when unmute. */
+  phaseGlueRetarget = false;
   cueOffset = 0;
   cuePreviewing = false;
 
@@ -174,6 +196,7 @@ export class DeckStore {
           this.fileBpm = meta?.fileBpm ?? null;
           this.keyCamelot = meta?.keyCamelot ?? null;
           this.loudnessLufs = meta?.loudnessLufs ?? null;
+          this.beatGridOffsetSec = meta?.beatGridOffsetSec ?? null;
           this.libraryTrackId = meta?.libraryTrackId ?? null;
           this.overviewWaveform = null;
           this.detailWaveform = null;
@@ -385,6 +408,7 @@ export class DeckStore {
       runInAction(() => {
         this.keyCamelot = row.keyCamelot;
         if (row.bpm != null) this.fileBpm = row.bpm;
+        this.beatGridOffsetSec = row.beatGridOffsetSec;
       });
     } catch {
       /* non-fatal */
@@ -399,10 +423,16 @@ export class DeckStore {
 
   setPitchPos(pos: number): void {
     this.pitchPos = Math.min(1, Math.max(0, pos));
-    // Moving pitch releases SYNC (docs/03).
+    // Moving pitch releases SYNC + phase glue (docs/03).
     this.clearSync();
     audioEngine.transport(this.id)?.setRate(this.effectiveRate);
     this.notify('pitch');
+  }
+
+  clearPhaseGlue(): void {
+    this.phaseGluePartner = null;
+    this.phaseGlueTargetSec = null;
+    this.phaseGlueRetarget = false;
   }
 
   clearSync(): void {
@@ -410,24 +440,60 @@ export class DeckStore {
     this.syncPartner = null;
     this.syncMode = 'off';
     this.syncClamped = false;
+    this.syncHasGrid = false;
+    this.clearPhaseGlue();
+  }
+
+  /**
+   * SYNC off → keep pitch frozen and soft-hold current phase relationship (glue).
+   */
+  releaseSyncToGlue(other: DeckStore): void {
+    if (
+      this.syncMode === 'bpm' &&
+      this.hasBeatGridWith(other) &&
+      other.state !== 'empty'
+    ) {
+      const bpm = other.pitchOnlyBpm;
+      const period = bpm != null ? beatPeriodSec(bpm) : null;
+      if (period != null) {
+        const thisPos = audioEngine.transport(this.id)?.position() ?? this.position;
+        const otherPos = audioEngine.transport(other.id)?.position() ?? other.position;
+        const err = phaseErrorSec(
+          thisPos,
+          otherPos,
+          period,
+          this.beatGridOffsetSec ?? 0,
+          other.beatGridOffsetSec ?? 0,
+        );
+        this.phaseGluePartner = other.id;
+        this.phaseGlueTargetSec = err;
+        this.phaseGlueRetarget = false;
+      }
+    }
+    this.syncArmed = false;
+    this.syncPartner = null;
+    this.syncMode = 'off';
+    this.syncClamped = false;
+    this.syncHasGrid = false;
   }
 
   /**
    * SYNC is a latching on/off control (docs/06 lit until released).
-   * On → this deck becomes the sole slave: clear partner SYNC, match tempo,
-   * one-shot beat phase snap, stay armed (tempo follow while on).
-   * Off → clear armed; leave pitch where it is (manual jogs take over).
+   * On → sole slave: match tempo, grid snap, soft phase to zero.
+   * Off → freeze pitch + phase glue (hold current offset until jog retargets / pitch / load).
    */
   toggleSync(other: DeckStore): void {
     if (this.syncArmed) {
-      this.clearSync();
+      this.releaseSyncToGlue(other);
       return;
     }
     if (this.state === 'empty' || other.state === 'empty') return;
     // One slave at a time — Sync A and Sync B are mutually exclusive (R2.3).
     other.clearSync();
+    this.clearPhaseGlue();
     this.syncPartner = other.id;
     this.syncArmed = true;
+    this.syncHasGrid = this.hasBeatGridWith(other);
     this.applySyncTo(other);
     this.snapPhaseTo(other);
   }
@@ -436,17 +502,29 @@ export class DeckStore {
    * Human-readable sync status for the harness (why Sync “did nothing”).
    */
   get syncStatusLine(): string | null {
+    if (this.phaseGluePartner != null && this.phaseGlueTargetSec != null && !this.syncArmed) {
+      return 'SYNC off: phase glue holding jog offset (pitch frozen)';
+    }
     if (!this.syncArmed) return null;
     if (this.syncMode === 'bpm') {
       const bpm = this.effectiveBpm?.toFixed(1) ?? '?';
-      return this.syncClamped
-        ? `SYNC: BPM+phase (~${bpm}) — target outside ±pitch range (clamped)`
-        : `SYNC: BPM + phase snap (~${bpm})`;
+      if (this.syncClamped) {
+        return `SYNC: BPM (~${bpm}) — target outside ±pitch range (clamped)`;
+      }
+      if (!this.syncHasGrid) {
+        return `SYNC: BPM (~${bpm}) — tempo follow; no beatgrid (Detect in Prep)`;
+      }
+      return `SYNC: BPM + grid snap + soft phase (~${bpm})`;
     }
     if (this.fileBpm == null) {
       return 'SYNC: pitch-% only — set File BPM on THIS deck for BPM + phase';
     }
     return 'SYNC: pitch-% only — partner needs File BPM for BPM + phase';
+  }
+
+  /** True when both decks have usable beatgrid offsets for phase snap/assist. */
+  private hasBeatGridWith(other: DeckStore): boolean {
+    return this.beatGridOffsetSec != null && other.beatGridOffsetSec != null;
   }
 
   /** Match tempo to `other` (pitch-only BPM when known; else pitch %). Called while armed too. */
@@ -476,20 +554,80 @@ export class DeckStore {
   }
 
   /**
-   * One-shot phase snap after tempo match (R2.3). Aligns beat phase at playheads
-   * using the 0:00 beat grid (same as visual ticks). Not called from tick follow.
+   * One-shot phase snap after tempo match (R2.3). Aligns beat phases using
+   * analyzed beatgrid offsets (same as visual ticks). Soft assist continues in tick.
    */
   snapPhaseTo(other: DeckStore): void {
     if (this.syncMode !== 'bpm') return;
+    if (!this.hasBeatGridWith(other)) return;
     const bpm = other.pitchOnlyBpm;
     const period = bpm != null ? beatPeriodSec(bpm) : null;
     if (period == null) return;
 
     const thisPos = audioEngine.transport(this.id)?.position() ?? this.position;
     const otherPos = audioEngine.transport(other.id)?.position() ?? other.position;
-    const delta = phaseSnapDeltaSec(thisPos, otherPos, period);
+    const delta = phaseSnapDeltaSec(
+      thisPos,
+      otherPos,
+      period,
+      this.beatGridOffsetSec ?? 0,
+      other.beatGridOffsetSec ?? 0,
+    );
     if (Math.abs(delta) < 1e-4) return;
     this.seek(thisPos + delta);
+  }
+
+  /**
+   * Soft phase assist: SYNC armed → target 0; SYNC off with glue → hold jog offset.
+   * Muted briefly after jog so the wheel wins.
+   */
+  applySoftPhaseAssist(other: DeckStore): void {
+    const armed =
+      this.syncArmed && this.syncMode === 'bpm' && other.id === this.syncPartner;
+    const glue =
+      !this.syncArmed &&
+      this.phaseGluePartner === other.id &&
+      this.phaseGlueTargetSec != null;
+    if (!armed && !glue) return;
+    if (!this.hasBeatGridWith(other)) return;
+    if (this.state !== 'playing' && other.state !== 'playing') return;
+    if (typeof performance !== 'undefined' && performance.now() < this.phaseAssistMuteUntil) {
+      return;
+    }
+
+    const bpm = other.pitchOnlyBpm;
+    const period = bpm != null ? beatPeriodSec(bpm) : null;
+    if (period == null) return;
+
+    const thisPos = audioEngine.transport(this.id)?.position() ?? this.position;
+    const otherPos = audioEngine.transport(other.id)?.position() ?? other.position;
+    const thisOff = this.beatGridOffsetSec ?? 0;
+    const otherOff = other.beatGridOffsetSec ?? 0;
+
+    if (glue && this.phaseGlueRetarget) {
+      this.phaseGlueTargetSec = phaseErrorSec(
+        thisPos,
+        otherPos,
+        period,
+        thisOff,
+        otherOff,
+      );
+      this.phaseGlueRetarget = false;
+    }
+
+    const target = armed ? 0 : (this.phaseGlueTargetSec ?? 0);
+    const delta = phaseAssistDeltaSec(
+      thisPos,
+      otherPos,
+      period,
+      thisOff,
+      otherOff,
+      target,
+    );
+    if (Math.abs(delta) < PHASE_ASSIST_DEADBAND_SEC) return;
+    const step =
+      Math.sign(delta) * Math.min(Math.abs(delta), PHASE_ASSIST_MAX_SEEK_SEC);
+    this.seek(thisPos + step);
   }
 
   setFileBpm(bpm: number | null): void {
@@ -506,21 +644,37 @@ export class DeckStore {
     if (this.state === 'empty' || other.state === 'empty') return;
     this.syncPartner = other.id;
     this.syncArmed = true;
+    this.syncHasGrid = this.hasBeatGridWith(other);
     this.applySyncTo(other);
     this.snapPhaseTo(other);
   }
 
   nudge(velocity: number): void {
+    // Don't fight the wheel with soft assist / glue for a moment.
+    if (typeof performance !== 'undefined') {
+      this.phaseAssistMuteUntil = performance.now() + PHASE_ASSIST_JOG_MUTE_MS;
+    }
+    if (this.phaseGluePartner != null) {
+      this.phaseGlueRetarget = true;
+    }
+
+    const v = Number.isFinite(velocity) ? velocity : 0;
+    const sign = Math.sign(v) || 1;
+    const mag = Math.min(1, Math.abs(v));
+
     if (this.state === 'playing') {
-      this.nudgeFactor = 1 + 0.02 * velocity;
+      // Sticky phase: micro-seek so the offset stays after the rate nudge decays.
+      const pos = audioEngine.transport(this.id)?.position() ?? this.position;
+      this.seek(pos + JOG_PLAYING_SEEK_SEC * sign * Math.max(0.35, mag));
+      this.nudgeFactor = 1 + 0.02 * v;
       audioEngine.transport(this.id)?.setRate(this.effectiveRate);
-      if (this.nudgeTimer != null) window.clearTimeout(this.nudgeTimer);
-      this.nudgeTimer = window.setTimeout(() => {
+      if (this.nudgeTimer != null) globalThis.clearTimeout(this.nudgeTimer);
+      this.nudgeTimer = globalThis.setTimeout(() => {
         this.nudgeFactor = 1;
         audioEngine.transport(this.id)?.setRate(this.effectiveRate);
-      }, 250);
+      }, 250) as unknown as number;
     } else {
-      this.seek(this.position + 0.02 * Math.sign(velocity || 1));
+      this.seek(this.position + 0.02 * sign);
     }
   }
 
@@ -603,9 +757,12 @@ export class DeckStore {
     this.position = pos;
     this.duration = dur;
 
-    // While SYNC is on, keep matching the partner's tempo (latching follow).
-    if (this.syncArmed && other && other.id === this.syncPartner && other.state !== 'empty') {
-      this.applySyncTo(other);
+    // SYNC armed: tempo follow. Armed or post-SYNC glue: soft phase assist.
+    if (other && other.state !== 'empty') {
+      if (this.syncArmed && other.id === this.syncPartner) {
+        this.applySyncTo(other);
+      }
+      this.applySoftPhaseAssist(other);
     }
 
     if (this.state === 'playing' && dur > 0 && pos >= dur - 0.02) {

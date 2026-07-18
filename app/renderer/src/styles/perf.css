@@ -13,9 +13,26 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
   font-size: 0.8125rem;
   color: var(--text-faint);
   flex-shrink: 0;
+}
+
+.perf-midi-dot {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--vu-ok);
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+
+.perf-header-outs {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
 }
 
 .perf-well {
@@ -44,8 +61,8 @@
 }
 
 .perf-wave.overview {
-  height: 2rem;
-  margin: 0.35rem 0 0.5rem;
+  height: 2.125rem; /* handoff ~34px */
+  margin: 0;
   cursor: pointer;
 }
 
@@ -83,10 +100,11 @@
 
 .perf-mid {
   display: grid;
-  grid-template-columns: 1fr 12.5rem 1fr;
+  grid-template-columns: 1fr 13.125rem 1fr; /* ~210px mixer */
   gap: 0.75rem;
   flex-shrink: 0;
   min-height: 0;
+  align-items: stretch;
 }
 
 .perf-deck {
@@ -94,7 +112,9 @@
   border: 0.5px solid var(--border);
   border-radius: 0 0 0.5rem 0.5rem;
   padding: 0.75rem 0.85rem;
-  /* Overview canvas can paint past the box; clip so amber/blue don't bleed into the mixer. */
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   overflow: hidden;
 }
 
@@ -104,6 +124,17 @@
 
 .perf-deck-b {
   border-top: 3px solid var(--deck-b);
+}
+
+.perf-deck-hd {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+}
+
+.perf-deck-meta {
+  min-width: 0;
+  flex: 1;
 }
 
 .perf-deck-title {
@@ -117,18 +148,42 @@
 .perf-deck-artist {
   font-size: 0.875rem;
   color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.perf-deck-big {
+.perf-phones {
+  border: none;
+  background: transparent;
+  color: var(--disabled);
+  font-size: 1.1rem;
+  margin-top: 0.15rem;
+  padding: 0.15rem;
+  cursor: pointer;
+}
+
+.perf-phones.on {
+  color: inherit;
+}
+
+.perf-deck-a .perf-phones.on {
+  color: var(--deck-a);
+}
+
+.perf-deck-b .perf-phones.on {
+  color: var(--deck-b);
+}
+
+.perf-bpmrow {
   display: flex;
   align-items: baseline;
   gap: 0.65rem;
-  margin: 0.35rem 0 0.5rem;
 }
 
 .perf-deck-bpm {
-  font-size: 2.4rem;
-  line-height: 1.1;
+  font-size: 2.875rem; /* ~46px */
+  line-height: 1;
 }
 
 .perf-deck-bpm.accent-a {
@@ -139,40 +194,94 @@
   color: var(--deck-b);
 }
 
+.perf-pitch-pct {
+  font-size: 0.95rem;
+  color: var(--text-dim);
+}
+
+.perf-pitch-pct.zero {
+  color: var(--disabled);
+}
+
+.perf-key-chip {
+  font-size: 1.25rem;
+  background: var(--bg-raised);
+  border-radius: 0.4rem;
+  padding: 0.1rem 0.55rem;
+}
+
 .perf-deck-rem {
-  font-size: 1.35rem;
+  font-size: 1.5rem;
   margin-left: auto;
   color: var(--text);
 }
 
-.perf-deck-prog {
-  height: 0.45rem;
+.perf-pitch-strip {
+  height: 0.35rem;
   background: var(--bg-raised);
-  border-radius: 0.25rem;
-  margin-bottom: 0.55rem;
-  overflow: hidden;
+  border-radius: 0.2rem;
+  position: relative;
+  cursor: ew-resize;
+  touch-action: none;
+  margin: 0.15rem 0;
 }
 
-.perf-deck-prog i {
-  display: block;
-  height: 100%;
-  border-radius: 0.25rem;
+.perf-pitch-zero {
+  position: absolute;
+  left: 50%;
+  top: -0.2rem;
+  width: 2px;
+  height: 0.7rem;
+  background: var(--text-faint);
+  transform: translateX(-50%);
+}
+
+.perf-pitch-cap {
+  position: absolute;
+  top: -0.25rem;
+  width: 0.7rem;
+  height: 0.85rem;
+  margin-left: -0.35rem;
+  background: var(--text);
+  border-radius: 0.2rem;
+}
+
+.perf-pitch-ghost {
+  position: absolute;
+  top: -0.25rem;
+  width: 0.7rem;
+  height: 0.85rem;
+  margin-left: -0.35rem;
+  background: transparent;
+  border: 2px solid var(--text);
+  border-radius: 0.2rem;
+  box-sizing: border-box;
+  opacity: 0.85;
 }
 
 .perf-deck-row {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.45rem;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.perf-deck-trail {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .perf-play {
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 50%;
   border: 2px solid var(--border-strong);
   background: transparent;
   color: var(--text);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  flex: none;
 }
 
 .perf-deck-a .perf-play.on {
@@ -187,14 +296,19 @@
   color: #0a1a22;
 }
 
+.perf-deck-b .perf-play:not(.on) {
+  border-color: var(--deck-b);
+  color: var(--deck-b);
+}
+
 .perf-btn {
   border: 1px solid var(--border-strong);
   border-radius: 0.5rem;
-  padding: 0.55rem 0.85rem;
-  font-size: 0.9rem;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.85rem;
   letter-spacing: 0.06em;
   background: transparent;
-  color: var(--text);
+  color: #d5dce5;
 }
 
 .perf-btn.sync {
@@ -202,13 +316,149 @@
   color: var(--deck-b);
 }
 
+.perf-btn.fxon {
+  border-color: var(--deck-a);
+  background: #2b2314;
+  color: var(--deck-a);
+}
+
+.perf-deck-b .perf-btn.fxon {
+  border-color: var(--deck-b);
+  background: #12262f;
+  color: var(--deck-b);
+}
+
+.perf-btn.load.locked {
+  color: var(--text-faint);
+}
+
+.perf-btn.load.ready {
+  border-color: var(--deck-b);
+  color: var(--deck-b);
+  background: #12262f;
+}
+
+.perf-deck-a .perf-btn.load.ready {
+  border-color: var(--deck-a);
+  color: var(--deck-a);
+  background: #2b2314;
+}
+
 .perf-mixer {
   background: var(--bg-panel);
   border: 0.5px solid var(--border);
   border-radius: 0.5rem;
-  padding: 0.75rem 0.55rem;
+  padding: 0.55rem 0.5rem 0.65rem;
   display: flex;
   flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+.perf-eqg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.perf-eq-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+}
+
+.perf-eq-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.perf-knob-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.perf-knob-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.perf-knob-wrap:has(.perf-knob-label:empty) .perf-knob-label {
+  display: none;
+}
+
+.perf-knob {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  position: relative;
+  padding: 0;
+  cursor: ns-resize;
+}
+
+.perf-knob.size-sm {
+  width: 1.9rem;
+  height: 1.9rem;
+}
+
+.perf-knob::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0.2rem;
+  width: 0.18rem;
+  height: 0.7rem;
+  background: var(--text);
+  transform: translateX(-50%) rotate(var(--knob-angle, 0deg));
+  transform-origin: 50% 0.9rem;
+  border-radius: 1px;
+}
+
+.perf-knob.size-sm::after {
+  height: 0.55rem;
+  transform-origin: 50% 0.75rem;
+}
+
+.perf-knob-hw {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.perf-knob-hw::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0.12rem;
+  width: 0.14rem;
+  height: 0.5rem;
+  border: 1px solid var(--text);
+  background: transparent;
+  transform: translateX(-50%) rotate(var(--hw-angle, 0deg));
+  transform-origin: 50% 1rem;
+}
+
+.perf-eq-label {
+  border: none;
+  background: transparent;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  padding: 0.1rem 0.25rem;
+  cursor: pointer;
+}
+
+.perf-eq-label.kill {
+  color: var(--vu-clip);
+  text-decoration: line-through;
 }
 
 .perf-fads {
@@ -216,20 +466,22 @@
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
   flex: 1;
+  min-height: 0;
 }
 
 .perf-ch {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
 }
 
 .perf-fw {
   display: flex;
-  gap: 0.45rem;
+  gap: 0.4rem;
   justify-content: center;
-  height: 8.5rem;
+  height: 100%;
+  min-height: 7rem;
 }
 
 .perf-ft {
@@ -238,6 +490,8 @@
   background: var(--bg-raised);
   border-radius: 0.25rem;
   position: relative;
+  cursor: ns-resize;
+  touch-action: none;
 }
 
 .perf-cap {
@@ -248,6 +502,20 @@
   background: var(--text);
   border-radius: 0.3rem;
   border: 1px solid var(--bg-app);
+  pointer-events: none;
+}
+
+.perf-ghost {
+  position: absolute;
+  left: -0.45rem;
+  right: -0.45rem;
+  height: 1.25rem;
+  background: transparent;
+  border: 2px solid var(--text);
+  border-radius: 0.3rem;
+  opacity: 0.85;
+  pointer-events: none;
+  box-sizing: border-box;
 }
 
 .perf-vu {
@@ -263,6 +531,19 @@
 .perf-vu .ok {
   background: var(--vu-ok);
   width: 100%;
+  flex-shrink: 0;
+}
+
+.perf-vu .hot {
+  background: var(--vu-hot);
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.perf-vu .clip {
+  background: var(--vu-clip);
+  width: 100%;
+  flex-shrink: 0;
 }
 
 .perf-ch .kl {
@@ -278,10 +559,6 @@
   color: var(--deck-b);
 }
 
-.perf-ch input[type='range'] {
-  width: 100%;
-  accent-color: var(--text-dim);
-}
 
 .perf-brow {
   background: var(--bg-panel-2);

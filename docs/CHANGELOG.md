@@ -5,6 +5,24 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — Perf UI v2 handoff (header outs + full decks)
+
+Designer handoff applied: **MST / CUE / PHN** knobs in Perf header (library gets height); deck panels gain GAIN, phones PFL, pitch%, key chip, pitch strip + pickup, FILTER/FLANGER/WET/LOAD; mixer slimmed to EQ + faders/VU. Mockup `01` replaced; docs/06 updated. R2.5–R2.8, R3, R4.2, R7.7, E6.
+
+---
+
+## 2026-07-18 — SYNC phase glue + Perf mixer column (E6)
+
+SYNC off now **phase-glues** the release offset (soft assist holds it; jog micro-seeks + retargets; pitch/load clears). Playing jog = sticky seek + short rate nudge; assist muted ~300 ms during jog. Perf mixer: HI/MID/LOW EQ knobs + kill labels, channel faders with green/amber/red VU + soft-takeover ghosts, MASTER / CUE-MIX / PHONES (no crossfader). R2.3, R2.4, R2.7, R7.6, E6 §4, mockup 05.
+
+---
+
+## 2026-07-18 — Radical SYNC: beatgrids + soft phase assist (R2.3)
+
+SYNC no longer assumes beat 1 at 0:00. Analysis writes `beat_grid_offset_sec` (`ANALYSIS_VERSION` **3**, migration `003_beat_grid`); engage snaps onto that grid; while armed, soft phase assist keeps phases glued (deadband + capped seeks); SYNC off freezes pitch and stops assist for Hercules jogs. Visual ticks use the same offset. Missing grid → honest tempo-only status. Spec: R2.3, R7.5, docs/03, docs/05.
+
+---
+
 ## 2026-07-18 — Park: Prep library as v2 AI queue surface
 
 Owner note: later examine whether Prep’s library UI can host a Co-pilot / Suggest **queue (playlist)** for AI autoplay. Parked in [`BACKLOG-v2-spotify-ai.md`](./BACKLOG-v2-spotify-ai.md) (design spike before V2-E); ROADMAP + Prep guide FAQ pointed. **Not v1** — disk folders remain crates.

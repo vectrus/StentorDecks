@@ -8,7 +8,7 @@ Reads: docs/05 (pipeline, blob formats), docs/02 (analysis window). Depends on E
 2. Priority queue in main: deck-load requests preempt; newly added before backfill; pause/resume; queue depth in `analysis:progress`.
 3. Decode stage with hard memory discipline: decode → mono downmix → release stereo buffer; sequential jobs; window working set returns to baseline between jobs.
 4. Waveform stage: overview (800 buckets) + detail (50 pps) min/max/RMS u8 blobs per docs/05 format.
-5. BPM stage per docs/05 §3: envelope, autocorrelation, tempo folding with dance prior, quadratic refinement, confidence flag.
+5. BPM stage per docs/05 §3: envelope, autocorrelation, tempo folding with dance prior, quadratic refinement, confidence flag, **`beat_grid_offset_sec`** (first-beat phase for SYNC + ticks). `ANALYSIS_VERSION` ≥ 3.
 6. Key stage per docs/05 §4: chroma, Krumhansl correlation, Camelot mapping, confidence flag.
 7. Loudness stage per docs/05 §5: `loudness_lufs` + `peak_db` for auto-gain.
 8. Commit transaction + progress events; `analysis_version` stamped.

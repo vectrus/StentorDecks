@@ -45,9 +45,11 @@ UI scale (R7.2) multiplies a root `rem`; everything is rem-based. Minimum post-s
 
 ## Layout
 
-**Performance mode** — rows: waveform well (both decks stacked, thick bars, 2 px white center playhead, beat ticks, cue marker) / deck A · mixer · deck B / library browser that **fills remaining height** (windowed list, ≥3 rows × 42 px, cursor-centered).
-Deck panel: 3 px accent top border; title+artist left, GAIN knob top-right (auto-gain applied on load; manual override live); BPM + key chip + remaining on one baseline row; progress bar (7 px, seekable); FX row left-to-right: **FILTER pad · AMT knob · FLANGER pad · WET knob** (pad = activate, knob = amount; mockups `01`/`04`); transport row (play 44 px round, CUE, SYNC, LOAD right-aligned). Tap/half/double/key chrome on this panel is nice-to-have.
-Mixer column: EQ knob pairs (HI/MID/LOW) with kill state shown as a struck-through lit label; two channel faders (oversized caps) each with adjacent VU; no crossfader ever rendered.
+**Performance mode** (mockup `01` v2) — rows: header (MIDI status + **MST / CUE / PHN** knobs) / waveform well (stacked detail, center playhead, ticks, cue) / deck A · slim mixer · deck B / library that **fills remaining height** (≥3 × 42 px rows).
+
+Deck panel: title/artist + phones PFL + **GAIN**; BPM · pitch% · key chip · remaining; overview waveform; pitch strip (zero + cap + soft-takeover ghost); play · CUE · SYNC · FILTER · FLANGER · WET · LOAD (lock when playing). Tap/half/double chrome remains Prep / nice-to-have.
+
+Mixer column: EQ knob pairs (HI/MID/LOW) with kill labels; channel faders + VU only. Master/cue/phones live in the Perf header. No crossfader.
 
 **Prep mode** — compact deck strips pinned top (accent left border, play state icon, title, BPM, remaining); below: folder tree (~190 px) + large browser with breadcrumb and search; **BPM/key correction strip** (tap, ½, ×2, key picker) required (R6.6); footer hints for encoder navigation. Operator walkthrough: [`guides/prep-library.md`](./guides/prep-library.md).
 

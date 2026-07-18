@@ -100,15 +100,17 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     other.state = 'stopped';
     deck.fileBpm = 128;
     other.fileBpm = 132;
+    deck.beatGridOffsetSec = 0;
+    other.beatGridOffsetSec = 0;
     other.pitchPos = 0.5; // effective 132
     deck.toggleSync(other);
     expect(deck.syncArmed).toBe(true);
     expect(deck.syncMode).toBe('bpm');
     expect(deck.effectiveBpm).toBeCloseTo(132, 1);
-    expect(deck.syncStatusLine).toMatch(/BPM \+ phase/i);
+    expect(deck.syncStatusLine).toMatch(/BPM \+ grid snap \+ soft phase/i);
   });
 
-  it('toggleSync one-shot phase snap aligns beat phase (R2.3)', () => {
+  it('toggleSync one-shot phase snap aligns beat phase on beatgrid (R2.3)', () => {
     const deck = new DeckStore('A', () => defaultSettings);
     const other = new DeckStore('B', () => defaultSettings);
     deck.state = 'stopped';
@@ -117,13 +119,95 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     other.duration = 120;
     deck.fileBpm = 120;
     other.fileBpm = 120;
+    deck.beatGridOffsetSec = 0;
+    other.beatGridOffsetSec = 0;
     other.pitchPos = 0.5;
     // 120 BPM → 0.5 s period; phases 0.1 vs 0.3 → snap +0.2
     deck.position = 10.1;
     other.position = 4.3;
     deck.toggleSync(other);
     expect(deck.syncMode).toBe('bpm');
+    expect(deck.syncHasGrid).toBe(true);
     expect(deck.position).toBeCloseTo(10.3, 5);
+  });
+
+  it('toggleSync skips phase snap when beatgrid missing', () => {
+    const deck = new DeckStore('A', () => defaultSettings);
+    const other = new DeckStore('B', () => defaultSettings);
+    deck.state = 'stopped';
+    other.state = 'stopped';
+    deck.duration = 120;
+    other.duration = 120;
+    deck.fileBpm = 120;
+    other.fileBpm = 120;
+    deck.beatGridOffsetSec = null;
+    other.beatGridOffsetSec = 0.1;
+    other.pitchPos = 0.5;
+    deck.position = 10.1;
+    other.position = 4.3;
+    deck.toggleSync(other);
+    expect(deck.syncArmed).toBe(true);
+    expect(deck.syncHasGrid).toBe(false);
+    expect(deck.position).toBeCloseTo(10.1, 5);
+    expect(deck.syncStatusLine).toMatch(/no beatgrid/i);
+  });
+
+  it('toggleSync aligns phases across different grid offsets', () => {
+    const deck = new DeckStore('A', () => defaultSettings);
+    const other = new DeckStore('B', () => defaultSettings);
+    deck.state = 'stopped';
+    other.state = 'stopped';
+    deck.duration = 120;
+    other.duration = 120;
+    deck.fileBpm = 120;
+    other.fileBpm = 120;
+    deck.beatGridOffsetSec = 1.0;
+    other.beatGridOffsetSec = 0.2;
+    other.pitchPos = 0.5;
+    // Both on beat 0 of their grids → no seek
+    deck.position = 1.0;
+    other.position = 0.2;
+    deck.toggleSync(other);
+    expect(deck.syncHasGrid).toBe(true);
+    expect(deck.position).toBeCloseTo(1.0, 5);
+  });
+
+  it('toggleSync off starts phase glue holding current offset', () => {
+    const deck = new DeckStore('A', () => defaultSettings);
+    const other = new DeckStore('B', () => defaultSettings);
+    deck.state = 'playing';
+    other.state = 'playing';
+    deck.duration = 120;
+    other.duration = 120;
+    deck.fileBpm = 120;
+    other.fileBpm = 120;
+    deck.beatGridOffsetSec = 0;
+    other.beatGridOffsetSec = 0;
+    other.pitchPos = 0.5;
+    deck.position = 10.0;
+    other.position = 4.0;
+    deck.toggleSync(other);
+    expect(deck.syncArmed).toBe(true);
+    deck.position = 10.05; // slight musical offset while still "synced"
+    other.position = 4.0;
+    deck.toggleSync(other); // release → glue
+    expect(deck.syncArmed).toBe(false);
+    expect(deck.phaseGluePartner).toBe('B');
+    expect(deck.phaseGlueTargetSec).not.toBeNull();
+    expect(deck.syncStatusLine).toMatch(/phase glue/i);
+  });
+
+  it('nudge while playing micro-seeks and mutes assist', () => {
+    const deck = new DeckStore('A', () => defaultSettings);
+    deck.state = 'playing';
+    deck.duration = 120;
+    deck.position = 10;
+    deck.phaseGluePartner = 'B';
+    deck.phaseGlueTargetSec = 0;
+    deck.nudge(1);
+    expect(deck.position).toBeGreaterThan(10);
+    expect(deck.phaseGlueRetarget).toBe(true);
+    expect(deck.phaseAssistMuteUntil).toBeGreaterThan(0);
   });
 
   it('toggleSync is mutually exclusive — Sync A clears Sync B', () => {

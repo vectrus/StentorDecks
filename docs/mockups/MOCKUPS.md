@@ -4,7 +4,7 @@ Self-contained HTML files — open directly in a browser. These are the **design
 
 | File | Shows | Authority |
 |---|---|---|
-| `01-performance-mode.html` | Final composite performance view: waveform well, both deck panels (gain, FX, load, pitch strip), mixer column (no crossfader, faders + VU), 3-row browser | **Authoritative** for Performance mode layout |
+| `01-performance-mode.html` | Performance **v2 handoff**: well, full deck panels (GAIN, phones, BPM·%·key·rem, overview, pitch strip, FX/WET/LOAD), slim mixer (EQ+faders), MST/CUE/PHN in header, flex library | **Authoritative** for Performance mode layout |
 | `02-prep-mode.html` | Compact deck strips, folder tree, breadcrumb, large browser | **Authoritative** for Prep mode layout |
 | `03-audio-setup.html` | First-run/settings audio routing screen incl. disabled inputs section | **Authoritative** for the setup screen |
 | `04-deck-panel-states.html` | Deck A playing + FILTER active + AMT + LOAD locked, vs. Deck B empty + LOAD ready | **Authoritative** for state styling (R3.2, R4.3, empty deck) |

@@ -11,6 +11,7 @@ function track(partial: Partial<TrackRow> & { id: number; path: string }): Track
     durationMs: null,
     bpmSource: null,
     lowConfidence: false,
+    beatGridOffsetSec: null,
     ...partial,
   };
 }

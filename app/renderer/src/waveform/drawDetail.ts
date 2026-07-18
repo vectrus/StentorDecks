@@ -23,6 +23,8 @@ export type DetailDrawOpts = {
   tickColor: string;
   /** Effective BPM for beat ticks; null → no ticks. */
   effectiveBpm: number | null;
+  /** Analyzed first-beat offset (sec); default 0 = legacy 0:00 grid. */
+  beatGridOffsetSec?: number | null;
   showBeatTicks: boolean;
 };
 
@@ -54,21 +56,31 @@ export function timeToDetailX(
   return ((timeSec - t0) / (t1 - t0)) * width;
 }
 
-/** Beat times (seconds from 0:00) that fall inside the visible window. */
+/**
+ * Beat times (seconds) that fall inside the visible window.
+ * Lattice: beatGridOffset + n × period (same grid as SYNC, R2.3 / R7.5).
+ */
 export function beatTimesInWindow(
   positionSec: number,
   effectiveBpm: number,
   halfWindowSec = DETAIL_HALF_WINDOW_SEC,
+  beatGridOffsetSec = 0,
 ): number[] {
   if (!(effectiveBpm > 0)) return [];
   const period = 60 / effectiveBpm;
+  if (!(period > 0)) return [];
+  const offset =
+    Number.isFinite(beatGridOffsetSec) && beatGridOffsetSec >= 0
+      ? beatGridOffsetSec % period
+      : 0;
   const t0 = positionSec - halfWindowSec;
   const t1 = positionSec + halfWindowSec;
-  let n = Math.ceil(t0 / period - 1e-9);
+  // First beat index with offset + n*period >= t0
+  let n = Math.ceil((t0 - offset) / period - 1e-9);
   if (n < 0) n = 0;
   const out: number[] = [];
-  for (let t = n * period; t <= t1 + 1e-9; t += period) {
-    if (t >= t0 - 1e-9) out.push(t);
+  for (let t = offset + n * period; t <= t1 + 1e-9; t += period) {
+    if (t >= t0 - 1e-9 && t >= 0) out.push(t);
     if (out.length > 64) break;
   }
   return out;
@@ -128,6 +140,7 @@ export function drawDetailWaveform(
     accent,
     tickColor,
     effectiveBpm,
+    beatGridOffsetSec,
     showBeatTicks,
   } = opts;
   ctx.clearRect(0, 0, width, height);
@@ -167,7 +180,12 @@ export function drawDetailWaveform(
   if (showBeatTicks && effectiveBpm != null && effectiveBpm > 0) {
     ctx.globalAlpha = 0.35;
     ctx.fillStyle = tickColor;
-    for (const t of beatTimesInWindow(positionSec, effectiveBpm)) {
+    for (const t of beatTimesInWindow(
+      positionSec,
+      effectiveBpm,
+      DETAIL_HALF_WINDOW_SEC,
+      beatGridOffsetSec ?? 0,
+    )) {
       const x = Math.round(timeToDetailX(t, positionSec, width));
       if (x < 0 || x > width) continue;
       ctx.fillRect(x, 0, 1, height);

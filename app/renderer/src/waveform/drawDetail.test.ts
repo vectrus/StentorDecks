@@ -48,6 +48,13 @@ describe('detail window math', () => {
     expect(beats).toContain(10);
   });
 
+  it('beatTimesInWindow respects beat-grid offset', () => {
+    // 120 BPM, offset 0.1 → beats at … 9.6, 10.1, 10.6 …
+    const beats = beatTimesInWindow(10, 120, 4, 0.1);
+    expect(beats).toContain(10.1);
+    expect(beats).not.toContain(10);
+  });
+
   it('detailBucketCount', () => {
     expect(detailBucketCount(makeDetail(50))).toBe(50);
   });

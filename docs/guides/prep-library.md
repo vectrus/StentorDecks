@@ -113,7 +113,7 @@ Select a **track** (not a folder). Then you can:
 | **BPM** box | Type the correct number, press Enter |
 | **Tap** | Tap along with the beat (at least 4 taps). Then **Apply tap** to save |
 | **½** / **×2** | If the number is double or half of the real tempo (very common), fix it in one click |
-| **Detect** | Ask the app to re-analyze that song (BPM, key, waveform, loudness) |
+| **Detect** | Ask the app to re-analyze that song (BPM, key, **beatgrid**, waveform, loudness). Good SYNC needs a beatgrid — run Detect if Sync says “no beatgrid”. |
 | **Camelot** | Pick the key yourself (`8A`, `9B`, …) or clear it with `—` |
 
 Your fixes are remembered. You don’t have to do them again next time.
@@ -197,7 +197,7 @@ One library. Two views. Don’t think of them as two different collections.
 The file has no tag yet, or analysis hasn’t finished. Select the track → **Detect**, or wait while the app analyzes in the background.
 
 **Why does Sync sound wrong?**  
-Often the BPM is half or double. Select the track in Prep → try **½** or **×2**, or **Tap**.
+Often the BPM is half or double — try **½** / **×2** / **Tap**. Or the track has no **beatgrid** yet — press **Detect**, wait, reload the deck, then SYNC again. SYNC snaps and holds phase while lit; turn SYNC off and the app **keeps your offset** (phase glue) until you jog again, move pitch, or load.
 
 **What does Camelot mean?**  
 A DJ-friendly code for musical key. Nearby numbers (and A↔B with the same number) usually mix nicer. The `~` mark is a gentle hint, not a rule.

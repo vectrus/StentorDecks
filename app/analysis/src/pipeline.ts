@@ -28,6 +28,7 @@ export async function runAnalysisPipeline(
 
     let bpm: number | null = null;
     let bpmSource: 'analysis' | null = null;
+    let beatGridOffsetSec: number | null = null;
     let lowConfidence = false;
 
     if (!job.skipBpm) {
@@ -36,6 +37,7 @@ export async function runAnalysisPipeline(
       if (b) {
         bpm = b.bpm;
         bpmSource = 'analysis';
+        beatGridOffsetSec = b.beatGridOffsetSec;
         lowConfidence = lowConfidence || b.lowConfidence;
       }
     }
@@ -67,6 +69,7 @@ export async function runAnalysisPipeline(
       detailPps: waves.detailPps,
       bpm,
       bpmSource,
+      beatGridOffsetSec,
       keyCamelot,
       keyName,
       keySource,

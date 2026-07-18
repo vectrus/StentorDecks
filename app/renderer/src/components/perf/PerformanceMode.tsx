@@ -1,22 +1,29 @@
 import { observer } from 'mobx-react-lite';
-import { deckA, deckB, midiStore } from '../../stores/root';
+import { audioDeviceStore, deckA, deckB, midiStore } from '../../stores/root';
 import { DetailWaveform } from './DetailWaveform';
 import { PerfBrowseStrip } from './PerfBrowseStrip';
 import { PerfDeckMini } from './PerfDeckMini';
+import { PerfHeaderOuts } from './PerfHeaderOuts';
 import { PerfMixerMini } from './PerfMixerMini';
 
 /**
- * Performance shell — scrolling detail well + per-deck overview (E6 / docs/05–06).
+ * Performance shell — v2 handoff: header outs, full decks, slim mixer, flex library.
  */
 export const PerformanceMode = observer(function PerformanceMode() {
   return (
     <div className="perf">
       <div className="perf-top">
         <span className="mono hint">
-          {midiStore.connected
-            ? `${midiStore.portName ?? 'RMX2'} connected`
-            : 'No MIDI — mouse + Prep still work'}
+          {midiStore.connected ? (
+            <>
+              <span className="perf-midi-dot" aria-hidden />
+              {midiStore.portName ?? 'RMX2'} · Plan {audioDeviceStore.activePlan}
+            </>
+          ) : (
+            'No MIDI — mouse + Prep still work'
+          )}
         </span>
+        <PerfHeaderOuts />
       </div>
 
       <div className="perf-well">

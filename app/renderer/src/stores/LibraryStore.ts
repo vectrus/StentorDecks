@@ -3,6 +3,7 @@ import {
   averageTapBpm,
   camelotDisplayName,
   isCamelotKey,
+  rescaleBeatGridOffsetSec,
   type AnalysisProgress,
   type FolderNode,
   type LibraryProgress,
@@ -281,6 +282,7 @@ export class LibraryStore {
         fileBpm?: number | null;
         keyCamelot?: string | null;
         loudnessLufs?: number | null;
+        beatGridOffsetSec?: number | null;
         libraryTrackId?: number | null;
         durationMs?: number | null;
       },
@@ -303,6 +305,7 @@ export class LibraryStore {
         fileBpm?: number | null;
         keyCamelot?: string | null;
         loudnessLufs?: number | null;
+        beatGridOffsetSec?: number | null;
         libraryTrackId?: number | null;
         durationMs?: number | null;
       },
@@ -327,6 +330,7 @@ export class LibraryStore {
       fileBpm: payload.bpm,
       keyCamelot: payload.keyCamelot,
       loudnessLufs: payload.loudnessLufs,
+      beatGridOffsetSec: payload.beatGridOffsetSec,
       libraryTrackId: payload.id,
       durationMs: payload.durationMs,
     });
@@ -357,20 +361,39 @@ export class LibraryStore {
   async setManualBpm(bpm: number | null): Promise<void> {
     const row = this.selectedTrack;
     if (!row) return;
-    const next = await invoke('library:updateManual', { id: row.id, bpm });
+    // Numeric / tap replace clears beatgrid until Detect (docs/05).
+    const next = await invoke('library:updateManual', {
+      id: row.id,
+      bpm,
+      beatGridOffsetSec: null,
+    });
     this.patchLocalTrack(next);
   }
 
   async halfBpm(): Promise<void> {
     const row = this.selectedTrack;
     if (!row || row.bpm == null) return;
-    await this.setManualBpm(Math.round((row.bpm / 2) * 10) / 10);
+    const nextBpm = Math.round((row.bpm / 2) * 10) / 10;
+    const offset = rescaleBeatGridOffsetSec(row.beatGridOffsetSec, nextBpm);
+    const next = await invoke('library:updateManual', {
+      id: row.id,
+      bpm: nextBpm,
+      beatGridOffsetSec: offset,
+    });
+    this.patchLocalTrack(next);
   }
 
   async doubleBpm(): Promise<void> {
     const row = this.selectedTrack;
     if (!row || row.bpm == null) return;
-    await this.setManualBpm(Math.round(row.bpm * 2 * 10) / 10);
+    const nextBpm = Math.round(row.bpm * 2 * 10) / 10;
+    const offset = rescaleBeatGridOffsetSec(row.beatGridOffsetSec, nextBpm);
+    const next = await invoke('library:updateManual', {
+      id: row.id,
+      bpm: nextBpm,
+      beatGridOffsetSec: offset,
+    });
+    this.patchLocalTrack(next);
   }
 
   async setManualKey(camelot: string | null): Promise<void> {

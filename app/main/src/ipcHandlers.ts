@@ -102,6 +102,7 @@ export function registerIpcHandlers(ctx: Ctx): void {
       bpm: req.bpm,
       keyCamelot: req.keyCamelot,
       keyName: req.keyName,
+      beatGridOffsetSec: req.beatGridOffsetSec,
     }),
   );
   handle('library:rescan', async (req) => {

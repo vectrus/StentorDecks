@@ -1,138 +1,163 @@
-<!doctype html><html><head><meta charset="utf-8"><title>StentorDeck — Performance mode (authoritative)</title>
+<!doctype html><html><head><meta charset="utf-8"><title>StentorDeck — Performance mode v2 (handoff)</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
 <style>
 :root{--bg:#0E1115;--well:#080A0D;--panel:#161B22;--panel2:#12161C;--raised:#262E39;--sel:#2A3340;
 --bd:#313A46;--bds:#4A5563;--tx:#F4F7FB;--dim:#AAB4C2;--faint:#8A94A6;--dis:#39424E;
 --a:#FFB454;--b:#5BD0FF;--ok:#57C98A;--clip:#FF5D5D;}
-body{background:var(--bg);color:var(--tx);font-family:Bahnschrift,"Segoe UI",sans-serif;margin:0;padding:18px;}
+*{box-sizing:border-box;}
+body{background:var(--bg);color:var(--tx);font-family:Bahnschrift,"Segoe UI",sans-serif;margin:0;padding:16px;}
 .mono{font-family:Consolas,monospace;}
-.app{max-width:1280px;margin:0 auto;}
-.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:var(--faint);}
-.well{background:var(--well);border:0.5px solid var(--bd);border-radius:8px;padding:8px;position:relative;margin-bottom:12px;}
-.well canvas{width:100%;height:56px;display:block;}
+.app{max-width:1600px;margin:0 auto;display:flex;flex-direction:column;gap:12px;min-height:calc(100vh - 32px);}
+.top{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--faint);}
+.well{background:var(--well);border:0.5px solid var(--bd);border-radius:8px;padding:8px;position:relative;}
+.well canvas{width:100%;height:52px;display:block;}
 .ph{position:absolute;left:50%;top:8px;bottom:8px;width:2px;background:#fff;}
-.mid{display:grid;grid-template-columns:1fr 200px 1fr;gap:12px;margin-bottom:12px;}
-.deck{background:var(--panel);border:0.5px solid var(--bd);border-radius:0 0 8px 8px;padding:12px 14px;}
+.mid{display:grid;grid-template-columns:1fr 210px 1fr;gap:12px;}
+.deck{background:var(--panel);border:0.5px solid var(--bd);border-radius:0 0 8px 8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
 .deck.a{border-top:3px solid var(--a);} .deck.b{border-top:3px solid var(--b);}
-.hd{display:flex;align-items:flex-start;gap:10px;}
+.hd{display:flex;gap:10px;align-items:flex-start;}
 .tt{font-size:16px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ar{font-size:14px;color:var(--dim);}
+.ar{font-size:14px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .knob{width:36px;height:36px;border-radius:50%;background:var(--raised);border:1px solid var(--bds);margin:0 auto;position:relative;}
 .knob:after{content:"";position:absolute;left:50%;top:4px;width:3px;height:11px;background:var(--tx);transform:translateX(-50%);}
 .kl{font-size:11px;color:var(--dim);letter-spacing:1px;text-align:center;}
-.big{display:flex;align-items:baseline;gap:10px;margin:2px 0 8px;}
-.bpm{font-size:46px;line-height:1.1;}
+.bpmrow{display:flex;align-items:baseline;gap:10px;}
+.bpm{font-size:46px;line-height:1;}
+.pct{font-size:15px;color:var(--dim);}
 .key{font-size:20px;background:var(--raised);border-radius:6px;padding:2px 9px;}
 .rem{font-size:24px;margin-left:auto;}
-/* Per-deck full-track overview (seekable in app) */
-.ov{height:28px;background:var(--raised);border-radius:4px;margin:6px 0 8px;position:relative;overflow:hidden;}
-.ov canvas{width:100%;height:28px;display:block;}
-.pitch{height:4px;background:var(--raised);border-radius:2px;position:relative;margin:0 0 10px;}
-.pitch .zero{position:absolute;left:50%;top:-3px;width:2px;height:10px;background:var(--faint);}
-.pitch .cap{position:absolute;top:-4px;width:10px;height:12px;background:var(--tx);border-radius:3px;}
-.fx{display:flex;gap:8px;align-items:center;margin-bottom:10px;}
-.pad{border:1px solid var(--bds);border-radius:8px;padding:8px 12px;font-size:14px;color:#D5DCE5;}
-.pad.on{border-color:var(--a);background:#2B2314;color:var(--a);}
-.row{display:flex;gap:10px;align-items:center;}
-.play{width:44px;height:44px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:21px;}
-.btn{border:1px solid var(--bds);border-radius:8px;padding:10px 15px;font-size:15px;letter-spacing:1px;}
-.btn.lock{color:var(--faint);display:flex;align-items:center;gap:6px;}
-.btn.ready{border-color:var(--b);color:var(--b);background:#12262F;}
-.mixer{background:var(--panel);border:0.5px solid var(--bd);border-radius:8px;padding:12px 10px;display:flex;flex-direction:column;gap:10px;}
-.eqg{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.ovw{width:100%;height:34px;display:block;cursor:pointer;}
+.pitch{height:5px;background:var(--raised);border-radius:3px;position:relative;}
+.pitch .zero{position:absolute;left:50%;top:-3px;width:2px;height:11px;background:var(--faint);}
+.pitch .cap{position:absolute;top:-4px;width:11px;height:13px;background:var(--tx);border-radius:3px;}
+.ctl{display:flex;gap:8px;align-items:center;}
+.play{width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:19px;flex:none;}
+.btn{border:1px solid var(--bds);border-radius:8px;padding:9px 13px;font-size:14px;letter-spacing:1px;color:#D5DCE5;display:inline-flex;align-items:center;gap:6px;}
+.btn.fxon{border-color:var(--a);background:#2B2314;color:var(--a);}
+.mixer{background:var(--panel);border:0.5px solid var(--bd);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:10px;}
+.eqg{display:grid;grid-template-columns:1fr 1fr;gap:4px;text-align:center;}
 .fads{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:1;}
-.fw{display:flex;gap:8px;justify-content:center;}
-.ft{width:14px;height:140px;background:var(--raised);border-radius:4px;position:relative;}
-.ft .cap{position:absolute;left:-8px;right:-8px;height:22px;background:var(--tx);border-radius:5px;border:1px solid var(--bg);}
-.vu{width:10px;height:140px;background:var(--raised);border-radius:4px;display:flex;flex-direction:column-reverse;overflow:hidden;}
-.brow{background:var(--panel2);border:0.5px solid var(--bd);border-radius:8px;padding:10px 12px;}
-.bh{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;color:var(--faint);}
+.fw{display:flex;gap:6px;justify-content:center;height:100%;}
+.ft{width:13px;min-height:110px;background:var(--raised);border-radius:4px;position:relative;}
+.ft .cap{position:absolute;left:-7px;right:-7px;height:20px;background:var(--tx);border-radius:4px;border:1px solid var(--bg);}
+.vu{width:9px;min-height:110px;background:var(--raised);border-radius:4px;display:flex;flex-direction:column-reverse;overflow:hidden;}
+.outs{display:flex;gap:10px;justify-content:center;text-align:center;}
+.lib{background:var(--panel2);border:0.5px solid var(--bd);border-radius:8px;padding:10px 12px;flex:1;display:flex;flex-direction:column;}
+.lh{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;color:var(--faint);}
 table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:16px;}
-th{padding:4px 8px;font-weight:400;color:var(--dim);font-size:12px;text-align:left;}
+th{padding:4px 8px;font-weight:400;color:var(--dim);font-size:12px;text-align:left;letter-spacing:1px;}
 td{padding:10px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#D5DCE5;}
-tr.sel td{background:var(--sel);} tr.sel td:first-child{border-radius:6px 0 0 6px;} tr.sel td:last-child{border-radius:0 6px 6px 0;}
+tr.sel td{background:var(--sel);color:var(--tx);}
+tr.sel td:first-child{border-radius:6px 0 0 6px;} tr.sel td:last-child{border-radius:0 6px 6px 0;}
+.notes{border-top:0.5px solid var(--bd);margin-top:4px;padding-top:10px;font-size:12px;color:var(--faint);line-height:1.6;max-width:1100px;}
+.notes b{color:var(--dim);font-weight:500;}
 </style></head><body><div class="app">
-<div class="top"><span style="display:flex;align-items:center;gap:8px;"><svg width="22" height="22" viewBox="0 0 40 40" aria-hidden><rect width="40" height="40" rx="8" fill="#0E1115"/><rect x="9" y="10" width="7" height="22" rx="2.5" fill="#FFB454"/><rect x="18" y="6" width="7" height="26" rx="2.5" fill="#5BD0FF"/><text x="31" y="30" text-anchor="middle" fill="#F4F7FB" font-family="Bahnschrift,Segoe UI,sans-serif" font-size="14" font-weight="600">j</text></svg><span style="display:flex;flex-direction:column;line-height:1.15;"><span style="font-weight:600;letter-spacing:0.04em;">StentorDeck</span><span style="font-size:11px;color:var(--dim);letter-spacing:0.06em;">for julius</span></span></span>
-<span style="display:flex;gap:12px;align-items:center;">
-<span style="display:flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block;"></span>RMX2 connected</span>
-<span style="border:0.5px solid var(--bd);border-radius:5px;padding:3px 8px;">Master 1-2 · Cue 3-4</span>
-<i class="ti ti-settings"></i></span></div>
 
-<!-- Waveform well: scrolling detail (±4s) under fixed center playhead; overviews live in each deck -->
-<div class="well"><canvas id="wa" width="1240" height="56"></canvas><canvas id="wb" width="1240" height="56" style="margin-top:5px;"></canvas><div class="ph"></div></div>
+<div class="top"><span style="letter-spacing:2px;color:var(--dim);">STENTORDECK</span>
+<span style="display:flex;gap:12px;align-items:center;">
+<span style="display:flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block;"></span>DJConsole RMX2 · Plan A</span>
+<span class="outs" style="gap:14px;">
+  <span><span class="knob" style="width:28px;height:28px;"></span><span class="kl">MST</span></span>
+  <span><span class="knob" style="width:28px;height:28px;"></span><span class="kl">CUE</span></span>
+  <span><span class="knob" style="width:28px;height:28px;"></span><span class="kl">PHN</span></span>
+</span>
+<i class="ti ti-settings" style="font-size:15px;"></i></span></div>
+
+<div class="well"><canvas id="va" width="1560" height="52"></canvas><canvas id="vb" width="1560" height="52" style="margin-top:4px;"></canvas><div class="ph"></div></div>
 
 <div class="mid">
   <div class="deck a">
-    <div class="hd"><div style="min-width:0;flex:1;"><div class="tt">Amsterdam Nights</div><div class="ar">De Sluwe Vos</div></div>
-      <div><div class="knob"></div><div class="kl">GAIN</div></div></div>
-    <div class="big"><span class="bpm mono" style="color:var(--a);">126.4</span><span class="key mono">8A</span>
-      <span style="display:flex;align-items:center;gap:5px;color:var(--a);"><i class="ti ti-headphones" style="font-size:18px;"></i></span>
-      <span class="rem mono">-3:52</span></div>
-    <div class="ov"><canvas id="ova" width="400" height="28"></canvas></div>
+    <div class="hd">
+      <div style="min-width:0;flex:1;"><div class="tt">Phobos (Original Mix)</div><div class="ar">Aquabeat And Vein Litterback</div></div>
+      <i class="ti ti-headphones" style="color:var(--a);font-size:18px;margin-top:4px;"></i>
+      <div><div class="knob"></div><div class="kl">GAIN</div></div>
+    </div>
+    <div class="bpmrow">
+      <span class="bpm mono" style="color:var(--a);">128.0</span><span class="pct mono">+1.9%</span>
+      <span class="key mono">~8B</span><span class="rem mono">-7:07</span>
+    </div>
+    <canvas class="ovw" id="oa" width="1400" height="34"></canvas>
     <div class="pitch"><span class="zero"></span><span class="cap" style="left:57%;"></span></div>
-    <div class="fx"><span class="pad on">FILTER</span>
-      <div><div class="knob" style="transform:rotate(-55deg);"></div><div class="kl">AMT</div></div>
-      <span class="pad">FLANGER</span>
-      <div style="margin-left:auto;"><div class="knob"></div><div class="kl">WET</div></div></div>
-    <div class="row"><span class="play" style="background:var(--a);color:#412402;"><i class="ti ti-player-pause"></i></span>
+    <div class="ctl">
+      <span class="play" style="background:var(--a);color:#412402;"><i class="ti ti-player-pause"></i></span>
       <span class="btn">CUE</span><span class="btn">SYNC</span>
-      <span class="btn lock" style="margin-left:auto;"><i class="ti ti-lock"></i>LOAD</span></div>
+      <span class="btn fxon">FILTER</span><span class="btn">FLANGER</span>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+        <div style="text-align:center;"><div class="knob" style="width:30px;height:30px;"></div><div class="kl">WET</div></div>
+        <span class="btn" style="color:var(--faint);"><i class="ti ti-lock" style="font-size:14px;"></i>LOAD</span>
+      </div>
+    </div>
   </div>
 
   <div class="mixer">
     <div class="eqg">
-      <div><div class="knob"></div><div class="kl">HI</div></div><div><div class="knob"></div><div class="kl">HI</div></div>
-      <div><div class="knob"></div><div class="kl">MID</div></div><div><div class="knob"></div><div class="kl">MID</div></div>
-      <div><div class="knob"></div><div class="kl">LOW</div></div><div><div class="knob"></div><div class="kl">LOW</div></div>
+      <div><div class="knob" style="width:32px;height:32px;"></div><div class="kl">HI</div></div>
+      <div><div class="knob" style="width:32px;height:32px;"></div><div class="kl">HI</div></div>
+      <div><div class="knob" style="width:32px;height:32px;"></div><div class="kl">MID</div></div>
+      <div><div class="knob" style="width:32px;height:32px;"></div><div class="kl">MID</div></div>
+      <div><div class="knob" style="width:32px;height:32px;"></div><div class="kl">LOW</div></div>
+      <div><div class="knob" style="width:32px;height:32px;"></div><div class="kl">LOW</div></div>
     </div>
     <div class="fads">
-      <div><div class="fw"><div class="ft"><span class="cap" style="top:34%;"></span></div>
-        <div class="vu"><div style="height:48%;background:var(--ok);"></div><div style="height:14%;background:var(--a);"></div></div></div>
-        <div class="kl" style="color:var(--a);margin-top:4px;">A</div></div>
-      <div><div class="fw"><div class="ft"><span class="cap" style="top:62%;"></span></div>
-        <div class="vu"><div style="height:31%;background:var(--ok);"></div></div></div>
-        <div class="kl" style="color:var(--b);margin-top:4px;">B</div></div>
+      <div><div class="fw">
+        <div class="ft"><span class="cap" style="top:30%;"></span></div>
+        <div class="vu"><div style="height:46%;background:var(--ok);"></div><div style="height:12%;background:var(--a);"></div></div>
+      </div><div class="kl" style="color:var(--a);margin-top:4px;">A</div></div>
+      <div><div class="fw">
+        <div class="ft"><span class="cap" style="top:60%;"></span></div>
+        <div class="vu"><div style="height:30%;background:var(--ok);"></div></div>
+      </div><div class="kl" style="color:var(--b);margin-top:4px;">B</div></div>
     </div>
   </div>
 
   <div class="deck b">
-    <div class="hd"><div style="min-width:0;flex:1;"><div class="tt">Polder Pressure</div><div class="ar">Joris Voorn</div></div>
-      <div><div class="knob"></div><div class="kl">GAIN</div></div></div>
-    <div class="big"><span class="bpm mono" style="color:var(--b);">126.4</span><span class="key mono">9A</span>
-      <span style="color:var(--dis);"><i class="ti ti-headphones" style="font-size:18px;"></i></span>
-      <span class="rem mono">-6:07</span></div>
-    <div class="ov"><canvas id="ovb" width="400" height="28"></canvas></div>
+    <div class="hd">
+      <div style="min-width:0;flex:1;"><div class="tt">Are You With Me</div><div class="ar">Lost Frequencies</div></div>
+      <i class="ti ti-headphones" style="color:var(--dis);font-size:18px;margin-top:4px;"></i>
+      <div><div class="knob"></div><div class="kl">GAIN</div></div>
+    </div>
+    <div class="bpmrow">
+      <span class="bpm mono" style="color:var(--b);">121.0</span><span class="pct mono" style="color:var(--dis);">0.0%</span>
+      <span class="key mono">4A</span><span class="rem mono">-4:48</span>
+    </div>
+    <canvas class="ovw" id="ob" width="1400" height="34"></canvas>
     <div class="pitch"><span class="zero"></span><span class="cap" style="left:calc(50% - 5px);"></span></div>
-    <div class="fx"><span class="pad">FILTER</span>
-      <div><div class="knob"></div><div class="kl">AMT</div></div>
-      <span class="pad">FLANGER</span>
-      <div style="margin-left:auto;"><div class="knob"></div><div class="kl">WET</div></div></div>
-    <div class="row"><span class="play" style="border:2px solid var(--b);color:var(--b);"><i class="ti ti-player-play"></i></span>
+    <div class="ctl">
+      <span class="play" style="border:2px solid var(--b);color:var(--b);"><i class="ti ti-player-play"></i></span>
       <span class="btn">CUE</span><span class="btn" style="border-color:var(--b);color:var(--b);">SYNC</span>
-      <span class="btn" style="margin-left:auto;">LOAD</span></div>
+      <span class="btn">FILTER</span><span class="btn">FLANGER</span>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+        <div style="text-align:center;"><div class="knob" style="width:30px;height:30px;"></div><div class="kl">WET</div></div>
+        <span class="btn" style="border-color:var(--b);color:var(--b);background:#12262F;">LOAD</span>
+      </div>
+    </div>
   </div>
 </div>
 
-<div class="brow">
-  <div class="bh"><i class="ti ti-search" style="font-size:15px;"></i><span>Search library…</span>
-    <span style="margin-left:auto;">2,314 tracks · 12 analyzing</span></div>
+<div class="lib">
+  <div class="lh"><i class="ti ti-search" style="font-size:15px;"></i><span>Search library…</span>
+    <span style="margin-left:auto;">Techno › NL classics · 84 tracks · 12 analyzing</span></div>
   <table>
-    <tr><th>Track</th><th style="width:90px;">BPM</th><th style="width:64px;">Key</th><th style="width:70px;">Time</th></tr>
-    <tr class="sel"><td style="color:var(--tx);">Speedy J — Pullover</td><td class="mono">128.0</td><td class="mono">9A</td><td class="mono">5:44</td></tr>
-    <tr><td>Kraak en Smaak — Squeeze Me</td><td class="mono">122.5</td><td class="mono">7B</td><td class="mono">4:58</td></tr>
-    <tr><td>Rein de Vries — Noordzee</td><td class="mono" style="color:var(--faint);">…</td><td class="mono" style="color:var(--faint);">…</td><td class="mono">6:21</td></tr>
+    <tr><th>TRACK</th><th style="width:90px;">BPM</th><th style="width:64px;">KEY</th><th style="width:72px;">TIME</th></tr>
+    <tr class="sel"><td>Lost Frequencies — Are You With Me</td><td class="mono">121.0</td><td class="mono">4A</td><td class="mono">4:48</td></tr>
+    <tr><td>Aquabeat And Vein Litterback — Phobos (Original Mix)</td><td class="mono">128.0</td><td class="mono">~8B</td><td class="mono">7:07</td></tr>
+    <tr><td>August And Bachert — Rosemarie</td><td class="mono">127.0</td><td class="mono">11A</td><td class="mono">8:19</td></tr>
+    <tr><td>Speedy J — Pullover</td><td class="mono">128.0</td><td class="mono">9A</td><td class="mono">5:44</td></tr>
+    <tr><td>Orlando Voorn — Flash</td><td class="mono">127.8</td><td class="mono">6A</td><td class="mono">5:03</td></tr>
+    <tr><td>2000 And One — Wan Poko Moro</td><td class="mono">125.9</td><td class="mono">11A</td><td class="mono">7:18</td></tr>
+    <tr><td>Secret Cinema — Timeless Altitude</td><td class="mono">130.2</td><td class="mono">4A</td><td class="mono">6:12</td></tr>
   </table>
+</div>
+
+<div class="notes">
+<b>Handoff notes — v2.</b>
+Owner placement: MST · CUE · PHN live in the <b>top header</b> (not under mixer) so the mixer column is EQ + faders/VU only and the library gets max height. Deck panels: GAIN, phones, BPM·pitch%·key·remaining, overview, pitch strip, play/CUE/SYNC/FILTER/FLANGER/WET/LOAD. Tokens per docs/06.
 </div>
 </div>
 <script>
-function detail(id,c,p){var cv=document.getElementById(id),x=cv.getContext('2d'),mid=28;
-for(var i=0;i<248;i++){var t=i*5,h=8+20*Math.abs(Math.sin(i*0.31+p))+12*Math.abs(Math.sin(i*0.052+p*2))+(i%8===0?12:0);
-x.fillStyle=c+(t<620?'':'66');x.fillRect(t,mid-h/2,3.5,h);}
-x.fillStyle='#8A94A666';for(var b=0;b<248;b+=12)x.fillRect(b*5,0,1,56);}
-function overview(id,c,played){var cv=document.getElementById(id),x=cv.getContext('2d'),w=cv.width,mid=14;
-for(var i=0;i<100;i++){var px=i*(w/100),h=4+10*Math.abs(Math.sin(i*0.4));
-x.globalAlpha=i<played?1:0.4;x.fillStyle=c;x.fillRect(px,mid-h/2,Math.max(1,w/100-0.5),h);}
-x.globalAlpha=1;x.fillStyle=c;x.fillRect(played/100*w-1,0,2,28);}
-detail('wa','#FFB454',0.4);detail('wb','#5BD0FF',1.7);
-overview('ova','#FFB454',41);overview('ovb','#5BD0FF',4);
+function w(id,c,p,split){var cv=document.getElementById(id),x=cv.getContext('2d'),W=cv.width,H=cv.height;
+for(var i=0;i<W/5;i++){var t=i*5,h=6+(H*0.36)*Math.abs(Math.sin(i*0.31+p))+(H*0.22)*Math.abs(Math.sin(i*0.052+p*2))+(i%8===0?H*0.2:0);
+x.fillStyle=(t<W*split)?c:c+'55';x.fillRect(t,H/2-h/2,3.2,h);}}
+w('va','#FFB454',0.4,0.5);w('vb','#5BD0FF',1.7,0.5);
+w('oa','#FFB454',0.9,0.43);w('ob','#5BD0FF',2.3,0.04);
 </script></body></html>

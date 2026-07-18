@@ -1,7 +1,7 @@
 /** Internal main ↔ analysis-window contract (not UI StentorApi). E5 / docs/05. */
 
-/** Bump when decode/analysis output must be recomputed (v2: resilient MP3 decode). */
-export const ANALYSIS_VERSION = 2;
+/** Bump when decode/analysis output must be recomputed (v3: beat-grid offset for SYNC). */
+export const ANALYSIS_VERSION = 3;
 
 export type AnalysisPriority = 'deck' | 'new' | 'backfill';
 
@@ -32,6 +32,8 @@ export type AnalysisResult = {
   detailPps: number;
   bpm: number | null;
   bpmSource: 'analysis' | null;
+  /** First-beat offset seconds; null when BPM skipped / unknown. */
+  beatGridOffsetSec: number | null;
   keyCamelot: string | null;
   keyName: string | null;
   keySource: 'analysis' | null;

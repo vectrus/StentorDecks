@@ -11,6 +11,8 @@ export type TrackRow = {
   durationMs: number | null;
   bpmSource: 'tag' | 'analysis' | 'manual' | null;
   lowConfidence: boolean;
+  /** Analyzed first-beat offset (sec); null if unknown. */
+  beatGridOffsetSec: number | null;
 };
 
 export type TrackDetail = TrackRow & {
@@ -61,6 +63,7 @@ export type LibraryReadResult = {
   keyCamelot: string | null;
   loudnessLufs: number | null;
   durationMs: number | null;
+  beatGridOffsetSec: number | null;
   bytes: Uint8Array;
 };
 
@@ -115,6 +118,8 @@ export type IpcInvokeMap = {
       bpm?: number | null;
       keyCamelot?: string | null;
       keyName?: string | null;
+      /** Set/clear grid offset; omit to leave unchanged. Numeric BPM clear uses null. */
+      beatGridOffsetSec?: number | null;
     };
     res: TrackRow | null;
   };
