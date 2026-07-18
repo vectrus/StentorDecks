@@ -57,7 +57,8 @@ export const DetailWaveform = observer(function DetailWaveform({ deck, accent }:
             detailPps: deck.detailPps || 50,
             accent: accentCss,
             tickColor: tickCss,
-            effectiveBpm: deck.effectiveBpm,
+            // Track-time lattice (file BPM) — not pitched/jogged effective BPM (R7.5).
+            gridBpm: deck.fileBpm,
             beatGridOffsetSec: deck.beatGridOffsetSec,
             showBeatTicks: settingsStore.settings.ui.showBeatTicks,
           });

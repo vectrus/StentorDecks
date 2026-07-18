@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { autoGainTrimDb, defaultSettings, type Settings } from '@stentordeck/shared';
+import type { DeckTransport } from '../audio/DeckGraph';
 import { DeckPlayingError, DeckStore } from './DeckStore';
 
 describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
@@ -7,6 +8,28 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     const deck = new DeckStore('A', () => defaultSettings);
     deck.state = 'playing';
     await expect(deck.load(new File([], 'x.wav'))).rejects.toBeInstanceOf(DeckPlayingError);
+  });
+
+  it('applyEndOfTrack stops at cue so load is no longer blocked (R2.11 / R4.2)', async () => {
+    const deck = new DeckStore('A', () => defaultSettings);
+    deck.state = 'playing';
+    deck.cueOffset = 3.5;
+    deck.eotWarn = 10;
+    const seeks: number[] = [];
+    const t = {
+      pause: () => undefined,
+      seek: (o: number) => {
+        seeks.push(o);
+      },
+    } as unknown as DeckTransport;
+
+    deck.applyEndOfTrack(t);
+
+    expect(deck.state).toBe('stopped');
+    expect(deck.position).toBe(3.5);
+    expect(deck.eotWarn).toBe(0);
+    expect(seeks).toEqual([3.5]);
+    await expect(deck.load(new File([], 'x.wav'))).rejects.not.toBeInstanceOf(DeckPlayingError);
   });
 
   it('togglePfl only flips headphone cue — never starts play (R2.8)', () => {
@@ -110,6 +133,31 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     expect(deck.syncStatusLine).toMatch(/BPM \+ grid snap \+ soft phase/i);
   });
 
+  it('loading the SYNC master freezes the slave pitch (no mid-play yank)', () => {
+    const slave = new DeckStore('A', () => defaultSettings);
+    const master = new DeckStore('B', () => defaultSettings);
+    slave.state = 'playing';
+    master.state = 'stopped';
+    slave.fileBpm = 128;
+    master.fileBpm = 128;
+    slave.beatGridOffsetSec = 0;
+    master.beatGridOffsetSec = 0;
+    master.pitchPos = 0.5;
+    slave.toggleSync(master);
+    expect(slave.syncArmed).toBe(true);
+    const frozenBpm = slave.effectiveBpm;
+    const frozenPitch = slave.pitchPos;
+    // Master gets a new track BPM (as on load) — must not retarget slave.
+    master.fileBpm = 140;
+    master.breakSyncFollowers(slave);
+    expect(slave.syncArmed).toBe(false);
+    expect(slave.pitchPos).toBe(frozenPitch);
+    expect(slave.effectiveBpm).toBeCloseTo(frozenBpm!, 1);
+    // Tick follow would have yanked without the break:
+    slave.tick(master);
+    expect(slave.effectiveBpm).toBeCloseTo(frozenBpm!, 1);
+  });
+
   it('toggleSync one-shot phase snap aligns beat phase on beatgrid (R2.3)', () => {
     const deck = new DeckStore('A', () => defaultSettings);
     const other = new DeckStore('B', () => defaultSettings);
@@ -205,9 +253,10 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     deck.phaseGluePartner = 'B';
     deck.phaseGlueTargetSec = 0;
     deck.nudge(1);
+    deck.flushJogSeek(); // coalesced to rAF in production
     expect(deck.position).toBeGreaterThan(10);
-    expect(deck.position).toBeLessThan(10.001); // cold EMA → fine ~0.15 ms
-    expect(deck.nudgeFactor).toBeCloseTo(1.0003, 5);
+    expect(deck.position).toBeLessThan(10.001); // cold EMA → fine ~0.08 ms
+    expect(deck.nudgeFactor).toBeCloseTo(1.0002, 5);
     expect(deck.phaseGlueRetarget).toBe(true);
     expect(deck.phaseAssistMuteUntil).toBeGreaterThan(0);
   });
@@ -220,9 +269,10 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     // Pretend the wheel is already spinning hard (dual-zone open).
     (deck as unknown as { jogActivity: { lastTickMs: number; ticksPerSec: number } }).jogActivity = {
       lastTickMs: 1000,
-      ticksPerSec: 320,
+      ticksPerSec: 340,
     };
     deck.nudge(-1);
+    deck.flushJogSeek();
     expect(deck.position).toBeLessThan(10 - 0.008); // spin seek ~12 ms
     expect(deck.nudgeFactor).toBeLessThan(0.97); // ~−4 % temp rate
   });

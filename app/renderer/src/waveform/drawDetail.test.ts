@@ -90,7 +90,7 @@ describe('drawDetailWaveform', () => {
       detailPps: 50,
       accent: '#ffb454',
       tickColor: '#8a94a6',
-      effectiveBpm: 128,
+      gridBpm: 128,
       showBeatTicks: true,
     });
 
@@ -115,7 +115,7 @@ describe('drawDetailWaveform', () => {
       detailPps: 50,
       accent: '#fff',
       tickColor: '#888',
-      effectiveBpm: null,
+      gridBpm: null,
       showBeatTicks: false,
     });
     expect(fillRect).not.toHaveBeenCalled();

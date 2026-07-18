@@ -327,7 +327,7 @@ const JogFeelSection = observer(function JogFeelSection() {
         Jog feel (live)
       </div>
       <div className="temp-meta" style={{ marginBottom: 8 }}>
-        Fine nudge vs fast spinback — tweak while turning the wheel.
+        Soft = heavy platter (short nudge = tiny offset). Tweak live on the wheel.
       </div>
 
       <div className="temp-jog-presets">
@@ -411,7 +411,7 @@ const JogFeelSection = observer(function JogFeelSection() {
         hint="Tick-rate where spin opens — keep above light RMX2 flood (~80–120)"
         value={jog.spinStartsAtTps}
         min={20}
-        max={250}
+        max={350}
         step={5}
         unit=" t/s"
         onChange={(v) => patchJog({ spinStartsAtTps: v })}
@@ -421,7 +421,7 @@ const JogFeelSection = observer(function JogFeelSection() {
         hint="Tick-rate for maximum spinback throw"
         value={jog.spinFullAtTps}
         min={60}
-        max={450}
+        max={500}
         step={5}
         unit=" t/s"
         onChange={(v) => patchJog({ spinFullAtTps: v })}

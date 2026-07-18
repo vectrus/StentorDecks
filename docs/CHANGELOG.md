@@ -5,6 +5,30 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — SYNC: load on master freezes slave
+
+Loading a track into the SYNC master no longer retargets the playing slave to the new analyzed BPM mid-play — slave SYNC clears and pitch stays frozen. R2.3 / R3.3.
+
+---
+
+## 2026-07-18 — Jog heavy-platter + waveform drift
+
+RMX2 ±1 floods made short nudges jump and click (per-tick `seek`). Fine zone now flood-compresses + impulse-caps sticky phase; playing seeks coalesce to one soft-edged seek per rAF. Soft preset quieter again (migrate prior Soft). Detail ticks + SYNC assist use **file-BPM track-time** lattices (not pitched period); `setRate` re-anchors with live `playbackRate` and skips no-op ramps. R2.2, R2.3, R7.5, docs/03, docs/07.
+
+---
+
+## 2026-07-18 — End of track stop→cue (load unblocked)
+
+Natural buffer end cleared transport `playing` without latching offset at duration, so the deck stayed logically playing and load stayed locked until Cue. `onended` now latches EOF; tick always stop→cue (R2.11 / R4.2).
+
+---
+
+## 2026-07-18 — Channel fader softer open (bottom toe)
+
+Channel faders felt too hot in the first throw. Spec curve now eases physical **0..20% → 0..10%** of the shaped domain before the power curve; factory smooth preset **s=55** (was 35); saved `shape: 35` soft-migrates. R2.5, docs/03, docs/07, mockup 06.
+
+---
+
 ## 2026-07-18 — RMX2 pitch fader polarity
 
 Hardware pitch felt inverted vs tempo. Factory pitch CC is now MIDI-inverted into logical `pitchPos` (0=slow, 1=fast) so soft-takeover stays in one domain; UI strip unchanged (left slow / right fast). R2.6, docs/04, E3.

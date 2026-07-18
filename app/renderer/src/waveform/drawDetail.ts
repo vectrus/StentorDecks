@@ -21,8 +21,8 @@ export type DetailDrawOpts = {
   detailPps: number;
   accent: string;
   tickColor: string;
-  /** Effective BPM for beat ticks; null → no ticks. */
-  effectiveBpm: number | null;
+  /** File BPM for beat ticks (track-time lattice); null → no ticks. */
+  gridBpm: number | null;
   /** Analyzed first-beat offset (sec); default 0 = legacy 0:00 grid. */
   beatGridOffsetSec?: number | null;
   showBeatTicks: boolean;
@@ -139,7 +139,7 @@ export function drawDetailWaveform(
     detailPps,
     accent,
     tickColor,
-    effectiveBpm,
+    gridBpm,
     beatGridOffsetSec,
     showBeatTicks,
   } = opts;
@@ -177,12 +177,12 @@ export function drawDetailWaveform(
     ctx.fillRect(x, mid - rmsH, 1, Math.max(1, rmsH * 2));
   }
 
-  if (showBeatTicks && effectiveBpm != null && effectiveBpm > 0) {
+  if (showBeatTicks && gridBpm != null && gridBpm > 0) {
     ctx.globalAlpha = 0.35;
     ctx.fillStyle = tickColor;
     for (const t of beatTimesInWindow(
       positionSec,
-      effectiveBpm,
+      gridBpm,
       DETAIL_HALF_WINDOW_SEC,
       beatGridOffsetSec ?? 0,
     )) {

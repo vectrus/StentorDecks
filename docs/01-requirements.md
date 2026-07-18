@@ -60,7 +60,7 @@ Source: design sessions with the owner (DJ, 54, declining eyesight, RMX2 hardwar
 - R7.2 UI scale setting: 100 / 125 / 150 %.
 - R7.3 Deck accent colors configurable (defaults: A amber `#FFB454`, B cyan `#5BD0FF`).
 - R7.4 Two modes, both fullscreen: Performance (waveforms + decks + mixer + 3-row browser) and Prep (compact deck strips + folder tree + large browser). Toggle via UI and mappable hardware control.
-- R7.5 Waveform strip: both decks stacked, fixed center playhead, deck-colored. **Visual beat ticks** derived from file BPM × rate with origin at the analyzed **beat-grid offset** (same grid SYNC uses; not editable/dragable). SYNC engage snaps and soft-assists against that grid (R2.3). Cue point marker on overview + detail.
+- R7.5 Waveform strip: both decks stacked, fixed center playhead, deck-colored. **Visual beat ticks** on the track-time lattice (`file BPM` + analyzed **beat-grid offset** — same grid SYNC uses; not editable/dragable). The big BPM readout may show file×rate; ticks stay locked to waveform peaks. SYNC engage snaps and soft-assists against that grid (R2.3). Cue point marker on overview + detail.
 - R7.6 VU meters beside channel faders: green → amber, red only at clipping.
 - R7.7 Size = importance: mid-mix data (BPM, remaining time, key, VU) is the largest; prep-time data is smaller or moved to Prep mode.
 

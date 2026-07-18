@@ -287,7 +287,9 @@ export class DeckTransport {
   position(): number {
     if (!this.buffer) return 0;
     if (!this.snap.playing) return this.snap.offset;
-    const elapsed = (this.ctx.currentTime - this.rateAccumCtxTime) * this.rateAccumRate;
+    // Use live AudioParam during ramps so the playhead doesn't race ahead of audio.
+    const rate = this.source?.playbackRate.value ?? this.rateAccumRate;
+    const elapsed = (this.ctx.currentTime - this.rateAccumCtxTime) * rate;
     return Math.min(this.buffer.duration, this.rateAccumOffset + elapsed);
   }
 
@@ -315,7 +317,17 @@ export class DeckTransport {
   }
 
   setRate(rate: number): void {
+    if (!Number.isFinite(rate) || rate <= 0) return;
+    // Avoid restarting a 20 ms ramp every rAF when already on target (waveform drift).
+    const live = this.source?.playbackRate.value ?? this.snap.rate;
+    if (
+      Math.abs(this.snap.rate - rate) < 1e-6 &&
+      Math.abs(live - rate) < 1e-4
+    ) {
+      return;
+    }
     if (this.snap.playing) {
+      // Re-anchor with the instantaneous rate before scheduling a new ramp.
       const pos = this.position();
       this.rateAccumOffset = pos;
       this.rateAccumCtxTime = this.ctx.currentTime;
@@ -369,11 +381,17 @@ export class DeckTransport {
     src.connect(this.dest);
     const t = this.ctx.currentTime;
     src.start(t, offset);
+    // Natural buffer end: latch offset at duration so DeckStore tick can run EOT
+    // stop→cue (R2.11). Clearing playing without updating offset left a stale
+    // mid-track position and a stuck "playing" deck that blocked load (R4.2).
     src.onended = () => {
-      if (this.source === src) {
-        this.snap.playing = false;
-        this.source = null;
-      }
+      if (this.source !== src) return;
+      this.source = null;
+      const dur = this.buffer?.duration ?? 0;
+      this.snap.offset = dur;
+      this.rateAccumOffset = dur;
+      this.rateAccumCtxTime = this.ctx.currentTime;
+      this.snap.playing = false;
     };
     this.source = src;
     this.snap.playing = true;

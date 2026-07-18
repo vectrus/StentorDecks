@@ -74,8 +74,9 @@ export const defaultSettings: Settings = {
     crossfader: { enabled: false },
     channelFaders: {
       linked: true,
-      a: { shape: 35 },
-      b: { shape: 35 },
+      // Higher = finer near open; bottom toe (first 20%) is in audioCurves (docs/03).
+      a: { shape: 55 },
+      b: { shape: 55 },
     },
     pitchFaders: {
       range: 0.08,
@@ -147,8 +148,8 @@ export const settingsSchema = z.object({
         pausedFineSeekMs: z.number().min(0.5).max(50),
         pausedSpinSeekMs: z.number().min(1).max(150),
         // RMX2 light turns flood ~50–150 t/s — spin floor sits above that.
-        spinStartsAtTps: z.number().min(1).max(300),
-        spinFullAtTps: z.number().min(10).max(500),
+        spinStartsAtTps: z.number().min(1).max(400),
+        spinFullAtTps: z.number().min(10).max(600),
       })
       .refine((j) => j.spinFullAtTps > j.spinStartsAtTps, {
         message: 'spinFullAtTps must be greater than spinStartsAtTps',

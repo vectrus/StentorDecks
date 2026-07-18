@@ -1,24 +1,28 @@
 /**
  * Dual-zone jog feel (R2.2 / docs/03):
- * - Fine: SL-1200 fingertip phase nudge
+ * - Fine: SL-1200 fingertip phase nudge (impulse + flood compression)
  * - Spin: fast twist / spinback — larger sticky seek + stronger temp rate
  *
  * Tunables live in settings.mixer.jog (docs/07). Constants below are the defaults.
  *
  * RMX2 relative jogs flood ±1 CCs (~50–150 msg/s on a light turn). Spin thresholds
  * must sit above that flood or every nudge opens spinback and feels "too sensitive".
+ * Fine seeks are also window-capped so a short nudge ≠ N × fineSeekMs.
  */
 
 /** Default engine units (matches defaultJogSettings) — tests / docs. */
-export const JOG_FINE_SEEK_SEC = 0.00015;
+export const JOG_FINE_SEEK_SEC = 0.00008;
 export const JOG_SPIN_SEEK_SEC = 0.012;
-export const JOG_FINE_RATE = 0.0003;
+export const JOG_FINE_RATE = 0.0002;
 export const JOG_SPIN_RATE = 0.04;
-export const JOG_RATE_DECAY_MS = 300;
+export const JOG_RATE_DECAY_MS = 280;
 export const JOG_PAUSED_FINE_SEEK_SEC = 0.001;
 export const JOG_PAUSED_SPIN_SEEK_SEC = 0.012;
-export const JOG_TPS_FINE = 120;
-export const JOG_TPS_SPIN = 300;
+export const JOG_TPS_FINE = 140;
+export const JOG_TPS_SPIN = 320;
+/** Max sticky phase (sec) applied in one fine-zone impulse window. */
+export const JOG_FINE_IMPULSE_CAP_SEC = 0.0004;
+export const JOG_IMPULSE_WINDOW_MS = 50;
 
 /** Human-unit jog settings (matches settings.mixer.jog). */
 export type JogSettings = {
@@ -35,24 +39,37 @@ export type JogSettings = {
 };
 
 /**
- * Default = RMX2-safe fingertip (SL-1200).
+ * Default = heavy-platter fingertip (SL-1200).
  * Light push stays in fine; spinback only on a real hard twist.
  */
 export const defaultJogSettings: JogSettings = {
   dualZone: true,
-  fineSeekMs: 0.15,
+  fineSeekMs: 0.08,
   spinSeekMs: 12,
-  fineRatePercent: 0.03,
+  fineRatePercent: 0.02,
   spinRatePercent: 4,
-  rateDecayMs: 300,
+  rateDecayMs: 280,
   pausedFineSeekMs: 1,
   pausedSpinSeekMs: 12,
-  spinStartsAtTps: 120,
-  spinFullAtTps: 300,
+  spinStartsAtTps: 140,
+  spinFullAtTps: 320,
 };
 
 /** Previous factory defaults — migrate once so saved itchy settings quiet down. */
 export const LEGACY_ITCHY_JOG_DEFAULTS: readonly JogSettings[] = [
+  // 2026-07-18 Soft after first quiet pass — still too jumpy on short nudges
+  {
+    dualZone: true,
+    fineSeekMs: 0.15,
+    spinSeekMs: 12,
+    fineRatePercent: 0.03,
+    spinRatePercent: 4,
+    rateDecayMs: 300,
+    pausedFineSeekMs: 1,
+    pausedSpinSeekMs: 12,
+    spinStartsAtTps: 120,
+    spinFullAtTps: 300,
+  },
   // 2026-07-18 "very subtle" — still too hot for RMX2 tick flood
   {
     dualZone: true,
@@ -118,7 +135,7 @@ export function migrateItchyJogSettings(jog: JogSettings): JogSettings {
 /** Named bundles for Settings UI — values only; stored state is always the numbers. */
 export const JOG_PRESETS = {
   soft: {
-    label: 'Soft (SL-1200)',
+    label: 'Soft (heavy platter)',
     jog: { ...defaultJogSettings } satisfies JogSettings,
   },
   balanced: {
@@ -167,6 +184,9 @@ export type JogFeelParams = {
   pausedSpinSeekSec: number;
   spinStartsAtTps: number;
   spinFullAtTps: number;
+  /** Max |seek| in one fine impulse window (heavy-platter cap). */
+  fineImpulseCapSec: number;
+  impulseWindowMs: number;
 };
 
 export function jogFeelFromSettings(jog: JogSettings): JogFeelParams {
@@ -183,6 +203,8 @@ export function jogFeelFromSettings(jog: JogSettings): JogFeelParams {
     pausedSpinSeekSec: Math.max(0, jog.pausedSpinSeekMs) / 1000,
     spinStartsAtTps: start,
     spinFullAtTps: full,
+    fineImpulseCapSec: JOG_FINE_IMPULSE_CAP_SEC,
+    impulseWindowMs: JOG_IMPULSE_WINDOW_MS,
   };
 }
 
@@ -257,6 +279,17 @@ export type JogScaled = {
   rateDecayMs: number;
 };
 
+/**
+ * Flood compression in the fine zone: many ±1 ticks share one fingertip push,
+ * so each tick's sticky seek shrinks as tick-rate rises (heavy platter).
+ */
+export function fineFloodGain(ticksPerSec: number, intensity: number): number {
+  if (intensity >= 0.35) return 1;
+  const tps = Number.isFinite(ticksPerSec) ? Math.max(0, ticksPerSec) : 0;
+  // ~1.0 at idle; ~0.35 at 80 t/s; ~0.2 at 140 t/s
+  return 1 / (1 + tps / 45);
+}
+
 /** Map one relative jog tick into dual-zone seek / rate amounts. */
 export function scaleJogTick(
   delta: number,
@@ -269,13 +302,63 @@ export function scaleJogTick(
   const intensity = jogSpinIntensity(mag, ticksPerSec, params);
   const unit = Math.min(1, mag);
   const mix = (fine: number, spin: number) => fine + (spin - fine) * intensity;
+  const flood = fineFloodGain(ticksPerSec, intensity);
   return {
     sign,
     intensity,
-    playingSeekSec: mix(params.fineSeekSec, params.spinSeekSec) * unit,
+    playingSeekSec: mix(params.fineSeekSec, params.spinSeekSec) * unit * flood,
     playingRateAmount: mix(params.fineRate, params.spinRate) * unit,
     pausedSeekSec:
       mix(params.pausedFineSeekSec, params.pausedSpinSeekSec) * Math.max(unit, 0.35),
     rateDecayMs: params.rateDecayMs,
+  };
+}
+
+/** Per-deck fine-zone impulse window (absolute seek already applied). */
+export type JogImpulse = {
+  windowStartMs: number;
+  appliedAbsSeekSec: number;
+};
+
+export function createJogImpulse(): JogImpulse {
+  return { windowStartMs: 0, appliedAbsSeekSec: 0 };
+}
+
+/**
+ * Cap fine-zone sticky seek inside a short impulse window (SL-1200 mass).
+ * Spin intensity passes through uncapped. Pure — caller stores returned impulse.
+ */
+export function gateJogPlayingSeek(
+  prev: JogImpulse,
+  signedSeekSec: number,
+  intensity: number,
+  nowMs: number,
+  params: Pick<JogFeelParams, 'fineImpulseCapSec' | 'impulseWindowMs'>,
+): { impulse: JogImpulse; seekSec: number } {
+  const raw = Number.isFinite(signedSeekSec) ? signedSeekSec : 0;
+  if (raw === 0) return { impulse: prev, seekSec: 0 };
+
+  // Spin / whip: no heavy-platter cap
+  if (intensity >= 0.35) {
+    return { impulse: createJogImpulse(), seekSec: raw };
+  }
+
+  const windowMs = Math.max(16, params.impulseWindowMs);
+  const cap = Math.max(0, params.fineImpulseCapSec);
+  let windowStartMs = prev.windowStartMs;
+  let applied = prev.appliedAbsSeekSec;
+  if (windowStartMs <= 0 || nowMs - windowStartMs > windowMs) {
+    windowStartMs = nowMs;
+    applied = 0;
+  }
+  const remaining = Math.max(0, cap - applied);
+  const mag = Math.min(Math.abs(raw), remaining);
+  const seekSec = Math.sign(raw) * mag;
+  return {
+    impulse: {
+      windowStartMs,
+      appliedAbsSeekSec: applied + mag,
+    },
+    seekSec,
   };
 }

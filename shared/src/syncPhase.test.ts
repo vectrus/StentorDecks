@@ -3,7 +3,9 @@ import {
   beatPeriodSec,
   beatPhaseSec,
   phaseAssistDeltaSec,
+  phaseAssistDeltaTrackSec,
   phaseSnapDeltaSec,
+  phaseSnapDeltaTrackSec,
   rescaleBeatGridOffsetSec,
   wrapPhaseSec,
 } from './syncPhase.js';
@@ -86,5 +88,25 @@ describe('phaseAssistDeltaSec', () => {
   it('corrects back toward a glue target', () => {
     // err = 0; target = 0.1 → need delta -0.1 on this (increase phase / seek back)
     expect(phaseAssistDeltaSec(10.0, 4.0, period, 0, 0, 0.1)).toBeCloseTo(-0.1, 10);
+  });
+});
+
+describe('phaseSnapDeltaTrackSec (file BPM / track time)', () => {
+  it('matches shared-period snap when both decks share file BPM', () => {
+    const a = phaseSnapDeltaTrackSec(10.1, 4.3, 120, 120);
+    const b = phaseSnapDeltaSec(10.1, 4.3, 0.5);
+    expect(a).toBeCloseTo(b, 10);
+  });
+
+  it('aligns beat fractions across different file BPMs', () => {
+    // this 120 BPM at beat phase 0; other 128 BPM also at beat phase 0 → 0
+    expect(phaseSnapDeltaTrackSec(1.0, 2.0, 120, 128, 1.0, 2.0)).toBeCloseTo(0, 10);
+  });
+
+  it('assist holds glue on track-time lattice', () => {
+    const err = phaseSnapDeltaTrackSec(10.1, 4.3, 120, 120);
+    expect(
+      phaseAssistDeltaTrackSec(10.1, 4.3, 120, 120, 0, 0, err),
+    ).toBeCloseTo(0, 10);
   });
 });

@@ -74,4 +74,4 @@ Performance target on the reference laptop: ≤ 4 s per average track end-to-end
 
 - Overview strip: draw all 800 buckets, played portion full-opacity in deck accent, remainder 40 %. Cue marker: 2 px vertical in deck accent at `cueOffset`. End-of-track warning: remaining region tints toward `vu-clip` when ≤ 30 s (stronger at 15 / 10).
 - Scrolling detail: fixed center playhead; window = ±4 s at 50 pps → 400 buckets; canvas redraw per rAF from typed arrays (no React in the draw path). RMS drawn as inner bright bar, min/max as outer dim bar — reads as "energy" at a glance.
-- **Beat ticks** (R7.5): light vertical lines at `beatGridOffset + n × (60 / effectiveBpm)` (analyzed first-beat offset; not editable/dragable). Same grid as SYNC snap + soft phase assist (R2.3).
+- **Beat ticks** (R7.5): light vertical lines at `beatGridOffset + n × (60 / fileBpm)` in track time (analyzed first-beat offset; not editable/dragable). Same lattice as SYNC snap + soft phase assist (R2.3). The deck BPM readout may show file×rate.

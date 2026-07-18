@@ -36,11 +36,18 @@ const takeoverNotify = (id: Parameters<typeof midiStore.noteSoftwareChange>[0]) 
 };
 deckA.setTakeoverHooks({
   onSoftwareChange: takeoverNotify,
-  onLoaded: (id) => midiStore.noteDeckLoaded(id),
+  onLoaded: (id) => {
+    midiStore.noteDeckLoaded(id);
+    // Loading A must not yank B if B was SYNC'd to A (and vice versa).
+    deckA.breakSyncFollowers(deckB);
+  },
 });
 deckB.setTakeoverHooks({
   onSoftwareChange: takeoverNotify,
-  onLoaded: (id) => midiStore.noteDeckLoaded(id),
+  onLoaded: (id) => {
+    midiStore.noteDeckLoaded(id);
+    deckB.breakSyncFollowers(deckA);
+  },
 });
 mixerStore.setTakeoverHooks({ onSoftwareChange: takeoverNotify });
 export const audioDeviceStore = new AudioDeviceStore(

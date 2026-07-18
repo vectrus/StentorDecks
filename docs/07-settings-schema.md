@@ -24,8 +24,8 @@ Stored as `settings.json` in `app.getPath('userData')`, written atomically (temp
     "crossfader": { "enabled": false },              // R2.4 — default OFF
     "channelFaders": {
       "linked": true,
-      "a": { "shape": 35 },                          // -100..100, see docs/03
-      "b": { "shape": 35 }
+      "a": { "shape": 55 },                          // -100..100, see docs/03 (bottom toe + curve)
+      "b": { "shape": 55 }
     },
     "pitchFaders": {
       "range": 0.08,                                 // 0.08 = ±8 % | 0.16 = ±16 % (R2.6)
@@ -36,15 +36,15 @@ Stored as `settings.json` in `app.getPath('userData')`, written atomically (temp
     },
     "jog": {                                         // R2.2 dual-zone feel — live in Settings
       "dualZone": true,                              // false = fine-only (no spinback boost)
-      "fineSeekMs": 0.15,                            // phase ms/tick when gentle (RMX2-safe)
+      "fineSeekMs": 0.08,                            // base phase ms/tick (impulse-capped in engine)
       "spinSeekMs": 12,                              // phase ms/tick at full spin
-      "fineRatePercent": 0.03,                       // temp rate bend % (fine)
+      "fineRatePercent": 0.02,                       // temp rate bend % (fine)
       "spinRatePercent": 4,                          // temp rate bend % (spin)
-      "rateDecayMs": 300,                            // how long temp rate holds
+      "rateDecayMs": 280,                            // how long temp rate holds
       "pausedFineSeekMs": 1,                         // stopped scrub (fine)
       "pausedSpinSeekMs": 12,                        // stopped scrub (spin)
-      "spinStartsAtTps": 120,                        // above light RMX2 ±1 flood
-      "spinFullAtTps": 300                           // tick-rate EMA for full spin
+      "spinStartsAtTps": 140,                        // above light RMX2 ±1 flood
+      "spinFullAtTps": 320                           // tick-rate EMA for full spin
     }
   },
 

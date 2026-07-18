@@ -75,9 +75,56 @@ export function rescaleBeatGridOffsetSec(
   return wrapPhaseSec(offsetSec, period);
 }
 
-export function beatPeriodSec(effectiveBpm: number): number | null {
-  if (!(effectiveBpm > 0) || !Number.isFinite(effectiveBpm)) return null;
-  return 60 / effectiveBpm;
+export function beatPeriodSec(bpm: number): number | null {
+  if (!(bpm > 0) || !Number.isFinite(bpm)) return null;
+  return 60 / bpm;
+}
+
+/**
+ * Shortest correction (seconds of *this* deck's buffer time) so beat fractions match.
+ * Uses each deck's **file BPM** lattice — positions are track time, not pitched output time.
+ * (Using pitchOnlyBpm as a buffer-time period made SYNC assist crawl the waveforms.)
+ */
+export function phaseSnapDeltaTrackSec(
+  thisPosSec: number,
+  otherPosSec: number,
+  thisFileBpm: number,
+  otherFileBpm: number,
+  thisOffsetSec = 0,
+  otherOffsetSec = 0,
+): number {
+  const thisPeriod = beatPeriodSec(thisFileBpm);
+  const otherPeriod = beatPeriodSec(otherFileBpm);
+  if (thisPeriod == null || otherPeriod == null) return 0;
+  if (!Number.isFinite(thisPosSec) || !Number.isFinite(otherPosSec)) return 0;
+  if (!Number.isFinite(thisOffsetSec) || !Number.isFinite(otherOffsetSec)) return 0;
+
+  const thisBeat =
+    beatPhaseSec(thisPosSec, thisOffsetSec, thisPeriod) / thisPeriod;
+  const otherBeat =
+    beatPhaseSec(otherPosSec, otherOffsetSec, otherPeriod) / otherPeriod;
+  let deltaBeats = otherBeat - thisBeat;
+  if (deltaBeats > 0.5) deltaBeats -= 1;
+  if (deltaBeats < -0.5) deltaBeats += 1;
+  return deltaBeats * thisPeriod;
+}
+
+export function phaseErrorTrackSec(
+  thisPosSec: number,
+  otherPosSec: number,
+  thisFileBpm: number,
+  otherFileBpm: number,
+  thisOffsetSec = 0,
+  otherOffsetSec = 0,
+): number {
+  return phaseSnapDeltaTrackSec(
+    thisPosSec,
+    otherPosSec,
+    thisFileBpm,
+    otherFileBpm,
+    thisOffsetSec,
+    otherOffsetSec,
+  );
 }
 
 /** Soft-assist deadband (seconds) — ignore tiny errors. */
@@ -90,6 +137,37 @@ export const PHASE_ASSIST_JOG_MUTE_MS = 300;
 /**
  * Correction to apply to `this` so phase error becomes `targetErr`
  * (target 0 = grid lock; non-zero = hold a jogged musical offset).
+ * Periods are file-BPM track-time lattices.
+ */
+export function phaseAssistDeltaTrackSec(
+  thisPosSec: number,
+  otherPosSec: number,
+  thisFileBpm: number,
+  otherFileBpm: number,
+  thisOffsetSec: number,
+  otherOffsetSec: number,
+  targetErrSec: number,
+): number {
+  const thisPeriod = beatPeriodSec(thisFileBpm);
+  if (thisPeriod == null) return 0;
+  const err = phaseErrorTrackSec(
+    thisPosSec,
+    otherPosSec,
+    thisFileBpm,
+    otherFileBpm,
+    thisOffsetSec,
+    otherOffsetSec,
+  );
+  let delta = err - targetErrSec;
+  const half = thisPeriod / 2;
+  if (delta > half) delta -= thisPeriod;
+  if (delta < -half) delta += thisPeriod;
+  return delta;
+}
+
+/**
+ * @deprecated Prefer phaseAssistDeltaTrackSec (file BPM / track time).
+ * Kept for tests that use a shared period.
  */
 export function phaseAssistDeltaSec(
   thisPosSec: number,

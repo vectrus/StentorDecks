@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   createJogActivity,
+  createJogImpulse,
   defaultJogSettings,
+  fineFloodGain,
+  gateJogPlayingSeek,
   jogFeelFromSettings,
   jogSpinIntensity,
   scaleJogTick,
   updateJogActivity,
+  JOG_FINE_IMPULSE_CAP_SEC,
   JOG_FINE_SEEK_SEC,
   JOG_SPIN_SEEK_SEC,
   JOG_FINE_RATE,
@@ -25,7 +29,7 @@ describe('jogSpinIntensity', () => {
 
   it('opens the spin zone at high tick rate', () => {
     expect(jogSpinIntensity(1, 220, defaultFeel)).toBeGreaterThan(0.4);
-    expect(jogSpinIntensity(1, 320, defaultFeel)).toBeGreaterThan(0.95);
+    expect(jogSpinIntensity(1, 340, defaultFeel)).toBeGreaterThan(0.95);
   });
 
   it('ignores small packed |delta|; opens only on large packs', () => {
@@ -41,15 +45,22 @@ describe('jogSpinIntensity', () => {
 });
 
 describe('scaleJogTick', () => {
-  it('fine tick ≈ SL-1200 micro-seek / light rate', () => {
+  it('fine tick ≈ SL-1200 micro-seek / light rate (idle flood gain)', () => {
     const s = scaleJogTick(1, 8, defaultFeel);
-    expect(s.playingSeekSec).toBeCloseTo(JOG_FINE_SEEK_SEC, 5);
+    const flood = fineFloodGain(8, s.intensity);
+    expect(s.playingSeekSec).toBeCloseTo(JOG_FINE_SEEK_SEC * flood, 5);
     expect(s.playingRateAmount).toBeCloseTo(JOG_FINE_RATE, 5);
     expect(s.intensity).toBeLessThan(0.2);
   });
 
+  it('compresses fine seek under RMX2 flood t/s', () => {
+    const idle = scaleJogTick(1, 8, defaultFeel).playingSeekSec;
+    const flood = scaleJogTick(1, 80, defaultFeel).playingSeekSec;
+    expect(flood).toBeLessThan(idle * 0.6);
+  });
+
   it('spin tick ≈ spinback seek / stronger rate', () => {
-    const s = scaleJogTick(1, 320, defaultFeel);
+    const s = scaleJogTick(1, 340, defaultFeel);
     expect(s.playingSeekSec).toBeCloseTo(JOG_SPIN_SEEK_SEC, 5);
     expect(s.playingRateAmount).toBeCloseTo(JOG_SPIN_RATE, 5);
     expect(s.intensity).toBeGreaterThan(0.95);
@@ -68,8 +79,28 @@ describe('scaleJogTick', () => {
       fineRatePercent: 1,
     });
     const s = scaleJogTick(1, 200, feel);
-    expect(s.playingSeekSec).toBeCloseTo(0.01, 5);
+    // dualZone off → intensity 0 → flood gain still applies
+    const flood = fineFloodGain(200, 0);
+    expect(s.playingSeekSec).toBeCloseTo(0.01 * flood, 5);
     expect(s.playingRateAmount).toBeCloseTo(0.01, 5);
+  });
+});
+
+describe('gateJogPlayingSeek', () => {
+  it('caps fine-zone seek inside one impulse window', () => {
+    let imp = createJogImpulse();
+    let total = 0;
+    for (let i = 0; i < 20; i++) {
+      const g = gateJogPlayingSeek(imp, 0.0002, 0, 1000 + i, defaultFeel);
+      imp = g.impulse;
+      total += Math.abs(g.seekSec);
+    }
+    expect(total).toBeCloseTo(JOG_FINE_IMPULSE_CAP_SEC, 6);
+  });
+
+  it('does not cap spin intensity', () => {
+    const g = gateJogPlayingSeek(createJogImpulse(), 0.01, 0.9, 1000, defaultFeel);
+    expect(g.seekSec).toBeCloseTo(0.01, 6);
   });
 });
 

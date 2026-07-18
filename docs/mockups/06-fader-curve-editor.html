@@ -30,8 +30,8 @@ input[type=range]{width:100%;}
     <input id="pos" type="range" min="0" max="100" value="70" step="1">
     <div class="mono" style="font-size:13px;margin:2px 0 14px;"><span id="posv">70</span>%</div>
     <label>Curve shape (s)</label>
-    <input id="shape" type="range" min="-100" max="100" value="35" step="1">
-    <div class="hint">← sharp low · fine top →</div>
+<input id="shape" type="range" min="-100" max="100" value="55" step="1">
+<div class="hint">← sharp low · fine top → · first 20% = soft toe</div>
     <div class="out"><div style="font-size:11px;color:var(--dim);">Output</div>
       <div class="mono v" id="outv">-4.2 dB</div></div>
   </div>
@@ -41,7 +41,8 @@ input[type=range]{width:100%;}
 var cv=document.getElementById('cv'),x=cv.getContext('2d');
 var pos=document.getElementById('pos'),shape=document.getElementById('shape');
 var posv=document.getElementById('posv'),outv=document.getElementById('outv');
-function curve(p,s){return Math.pow(p,Math.pow(2,s/50));}
+function ease(p){if(p<=0)return 0;if(p>=1)return 1;if(p<=0.2)return(p/0.2)*0.1;return 0.1+((p-0.2)/0.8)*0.9;}
+function curve(p,s){return Math.pow(ease(p),Math.pow(2,s/50));}
 function db(v){return v<=0.001?-60:Math.max(-60,-60+v*60);}
 function draw(){
 var s=+shape.value,p=(+pos.value)/100;
@@ -50,6 +51,7 @@ x.strokeStyle='#262E39';x.lineWidth=1;
 for(var i=1;i<4;i++){x.beginPath();x.moveTo(0,i*60);x.lineTo(360,i*60);x.stroke();
 x.beginPath();x.moveTo(i*90,0);x.lineTo(i*90,240);x.stroke();}
 x.strokeStyle='#4A5563';x.setLineDash([4,4]);x.beginPath();x.moveTo(0,240);x.lineTo(360,0);x.stroke();x.setLineDash([]);
+x.strokeStyle='#39424E';x.beginPath();x.moveTo(0.2*360,0);x.lineTo(0.2*360,240);x.stroke();
 x.strokeStyle='#FFB454';x.lineWidth=2.5;x.beginPath();
 for(var i=0;i<=360;i++){var v=curve(i/360,s);var y=240-v*240;i?x.lineTo(i,y):x.moveTo(i,y);}
 x.stroke();
@@ -62,6 +64,6 @@ pos.addEventListener('input',draw);shape.addEventListener('input',draw);
 function setP(id,v){document.getElementById(id).addEventListener('click',function(){
 shape.value=v;['p-lin','p-smooth','p-sharp'].forEach(function(b){
 document.getElementById(b).className=(b===id)?'on':'';});draw();});}
-setP('p-lin',0);setP('p-smooth',35);setP('p-sharp',-45);
+setP('p-lin',0);setP('p-smooth',55);setP('p-sharp',-45);
 draw();
 </script></body></html>

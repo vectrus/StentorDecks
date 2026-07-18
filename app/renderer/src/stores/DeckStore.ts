@@ -1,16 +1,17 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import {
   autoGainTrimDb,
-  beatPeriodSec,
   endOfTrackWarnLevel,
   createJogActivity,
+  createJogImpulse,
+  gateJogPlayingSeek,
   jogFeelFromSettings,
   PHASE_ASSIST_DEADBAND_SEC,
   PHASE_ASSIST_JOG_MUTE_MS,
   PHASE_ASSIST_MAX_SEEK_SEC,
-  phaseAssistDeltaSec,
-  phaseErrorSec,
-  phaseSnapDeltaSec,
+  phaseAssistDeltaTrackSec,
+  phaseErrorTrackSec,
+  phaseSnapDeltaTrackSec,
   pitchPosFromRate,
   pitchRate,
   resolveCueHoldEnd,
@@ -23,7 +24,7 @@ import {
 } from '@stentordeck/shared';
 import { audioEngine } from '../audio/AudioEngine';
 import { decodeArrayBufferOffThread } from '../audio/decodeAudio';
-import type { DeckId } from '../audio/DeckGraph';
+import type { DeckId, DeckTransport } from '../audio/DeckGraph';
 import { invoke } from '../ipc/client';
 
 export class DeckPlayingError extends Error {
@@ -108,6 +109,12 @@ export class DeckStore {
   private seekHoldTimer: number | null = null;
   /** Tick-rate EMA for dual-zone jog (fine vs spinback). */
   private jogActivity = createJogActivity();
+  /** Fine-zone impulse window (heavy-platter seek cap). */
+  private jogImpulse = createJogImpulse();
+  /** Playing jog sticky seek coalesced to one transport.seek per rAF (R2.2 / clicks). */
+  private jogSeekPendingSec = 0;
+  /** Last coalesced jog seek time — soft-start only after idle (avoid per-frame duck). */
+  private lastJogSeekFlushMs = 0;
   /** Temporary pitch bend while held (docs/04: ±0.5%). */
   bendFactor = 1;
   private getSettings: () => Settings;
@@ -420,10 +427,14 @@ export class DeckStore {
     }
   }
 
-  seek(offset: number): void {
+  seek(offset: number, opts?: { soft?: boolean }): void {
     const clamped = Math.max(0, Math.min(this.duration || 0, offset));
     audioEngine.transport(this.id)?.seek(clamped);
     this.position = clamped;
+    // Soft-edge after buffer recreate — jog coalesced seeks (docs/03 ≥15 ms).
+    if (opts?.soft && this.state === 'playing') {
+      audioEngine.graph(this.id)?.softStartInput(0.02);
+    }
   }
 
   setPitchPos(pos: number): void {
@@ -450,30 +461,46 @@ export class DeckStore {
   }
 
   /**
+   * This deck just loaded a new track — any slave tempo-following us must freeze
+   * at its current pitch (do not yank mid-play to the new analyzed BPM). R2.3.
+   */
+  breakSyncFollowers(other: DeckStore): void {
+    if (other.syncArmed && other.syncPartner === this.id) {
+      const frozenPitch = other.pitchPos;
+      other.clearSync();
+      other.pitchPos = frozenPitch;
+      other.notify('pitch');
+      return;
+    }
+    if (other.phaseGluePartner === this.id) {
+      other.clearPhaseGlue();
+    }
+  }
+
+  /**
    * SYNC off → keep pitch frozen and soft-hold current phase relationship (glue).
    */
   releaseSyncToGlue(other: DeckStore): void {
     if (
       this.syncMode === 'bpm' &&
       this.hasBeatGridWith(other) &&
-      other.state !== 'empty'
+      other.state !== 'empty' &&
+      this.fileBpm != null &&
+      other.fileBpm != null
     ) {
-      const bpm = other.pitchOnlyBpm;
-      const period = bpm != null ? beatPeriodSec(bpm) : null;
-      if (period != null) {
-        const thisPos = audioEngine.transport(this.id)?.position() ?? this.position;
-        const otherPos = audioEngine.transport(other.id)?.position() ?? other.position;
-        const err = phaseErrorSec(
-          thisPos,
-          otherPos,
-          period,
-          this.beatGridOffsetSec ?? 0,
-          other.beatGridOffsetSec ?? 0,
-        );
-        this.phaseGluePartner = other.id;
-        this.phaseGlueTargetSec = err;
-        this.phaseGlueRetarget = false;
-      }
+      const thisPos = audioEngine.transport(this.id)?.position() ?? this.position;
+      const otherPos = audioEngine.transport(other.id)?.position() ?? other.position;
+      const err = phaseErrorTrackSec(
+        thisPos,
+        otherPos,
+        this.fileBpm,
+        other.fileBpm,
+        this.beatGridOffsetSec ?? 0,
+        other.beatGridOffsetSec ?? 0,
+      );
+      this.phaseGluePartner = other.id;
+      this.phaseGlueTargetSec = err;
+      this.phaseGlueRetarget = false;
     }
     this.syncArmed = false;
     this.syncPartner = null;
@@ -565,16 +592,15 @@ export class DeckStore {
   snapPhaseTo(other: DeckStore): void {
     if (this.syncMode !== 'bpm') return;
     if (!this.hasBeatGridWith(other)) return;
-    const bpm = other.pitchOnlyBpm;
-    const period = bpm != null ? beatPeriodSec(bpm) : null;
-    if (period == null) return;
+    if (this.fileBpm == null || other.fileBpm == null) return;
 
     const thisPos = audioEngine.transport(this.id)?.position() ?? this.position;
     const otherPos = audioEngine.transport(other.id)?.position() ?? other.position;
-    const delta = phaseSnapDeltaSec(
+    const delta = phaseSnapDeltaTrackSec(
       thisPos,
       otherPos,
-      period,
+      this.fileBpm,
+      other.fileBpm,
       this.beatGridOffsetSec ?? 0,
       other.beatGridOffsetSec ?? 0,
     );
@@ -600,9 +626,7 @@ export class DeckStore {
       return;
     }
 
-    const bpm = other.pitchOnlyBpm;
-    const period = bpm != null ? beatPeriodSec(bpm) : null;
-    if (period == null) return;
+    if (this.fileBpm == null || other.fileBpm == null) return;
 
     const thisPos = audioEngine.transport(this.id)?.position() ?? this.position;
     const otherPos = audioEngine.transport(other.id)?.position() ?? other.position;
@@ -610,10 +634,11 @@ export class DeckStore {
     const otherOff = other.beatGridOffsetSec ?? 0;
 
     if (glue && this.phaseGlueRetarget) {
-      this.phaseGlueTargetSec = phaseErrorSec(
+      this.phaseGlueTargetSec = phaseErrorTrackSec(
         thisPos,
         otherPos,
-        period,
+        this.fileBpm,
+        other.fileBpm,
         thisOff,
         otherOff,
       );
@@ -621,10 +646,11 @@ export class DeckStore {
     }
 
     const target = armed ? 0 : (this.phaseGlueTargetSec ?? 0);
-    const delta = phaseAssistDeltaSec(
+    const delta = phaseAssistDeltaTrackSec(
       thisPos,
       otherPos,
-      period,
+      this.fileBpm,
+      other.fileBpm,
       thisOff,
       otherOff,
       target,
@@ -671,9 +697,16 @@ export class DeckStore {
     const scaled = scaleJogTick(v, this.jogActivity.ticksPerSec, feel);
 
     if (this.state === 'playing') {
-      // Fine = SL-1200 phase; high tick-rate / packed delta = spinback throw.
-      const pos = audioEngine.transport(this.id)?.position() ?? this.position;
-      this.seek(pos + scaled.playingSeekSec * scaled.sign);
+      // Accumulate sticky seek — flush once per rAF (impulse-capped in fine zone).
+      const gated = gateJogPlayingSeek(
+        this.jogImpulse,
+        scaled.playingSeekSec * scaled.sign,
+        scaled.intensity,
+        now,
+        feel,
+      );
+      this.jogImpulse = gated.impulse;
+      this.jogSeekPendingSec += gated.seekSec;
       this.nudgeFactor = 1 + scaled.playingRateAmount * scaled.sign;
       audioEngine.transport(this.id)?.setRate(this.effectiveRate);
       if (this.nudgeTimer != null) globalThis.clearTimeout(this.nudgeTimer);
@@ -684,6 +717,27 @@ export class DeckStore {
     } else {
       this.seek(this.position + scaled.pausedSeekSec * scaled.sign);
     }
+  }
+
+  /** Apply coalesced playing-jog seek (call from audio clock tick). */
+  flushJogSeek(): void {
+    const delta = this.jogSeekPendingSec;
+    if (delta === 0 || this.state !== 'playing') {
+      this.jogSeekPendingSec = 0;
+      return;
+    }
+    this.jogSeekPendingSec = 0;
+    const pos = audioEngine.transport(this.id)?.position() ?? this.position;
+    const now =
+      typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now();
+    const abs = Math.abs(delta);
+    // Soft-edge after idle or larger spin seeks — not every rAF (would pump gain).
+    const idle = this.lastJogSeekFlushMs <= 0 || now - this.lastJogSeekFlushMs > 80;
+    const soft = abs >= 0.002 || (idle && abs >= 0.00005);
+    this.lastJogSeekFlushMs = now;
+    this.seek(pos + delta, { soft });
   }
 
   /** Pitch bend ±0.5% while held (docs/04). */
@@ -760,6 +814,10 @@ export class DeckStore {
   tick(other?: DeckStore): void {
     const t = audioEngine.transport(this.id);
     if (!t || this.state === 'empty') return;
+
+    // One transport.seek per frame for playing jog (R2.2 — fewer clicks / jumps).
+    this.flushJogSeek();
+
     const pos = t.position();
     const dur = t.duration;
     this.position = pos;
@@ -773,14 +831,15 @@ export class DeckStore {
       this.applySoftPhaseAssist(other);
     }
 
-    if (this.state === 'playing' && dur > 0 && pos >= dur - 0.02) {
-      // EOT: stop → cue (R2.11)
-      t.pause();
-      t.seek(this.cueOffset);
-      this.position = this.cueOffset;
-      this.state = 'stopped';
-      this.eotWarn = 0;
-      return;
+    // EOT: stop → cue (R2.11). Also catch natural buffer end (transport already
+    // stopped with offset latched at duration) so load is not blocked (R4.2).
+    if (this.state === 'playing' && dur > 0) {
+      const atEnd = pos >= dur - 0.02;
+      const transportEndedAtEnd = !t.isPlaying && pos >= dur - 0.05;
+      if (atEnd || transportEndedAtEnd) {
+        this.applyEndOfTrack(t);
+        return;
+      }
     }
 
     if (this.state === 'playing') {
@@ -793,10 +852,20 @@ export class DeckStore {
       this.eotWarn = 0;
     }
 
-    // Keep graph rate in sync
+    // Keep graph rate in sync (no-op inside setRate when already on target).
     if (this.state === 'playing') {
       t.setRate(this.effectiveRate);
     }
+  }
+
+  /** R2.11 — stop transport and jump playhead to cue so the deck can load again (R4.2). */
+  applyEndOfTrack(t: DeckTransport): void {
+    t.pause();
+    t.seek(this.cueOffset);
+    this.position = this.cueOffset;
+    this.state = 'stopped';
+    this.cuePreviewing = false;
+    this.eotWarn = 0;
   }
 
   /** Device lost / engine teardown — stop logical transport; keep cue & metadata. */

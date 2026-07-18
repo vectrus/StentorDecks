@@ -3,8 +3,37 @@
 /** Booth-safe MST default (linear 0..1). Full throw overloads many PAs. */
 export const DEFAULT_MASTER_GAIN = 0.3;
 
-export function channelFaderGain(pos: number, shape: number): number {
+/**
+ * Bottom toe: first 20% of fader throw → first 10% of shaped domain (R2.5).
+ * Softens the cut-in so bringing a channel in is less jumpy.
+ */
+export const CHANNEL_FADER_TOE_IN = 0.2;
+export const CHANNEL_FADER_TOE_OUT = 0.1;
+
+/** Factory "smooth" preset (docs/03). Legacy was 35 before bottom-toe + quieter default. */
+export const CHANNEL_FADER_SMOOTH_SHAPE = 55;
+export const LEGACY_CHANNEL_FADER_SMOOTH_SHAPE = 35;
+
+/** Soft-migrate old factory smooth shape so saved settings pick up the quieter default. */
+export function migrateLegacyChannelFaderShape(shape: number): number {
+  return shape === LEGACY_CHANNEL_FADER_SMOOTH_SHAPE
+    ? CHANNEL_FADER_SMOOTH_SHAPE
+    : shape;
+}
+
+/** Physical fader 0..1 → eased domain before power curve. */
+export function channelFaderEasedPos(pos: number): number {
   const p = clamp01(pos);
+  if (p <= 0) return 0;
+  if (p >= 1) return 1;
+  const toe = CHANNEL_FADER_TOE_IN;
+  const out = CHANNEL_FADER_TOE_OUT;
+  if (p <= toe) return (p / toe) * out;
+  return out + ((p - toe) / (1 - toe)) * (1 - out);
+}
+
+export function channelFaderGain(pos: number, shape: number): number {
+  const p = channelFaderEasedPos(pos);
   if (p <= 0) return 0;
   const shaped = Math.pow(p, Math.pow(2, shape / 50));
   const dB = -60 + shaped * 60;

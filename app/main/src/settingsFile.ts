@@ -4,6 +4,7 @@ import {
   defaultSettings,
   mergeSettings,
   migrateItchyJogSettings,
+  migrateLegacyChannelFaderShape,
   parseSettings,
   type DeepPartial,
   type Settings,
@@ -19,11 +20,21 @@ export function settingsPath(userDataPath: string): string {
   return path.join(userDataPath, 'settings.json');
 }
 
-function jogSettingsSame(
-  a: Settings['mixer']['jog'],
-  b: Settings['mixer']['jog'],
+function mixerSoftMigrateSame(
+  a: Settings['mixer'],
+  b: Settings['mixer'],
 ): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function migrateChannelFaders(
+  faders: Settings['mixer']['channelFaders'],
+): Settings['mixer']['channelFaders'] {
+  return {
+    ...faders,
+    a: { shape: migrateLegacyChannelFaderShape(faders.a.shape) },
+    b: { shape: migrateLegacyChannelFaderShape(faders.b.shape) },
+  };
 }
 
 export function loadSettings(userDataPath: string): SettingsFileState {
@@ -44,19 +55,20 @@ export function loadSettings(userDataPath: string): SettingsFileState {
       defaultSettings,
       raw && typeof raw === 'object' ? (raw as DeepPartial<Settings>) : {},
     );
-    const withJog = {
+    const withMigrate = {
       ...merged,
       mixer: {
         ...merged.mixer,
         jog: migrateItchyJogSettings(merged.mixer.jog),
+        channelFaders: migrateChannelFaders(merged.mixer.channelFaders),
       },
     };
-    const parsed = parseSettings(withJog);
+    const parsed = parseSettings(withMigrate);
     if (!parsed.ok) {
       return recoverCorrupt(userDataPath, file, parsed.error);
     }
-    // Persist migration so Soft defaults stick across restarts.
-    if (!jogSettingsSame(merged.mixer.jog, parsed.settings.mixer.jog)) {
+    // Persist migration so Soft / fader defaults stick across restarts.
+    if (!mixerSoftMigrateSame(merged.mixer, parsed.settings.mixer)) {
       writeSettingsAtomic(userDataPath, parsed.settings);
     }
     return {
