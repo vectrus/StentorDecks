@@ -18,6 +18,7 @@ export default defineConfig({
     include: [
       'shared/**/*.test.ts',
       'app/main/**/*.test.ts',
+      'app/analysis/**/*.test.ts',
       'app/renderer/**/*.test.ts',
       'app/renderer/**/*.component.test.tsx',
     ],
@@ -28,7 +29,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
-      include: ['shared/src/**', 'app/renderer/src/**', 'app/main/src/**'],
+      include: ['shared/src/**', 'app/renderer/src/**', 'app/main/src/**', 'app/analysis/src/**'],
       exclude: [
         '**/*.test.ts',
         '**/*.component.test.tsx',

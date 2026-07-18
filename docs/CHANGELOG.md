@@ -5,6 +5,18 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — Living status rule (§2c)
+
+`.cursorrules` now **requires** agents to update `README.md` roadmap + `docs/ROADMAP.md` + `docs/CHANGELOG.md` in the same change whenever epic progress moves — no waiting for the owner to ask. README refreshed to match E4/E5 DOING state.
+
+---
+
+## 2026-07-18 — E5 analysis pipeline (start)
+
+Hidden analysis BrowserWindow + priority queue; OfflineAudioContext decode; waveform/BPM/key/loudness stages; SQLite commit via `commitAnalysis`. Prep **Detect** enqueues real jobs. Accuracy harness still TODO. R-IDs: R5.5, R6.*, docs/05, E5.
+
+---
+
 ## 2026-07-18 — E4 Prep browser UI
 
 Prep mode: deck strips, folder tree, virtualized 42 px browse list (same cursor as MIDI), search, BPM/key correction strip (tap / ½ / ×2 / Camelot / numeric) via `library:updateManual` (R6.6). R-IDs: R5.*, R6.6, docs/06, mockup 02.

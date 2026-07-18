@@ -5,6 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type {
+  AnalysisResult,
   FolderNode,
   LibraryQuery,
   LibraryReadResult,
@@ -344,6 +345,78 @@ export function markMissingExcept(db: DbHandle, livePaths: Set<string>): number 
     }
   }
   return n;
+}
+
+export type TrackAnalysisHints = {
+  path: string;
+  bpm_source: 'tag' | 'analysis' | 'manual' | null;
+  key_source: 'tag' | 'analysis' | 'manual' | null;
+  analyzed_at: number | null;
+  analysis_version: number | null;
+};
+
+export function getTrackAnalysisHints(db: DbHandle, id: number): TrackAnalysisHints | null {
+  const r = db
+    .prepare(
+      `SELECT path, bpm_source, key_source, analyzed_at, analysis_version
+       FROM tracks WHERE id = ? AND missing_since IS NULL`,
+    )
+    .get(id) as TrackAnalysisHints | undefined;
+  return r ?? null;
+}
+
+/** Commit analysis blobs + fields in one transaction (E5). */
+export function commitAnalysis(db: DbHandle, result: AnalysisResult): void {
+  const tx = db.transaction(() => {
+    db.prepare(
+      `UPDATE tracks SET
+        duration_ms = COALESCE(?, duration_ms),
+        bpm = CASE WHEN ? IS NOT NULL THEN ? ELSE bpm END,
+        bpm_source = CASE WHEN ? IS NOT NULL THEN ? ELSE bpm_source END,
+        key_camelot = CASE WHEN ? IS NOT NULL THEN ? ELSE key_camelot END,
+        key_name = CASE WHEN ? IS NOT NULL THEN ? ELSE key_name END,
+        key_source = CASE WHEN ? IS NOT NULL THEN ? ELSE key_source END,
+        loudness_lufs = ?,
+        peak_db = ?,
+        low_confidence = ?,
+        analyzed_at = ?,
+        analysis_version = ?
+       WHERE id = ?`,
+    ).run(
+      result.durationMs,
+      result.bpm,
+      result.bpm,
+      result.bpmSource,
+      result.bpmSource,
+      result.keyCamelot,
+      result.keyCamelot,
+      result.keyName,
+      result.keyName,
+      result.keySource,
+      result.keySource,
+      result.loudnessLufs,
+      result.peakDb,
+      result.lowConfidence ? 1 : 0,
+      Date.now(),
+      result.analysisVersion,
+      result.trackId,
+    );
+
+    db.prepare(
+      `INSERT INTO waveforms (track_id, overview, detail, detail_pps)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(track_id) DO UPDATE SET
+         overview = excluded.overview,
+         detail = excluded.detail,
+         detail_pps = excluded.detail_pps`,
+    ).run(
+      result.trackId,
+      Buffer.from(result.overview),
+      Buffer.from(result.detail),
+      result.detailPps,
+    );
+  });
+  tx();
 }
 
 /** Prep R6.6 — write manual BPM and/or key; does not touch analysis blobs. */

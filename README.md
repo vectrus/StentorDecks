@@ -78,10 +78,10 @@ See [`docs/TESTING.md`](docs/TESTING.md).
 
 | Package | Role |
 |---|---|
-| `shared` | IPC contract, settings zod schema |
-| `app/main` | Electron main, DB, settings file, IPC handlers |
-| `app/renderer` | React/MobX UI + audio/MIDI engines |
-| `app/analysis` | Hidden analysis window (E5; stub in E1) |
+| `shared` | IPC contract, settings zod, MIDI/audio pure logic, analysis contract |
+| `app/main` | Electron main, SQLite, scanner/watcher, analysis supervisor, IPC |
+| `app/renderer` | React/MobX UI + audio/MIDI engines + Prep browser |
+| `app/analysis` | Hidden BrowserWindow — decode / waveform / BPM / key / loudness (E5) |
 
 ## Roadmap & status
 
@@ -104,8 +104,8 @@ E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW ✓]
 | **E1** Skeleton | DONE | 2026-07-18 | Shell, typed IPC, settings, SQLite, workspaces |
 | **E2** Audio engine | DONE | 2026-07-18 | Dual-deck engine, Plan A/B, cue/PFL, USB rebuild. **`[HW]` PASS** (owner Julius). Checklist: [`docs/E2-HW-CHECKLIST.md`](docs/E2-HW-CHECKLIST.md) |
 | **E3** MIDI layer | DONE | 2026-07-18 | Decode/map/dispatch/learn/persist/takeover/LEDs + FX pads + Load pending. **`[HW]` PASS** (owner Julius) — pads, Sync takeover, OOTB sweep, LEDs. Checklist: [`docs/E3-HW-CHECKLIST.md`](docs/E3-HW-CHECKLIST.md) |
-| **E4** Library | DOING | 2026-07-18 | Scan/IPC/read/load + MIDI browse + watcher + root picker + **Prep UI** (virtualized + R6.6 strip). Soak ACs / Perf strip next |
-| **E5** Analysis | TODO | — | BPM/key/waveform/loudness (stub today; File BPM is manual in harness; schema ready) |
+| **E4** Library | DOING | 2026-07-18 | Schema/scan/watcher, `library:*` IPC + read/load, MIDI browse→LibraryStore, root picker, Prep UI (virtualized + Camelot/tap/½/×2/**Detect**). Left: Perf 3-row strip, large-library soak ACs |
+| **E5** Analysis | DOING | 2026-07-18 | Hidden window + priority queue + pipeline commit (waveform/BPM/key/loudness). Prep Detect wired. Left: accuracy harness, backfill soak |
 | **E6** Decks/mixer UI | TODO | — | Performance UI from mockups; beat ticks, EOT, `[HW]` mix |
 | **E7** Polish | TODO | — | Packaging, soak, failure drills |
 
@@ -120,21 +120,22 @@ E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW ✓]
 | E3 scaffold | MIDI decode/map/dispatch/monitor/LEDs |
 | E3 persist + learn | SQLite `midi_map`, export/import/reset, learn SM + harness UI |
 | E3 takeover polish | Raw-space pickup refresh, gain↔trim inverse, UI re-arm, harness pickup table |
-| E3 pads + load | FX pad notes + dispatch/LEDs; MIDI Load → harness file picker until E4 |
-| E3 `[HW]` | Owner PASS 2026-07-18 — [`docs/E3-HW-CHECKLIST.md`](docs/E3-HW-CHECKLIST.md) |
+| E3 pads + load | FX pad notes + dispatch/LEDs; MIDI Load → harness file picker (then E4 paths) |
+| E3 `[HW]` | Owner PASS — [`docs/E3-HW-CHECKLIST.md`](docs/E3-HW-CHECKLIST.md) |
+| E4 library core | Scan, SQLite tracks, select/load, chokidar, root picker, MIDI browse merge |
+| E4 Prep UI | Folder tree + virtualized list + R6.6 correction strip; settings drawer |
+| E5 pipeline start | Analysis window + Detect→commit (waveform/BPM/key/loudness) |
 | Testing | Vitest unit/component + Playwright e2e (`docs/TESTING.md`) |
 
 ### In progress right now
 
-- **E4 library** — one-shot scanner + SQLite tracks wired; next: chokidar watcher, Prep browser UI, load-by-id, first-run root picker.
-- **E5 analysis** — parallel once enqueue hooks to real queue (schema ready).
+- **E4** — Perf-mode 3-row library strip; large-library soak against E4 ACs.
+- **E5** — Accuracy harness + confidence tuning; auto-backfill queue when idle.
 
 ### Next up
 
-- E4 Prep virtualized browser + MIDI browse merge
-- E5 analysis worker
-- E6 performance UI from mockups
-- E7 polish / installer
+- E6 performance UI from mockups (waveforms, decks, mixer)
+- E7 polish / installer / failure drills
 
 ### Parked (not v1)
 

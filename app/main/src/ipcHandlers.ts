@@ -6,7 +6,7 @@ import type {
   IpcInvokeMap,
   Settings,
 } from '@stentordeck/shared';
-import { createAnalysisSupervisor } from './analysisSupervisor';
+import { createAnalysisSupervisor, setAnalysisProgressBroadcast } from './analysisSupervisor';
 import { getDb } from './db/database';
 import {
   exportMidiMappingJson,
@@ -37,6 +37,8 @@ type Ctx = {
 
 const analysis = createAnalysisSupervisor();
 let libraryWatcher: LibraryWatcher | null = null;
+
+setAnalysisProgressBroadcast((p) => broadcast('analysis:progress', p));
 
 export function broadcast<K extends keyof IpcEventMap>(channel: K, payload: IpcEventMap[K]): void {
   for (const win of BrowserWindow.getAllWindows()) {
@@ -106,13 +108,8 @@ export function registerIpcHandlers(ctx: Ctx): void {
   });
 
   handle('analysis:enqueue', (req) => {
-    analysis.ensureAnalysisWindow();
-    broadcast('analysis:progress', {
-      trackId: req.trackIds[0] ?? 0,
-      stage: 'idle',
-      queueDepth: req.trackIds.length,
-    });
-    return { ok: true as const, queueDepth: req.trackIds.length };
+    const queueDepth = analysis.enqueue(req.trackIds, req.priority);
+    return { ok: true as const, queueDepth };
   });
 
   handle('settings:get', () => {

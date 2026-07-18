@@ -1,6 +1,6 @@
 # Roadmap & todo
 
-Living tracker for spec work and build order. Update when decisions land (also log in `CHANGELOG.md`).
+Living tracker for spec work and build order. **Agents must keep this file, root `README.md` § Roadmap, and `CHANGELOG.md` in sync** (see `.cursorrules` §2c) whenever epic status changes.
 
 **Status legend:** `TODO` · `DOING` · `BLOCKED` · `DONE` · `BACKLOG`
 
@@ -42,7 +42,7 @@ E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW ✓]
 | E2 | DONE | E1; **RMX2** | `[HW]` Plan A/B + unplug/replug **PASS** — owner Julius 2026-07-18. Checklist: [`E2-HW-CHECKLIST.md`](./E2-HW-CHECKLIST.md) |
 | E3 | DONE | E2 actions | `[HW]` pads + takeover + OOTB sweep + LEDs **PASS** — owner Julius 2026-07-18. Checklist: [`E3-HW-CHECKLIST.md`](./E3-HW-CHECKLIST.md) |
 | E4 | DOING | E1 + E3 | Core library + MIDI browse + watcher + root picker + Prep UI. Remaining: Perf 3-row strip, large-library soak ACs. |
-| E5 | TODO | E1 + schema | loudness stage (schema ready via E4 migration 002) |
+| E5 | DOING | E1 + E4 schema | Queue + hidden window + decode/waveform/BPM/key/loudness commit; accuracy harness later |
 | E6 | TODO | E2–E5; mockups | beat ticks, cue marker, EOT; filter knob (S10) |
 | E7 | TODO | E1–E6 | backlog issues |
 

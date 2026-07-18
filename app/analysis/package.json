@@ -3,10 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "tsup src/stub.ts --format cjs --outDir dist --clean",
+    "build": "tsup && node ../../scripts/copy-analysis-html.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
+  "dependencies": {
+    "@stentordeck/shared": "*"
+  },
   "devDependencies": {
+    "@types/node": "^22.10.2",
+    "electron": "^33.2.1",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2"
   }

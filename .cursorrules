@@ -5,7 +5,7 @@
 ## 0. Prime directive
 
 The spec is law. `docs/01-requirements.md` defines WHAT (R-IDs), `docs/02..07` define HOW,
-`epics/E*.md` define WHEN and DONE. If code and spec disagree, the spec wins. If the spec is
+`docs/E*.md` define WHEN and DONE. If code and spec disagree, the spec wins. If the spec is
 ambiguous or wrong, STOP and ask the owner (Julius) — never silently "improve" a requirement.
 Every non-trivial change must cite the R-ID or epic criterion it serves in the commit message.
 
@@ -24,8 +24,27 @@ Every non-trivial change must cite the R-ID or epic criterion it serves in the c
 1. Read the epic file for the task AND every doc it references before writing code.
 2. Restate the acceptance criteria you are targeting at the top of your plan.
 3. Implement smallest vertical slice → tests → self-review against the criteria list.
-4. Update docs/ only when the owner approved a spec change; code comments never replace spec.
-5. PR description: criteria targeted, criteria met, criteria remaining, R-IDs touched, model(s) used.
+4. Update locked requirement docs (`docs/01`–`07`) only when the owner approved a spec change; code comments never replace spec.
+5. **Living status (mandatory, same change):** keep progress trackers honest — see §2c.
+6. PR description: criteria targeted, criteria met, criteria remaining, R-IDs touched, model(s) used.
+
+## 2c. Living status — README / ROADMAP / CHANGELOG (automatic)
+
+After any slice that changes epic progress, gates, or “what works now”, update **all three** in the
+same turn (do not wait for the owner to ask):
+
+| File | What to update |
+|---|---|
+| [`README.md`](README.md) § Roadmap & status | Epic table (`DONE`/`DOING`/`TODO`), **Same-day milestones**, **In progress right now**, **Next up**; workspace blurbs if roles changed |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Epic status table + notes (source of truth for build order) |
+| [`docs/CHANGELOG.md`](docs/CHANGELOG.md) | Dated entry: what landed, R-IDs / epic, owner HW notes if any |
+
+Rules:
+- README roadmap **mirrors** ROADMAP — never let them drift. When in doubt, update ROADMAP first, then README.
+- Status vocabulary only: `TODO` · `DOING` · `BLOCKED` · `DONE` · `BACKLOG`.
+- Do **not** mark `[HW]` PASS in these files unless the owner signed a checklist (`docs/E*-HW-CHECKLIST.md`).
+- Stale “Next up” bullets that already shipped are defects — delete or rewrite them.
+- Typo-only / pure refactor with no user-visible or epic-status change: skip status updates.
 
 ## 2b. Testing (unit, component, end-user) + doc screenshots
 

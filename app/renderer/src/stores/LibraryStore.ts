@@ -371,10 +371,7 @@ export class LibraryStore {
         priority: 'deck',
       });
       runInAction(() => {
-        this.detectStatus =
-          res.queueDepth > 0
-            ? `queued (depth ${res.queueDepth}) — analysis worker E5`
-            : 'queued — analysis worker E5';
+        this.detectStatus = `queued · depth ${res.queueDepth}`;
       });
     } catch (err) {
       runInAction(() => {

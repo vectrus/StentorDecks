@@ -31,6 +31,10 @@ await new Promise((resolve, reject) => {
   const p = run('npm', ['run', 'build', '-w', '@stentordeck/main']);
   p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error('main build failed'))));
 });
+await new Promise((resolve, reject) => {
+  const p = run('npm', ['run', 'build', '-w', '@stentordeck/analysis']);
+  p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error('analysis build failed'))));
+});
 
 const vite = run('npm', ['run', 'dev', '-w', '@stentordeck/renderer'], {
   env: { ...process.env, VITE_PORT },
