@@ -1,30 +1,25 @@
 import { observer } from 'mobx-react-lite';
-import { audioDeviceStore, deckA, deckB, midiStore } from '../../stores/root';
+import { deckA, deckB, libraryStore } from '../../stores/root';
 import { DetailWaveform } from './DetailWaveform';
 import { PerfBrowseStrip } from './PerfBrowseStrip';
 import { PerfDeckMini } from './PerfDeckMini';
-import { PerfHeaderOuts } from './PerfHeaderOuts';
 import { PerfMixerMini } from './PerfMixerMini';
 
 /**
- * Performance shell — v2 handoff: header outs, full decks, slim mixer, flex library.
+ * Performance shell — v2 handoff: full decks, slim mixer, flex library.
+ * MST/CUE/PHN live in the app topbar (left of Audio).
  */
 export const PerformanceMode = observer(function PerformanceMode() {
   return (
     <div className="perf">
-      <div className="perf-top">
-        <span className="mono hint">
-          {midiStore.connected ? (
-            <>
-              <span className="perf-midi-dot" aria-hidden />
-              {midiStore.portName ?? 'RMX2'} · Plan {audioDeviceStore.activePlan}
-            </>
-          ) : (
-            'No MIDI — mouse + Prep still work'
-          )}
-        </span>
-        <PerfHeaderOuts />
-      </div>
+      {libraryStore.loadError ? (
+        <div className="perf-toast" role="alert">
+          <span>{libraryStore.loadError}</span>
+          <button type="button" onClick={() => libraryStore.clearLoadError()}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
 
       <div className="perf-well">
         <DetailWaveform deck={deckA} accent="a" />

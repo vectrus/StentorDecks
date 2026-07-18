@@ -35,6 +35,7 @@ export class LibraryStore {
   error: string | null = null;
   /** Last MIDI/UI load failure (playing interlock etc.). */
   loadError: string | null = null;
+  private loadErrorTimer: ReturnType<typeof setTimeout> | null = null;
   /** Tap-tempo timestamps for selected track (R6.6). */
   tapTimes: number[] = [];
   tapPreviewBpm: number | null = null;
@@ -54,7 +55,7 @@ export class LibraryStore {
   }
 
   constructor() {
-    makeAutoObservable(this, {}, { autoBind: true });
+    makeAutoObservable(this, { loadErrorTimer: false }, { autoBind: true });
   }
 
   get entries(): LibraryBrowseEntry[] {
@@ -269,6 +270,30 @@ export class LibraryStore {
     }
   }
 
+  /** Surface load interlock / reject (toast + strip); auto-clears. */
+  rejectLoad(message: string): void {
+    this.setLoadError(message);
+  }
+
+  clearLoadError(): void {
+    if (this.loadErrorTimer != null) {
+      clearTimeout(this.loadErrorTimer);
+      this.loadErrorTimer = null;
+    }
+    this.loadError = null;
+  }
+
+  private setLoadError(message: string): void {
+    if (this.loadErrorTimer != null) clearTimeout(this.loadErrorTimer);
+    this.loadError = message;
+    this.loadErrorTimer = setTimeout(() => {
+      runInAction(() => {
+        this.loadError = null;
+        this.loadErrorTimer = null;
+      });
+    }, 3500);
+  }
+
   /**
    * Load button (R4.2 / R5.3) — only when cursor is on a track.
    * Fire-and-forget friendly for MIDI; sets `loadError` on failure.
@@ -289,8 +314,9 @@ export class LibraryStore {
     ) => Promise<void>;
   }): void {
     void this.loadSelected(deck).catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
       runInAction(() => {
-        this.loadError = err instanceof Error ? err.message : String(err);
+        this.setLoadError(msg);
       });
       console.warn('[library] load rejected', err);
     });
@@ -313,9 +339,7 @@ export class LibraryStore {
   }): Promise<void> {
     const row = this.selectedTrack;
     if (!row) {
-      runInAction(() => {
-        this.loadError = 'Select a track (not a folder)';
-      });
+      this.setLoadError('Select a track (not a folder)');
       throw new Error('Select a track (not a folder)');
     }
     const payload = await invoke('library:read', { id: row.id });

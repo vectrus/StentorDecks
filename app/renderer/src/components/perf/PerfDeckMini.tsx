@@ -1,4 +1,5 @@
 import { observer } from 'mobx-react-lite';
+import { useEffect, useState } from 'react';
 import {
   gainKnobFromTrimDb,
   trimDbFromGainKnob,
@@ -43,6 +44,20 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
   const gainPickup = midiStore.takeoverView(gainId);
   const pitchPickup = midiStore.takeoverView(pitchId);
   const syncLit = deck.syncArmed || deck.phaseGluePartner != null;
+  const [loadFlash, setLoadFlash] = useState(false);
+
+  useEffect(() => {
+    if (!loadFlash) return;
+    const t = window.setTimeout(() => setLoadFlash(false), 420);
+    return () => window.clearTimeout(t);
+  }, [loadFlash]);
+
+  const eotClass =
+    deck.eotWarn === 10 || deck.eotWarn === 15
+      ? ' eot-pulse'
+      : deck.eotWarn === 30
+        ? ' eot'
+        : '';
 
   return (
     <div className={`perf-deck perf-deck-${accent}`}>
@@ -76,7 +91,7 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
         <span className={`perf-deck-bpm mono accent-${accent}`}>{bpm}</span>
         <span className={`perf-pitch-pct mono${pctZero ? ' zero' : ''}`}>{pct}</span>
         <span className="perf-key-chip mono">{key}</span>
-        <span className="perf-deck-rem mono">
+        <span className={`perf-deck-rem mono${eotClass}`}>
           {empty ? '—' : fmtRemaining(deck.position, deck.duration)}
         </span>
       </div>
@@ -166,6 +181,15 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
         >
           FILTER
         </button>
+        <PerfKnob
+          size="sm"
+          label="AMT"
+          ariaLabel={`Deck ${deck.id} filter amount`}
+          value={deck.filterAmount}
+          disabled={empty}
+          reset={0.5}
+          onChange={(v) => deck.setFilterAmount(v)}
+        />
         <button
           type="button"
           className={`perf-btn${deck.flangerOn ? ' fxon' : ''}`}
@@ -186,13 +210,18 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
           />
           <button
             type="button"
-            className={`perf-btn load${playing ? ' locked' : ''}${!playing && !empty ? ' ready' : ''}`}
-            disabled={playing}
+            className={`perf-btn load${playing ? ' locked' : ''}${!playing && !empty ? ' ready' : ''}${loadFlash ? ' flash' : ''}`}
             title={playing ? 'Pause deck before load (R4.2)' : 'Load selected library track'}
             onClick={() => {
+              if (playing) {
+                setLoadFlash(true);
+                libraryStore.rejectLoad(`Deck ${deck.id} is playing — pause first`);
+                return;
+              }
               try {
                 libraryStore.requestLoad(deck);
               } catch (err) {
+                setLoadFlash(true);
                 alert(formatUserError(err, `Deck ${deck.id} load`));
               }
             }}

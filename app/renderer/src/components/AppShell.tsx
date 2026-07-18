@@ -8,6 +8,7 @@ import { AudioSetupScreen } from './AudioSetupScreen';
 import { DevHarness } from './DevHarness';
 import { PrepMode } from './prep/PrepMode';
 import { PerformanceMode } from './perf/PerformanceMode';
+import { PerfHeaderOuts } from './perf/PerfHeaderOuts';
 import { BrandMark } from './BrandMark';
 import { MidiMonitor } from './MidiMonitor';
 import { midiStore } from '../stores/root';
@@ -61,6 +62,7 @@ export const AppShell = observer(function AppShell() {
           </button>
         </div>
         <div className="top-actions">
+          <PerfHeaderOuts />
           <button type="button" className="mode" onClick={() => setSetupOpen(true)}>
             Audio
           </button>

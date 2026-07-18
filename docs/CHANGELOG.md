@@ -5,6 +5,18 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — MST/CUE/PHN in app topbar
+
+Owner placement: master / cue-mix / phones knobs sit in the shell topbar immediately left of **Audio** (not in the Perf content header), freeing waveform/deck vertical space. docs/06.
+
+---
+
+## 2026-07-18 — Perf deck polish: AMT, EOT, load toast
+
+FILTER **AMT** knob restored (R3.1). Remaining time uses EOT clip color + short pulse at 15/10 s. Load while playing flashes LOAD and shows a dismissible toast (R4.2/R4.3). E6.
+
+---
+
 ## 2026-07-18 — Perf UI v2 handoff (header outs + full decks)
 
 Designer handoff applied: **MST / CUE / PHN** knobs in Perf header (library gets height); deck panels gain GAIN, phones PFL, pitch%, key chip, pitch strip + pickup, FILTER/FLANGER/WET/LOAD; mixer slimmed to EQ + faders/VU. Mockup `01` replaced; docs/06 updated. R2.5–R2.8, R3, R4.2, R7.7, E6.

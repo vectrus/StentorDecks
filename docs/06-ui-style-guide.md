@@ -45,9 +45,9 @@ UI scale (R7.2) multiplies a root `rem`; everything is rem-based. Minimum post-s
 
 ## Layout
 
-**Performance mode** (mockup `01` v2) — rows: header (MIDI status + **MST / CUE / PHN** knobs) / waveform well (stacked detail, center playhead, ticks, cue) / deck A · slim mixer · deck B / library that **fills remaining height** (≥3 × 42 px rows).
+**Performance mode** (mockup `01` v2) — **MST / CUE / PHN** knobs in the app topbar (left of Audio). Rows: waveform well / deck A · slim mixer · deck B / library that **fills remaining height** (≥3 × 42 px rows).
 
-Deck panel: title/artist + phones PFL + **GAIN**; BPM · pitch% · key chip · remaining; overview waveform; pitch strip (zero + cap + soft-takeover ghost); play · CUE · SYNC · FILTER · FLANGER · WET · LOAD (lock when playing). Tap/half/double chrome remains Prep / nice-to-have.
+Deck panel: title/artist + phones PFL + **GAIN**; BPM · pitch% · key chip · remaining (EOT → clip color / pulse); overview waveform; pitch strip (zero + cap + soft-takeover ghost); play · CUE · SYNC · **FILTER · AMT · FLANGER · WET** · LOAD (lock + flash toast when playing). Tap/half/double chrome remains Prep / nice-to-have.
 
 Mixer column: EQ knob pairs (HI/MID/LOW) with kill labels; channel faders + VU only. Master/cue/phones live in the Perf header. No crossfader.
 

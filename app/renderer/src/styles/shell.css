@@ -75,6 +75,22 @@
   gap: 0.75rem;
 }
 
+/* MST / CUE / PHN — app chrome, left of Audio */
+.top-actions .perf-header-outs {
+  margin-right: 0.25rem;
+  padding-right: 0.65rem;
+  border-right: 0.5px solid var(--border);
+}
+
+.top-actions .perf-knob.size-sm {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.top-actions .perf-knob-label {
+  font-size: 0.65rem;
+}
+
 .hint {
   font-size: 0.75rem;
   color: var(--text-faint);
