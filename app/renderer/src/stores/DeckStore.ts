@@ -727,15 +727,17 @@ export class DeckStore {
       return;
     }
     this.jogSeekPendingSec = 0;
+    const abs = Math.abs(delta);
+    // Drop sub-audible leftovers — fine zone is rate-primary; seeking these chunks.
+    if (abs < 0.00004) return;
     const pos = audioEngine.transport(this.id)?.position() ?? this.position;
     const now =
       typeof performance !== 'undefined' && typeof performance.now === 'function'
         ? performance.now()
         : Date.now();
-    const abs = Math.abs(delta);
     // Soft-edge after idle or larger spin seeks — not every rAF (would pump gain).
     const idle = this.lastJogSeekFlushMs <= 0 || now - this.lastJogSeekFlushMs > 80;
-    const soft = abs >= 0.002 || (idle && abs >= 0.00005);
+    const soft = abs >= 0.002 || (idle && abs >= 0.00008);
     this.lastJogSeekFlushMs = now;
     this.seek(pos + delta, { soft });
   }

@@ -87,6 +87,11 @@ describe('MidiStore ingest (fixture traffic)', () => {
 
   it('noteDeckLoaded keeps live pitch/EQ live (no full relearn)', () => {
     const { store, deckA } = makeStore();
+    // Absolute filter (learned spare) — adopt path; factory FX encoder is relative.
+    store.applyMapping({
+      ...store.mapping,
+      'deckA.filter': { kind: 'cc7', ch: 0, cc: 0x11 },
+    });
     // Pick up EQ mid at 0.7
     store.takeovers.set('deckA.eqMid', {
       armed: false,
@@ -121,5 +126,15 @@ describe('MidiStore ingest (fixture traffic)', () => {
     expect(store.takeoverView('deckA.filter')?.armed).toBe(false);
     expect(deckA.filterAmount).toBeCloseTo(0.8); // adopted HW
     expect(store.takeoverView('deckA.gain')?.armed).toBe(true); // auto-gain path
+  });
+
+  it('FX Mode relative encoder steps filter amount (CC 54 = 1 / 127)', () => {
+    const { store, deckA } = makeStore();
+    deckA.filterAmount = 0.5;
+    store.ingest([0xb0, 0x54, 0x01], 0); // CW +1
+    expect(deckA.filterAmount).toBeCloseTo(0.51, 5);
+    store.ingest([0xb0, 0x54, 0x7f], 1); // CCW −1
+    expect(deckA.filterAmount).toBeCloseTo(0.5, 5);
+    expect(store.monitor.some((e) => e.controlId === 'deckA.filter')).toBe(true);
   });
 });

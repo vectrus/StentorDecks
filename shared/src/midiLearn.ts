@@ -5,11 +5,13 @@
 
 import type { ControlId } from './controlIds.js';
 import type { MidiBinding, MidiMapping } from './ipc.js';
+import { decodeCcRelDelta, type MidiRaw } from './midiDecode.js';
 import { findBindingConflict } from './midiMappingSchema.js';
-import type { MidiRaw } from './midiDecode.js';
 
 const CONTINUOUS_QUALIFY_MS = 500;
 const CONTINUOUS_MIN_DISTINCT = 3;
+/** Relative encoders (RMX2 FX Mode) often only emit 1 and 127 when turned slowly. */
+const RELATIVE_MIN_SAMPLES = 4;
 
 /** Controls that bind from note-on (not CC streams). */
 const BUTTON_CONTROL_IDS = new Set<ControlId>([
@@ -263,8 +265,23 @@ function lsbNumbersFromMapping(mapping: MidiMapping): Set<number> {
 }
 
 /**
- * First CC with ≥3 distinct values in the 500 ms window.
- * If CC+1 also appears with ≥2 values in the same window, bind as cc14.
+ * RMX2 FX Mode / jog-style incremental: two's-complement deltas, no absolute park.
+ * Slow turns often only produce values 1 and 127.
+ */
+export function looksLikeRelativeCc(values: number[]): boolean {
+  if (values.length < RELATIVE_MIN_SAMPLES) return false;
+  const distinct = [...new Set(values)];
+  if (distinct.every((v) => v === 1 || v === 127)) return true;
+  // Faster turns: only incremental magnitudes, never absolute 0-park mid-stream
+  if (distinct.some((v) => v === 0)) return false;
+  const deltas = values.map(decodeCcRelDelta);
+  if (!deltas.every((d) => d !== 0 && Math.abs(d) <= 63)) return false;
+  return distinct.length <= 20;
+}
+
+/**
+ * First CC that qualifies in the 500 ms window.
+ * Relative incremental (1/127) → ccRel; else ≥3 distinct → cc7 / cc14 pair.
  * Never returns a bare cc7 for a known LSB number.
  */
 export function qualifyContinuous(
@@ -284,7 +301,18 @@ export function qualifyContinuous(
     byCc.set(s.cc, arr);
   }
 
-  // Prefer lower CC numbers (MSB before LSB) among qualifiers
+  const ccs = [...byCc.keys()].sort((a, b) => a - b);
+
+  // Prefer relative detection (FX Mode encoder) before absolute cc7.
+  for (const cc of ccs) {
+    if (lsbSet.has(cc)) continue;
+    const values = byCc.get(cc) ?? [];
+    if (looksLikeRelativeCc(values)) {
+      return { kind: 'ccRel', ch: channel, cc };
+    }
+  }
+
+  // Prefer lower CC numbers (MSB before LSB) among absolute qualifiers
   const qualifiers = [...byCc.entries()]
     .filter(([_cc, values]) => {
       const distinct = new Set(values).size;

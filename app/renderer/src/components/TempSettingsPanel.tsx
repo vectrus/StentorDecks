@@ -327,7 +327,7 @@ const JogFeelSection = observer(function JogFeelSection() {
         Jog feel (live)
       </div>
       <div className="temp-meta" style={{ marginBottom: 8 }}>
-        Soft = heavy platter (short nudge = tiny offset). Tweak live on the wheel.
+        Soft = small heavy wheel: steady turn crawls (rate); short push = tiny impulse.
       </div>
 
       <div className="temp-jog-presets">
@@ -363,18 +363,18 @@ const JogFeelSection = observer(function JogFeelSection() {
       <div className="temp-jog-group">Fine (fingertip)</div>
       <JogSlider
         label="Fine seek"
-        hint="Phase step per tick when nudging gently — keep low for SL-1200 feel"
+        hint="Burst impulse only — steady light turns use rate (keep very low)"
         value={jog.fineSeekMs}
-        min={0.05}
+        min={0.01}
         max={8}
-        step={0.05}
+        step={0.005}
         unit=" ms"
-        format={(v) => `${v.toFixed(2)} ms`}
+        format={(v) => `${v.toFixed(3)} ms`}
         onChange={(v) => patchJog({ fineSeekMs: v })}
       />
       <JogSlider
         label="Fine rate bend"
-        hint="Temporary speed change while light-nudging"
+        hint="Smooth crawl while turning lightly (this is the main fine feel)"
         value={jog.fineRatePercent}
         min={0}
         max={1}

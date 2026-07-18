@@ -43,8 +43,8 @@ Browse cluster (shared): up `45` prev row, down `46` next row, left `44` parent 
 | EQ B high/mid/low | 4C / 4E / 50 | 7-bit, soft takeover |
 | Jog A / B (turn) | 30 / 31 | relative two's-complement: v<64 → +v, else v−128 |
 | Jog A / B (scratch mode) | 32 / 33 | treat same as turn (no scratching) |
-| WET knob A / B | learn | `deckA.wet` / `deckB.wet` — no factory knob; assign via learn |
-| Filter amount A / B | learn | `deckA.filter` / `deckB.filter` — separate from wet; no factory knob; assign via learn |
+| Filter amount A / B | **54 / 55** | FX Mode encoder — **relative** (01…3F CW / 40…7F CCW; slow turns often only 01/7F). Not absolute 0…127. |
+| WET knob A / B | learn | `deckA.wet` / `deckB.wet` — no absolute factory knob; learn a spare, or Shift+FX Mode encoder (`5C`/`5D`, also relative) |
 | Tap tempo A / B | learn | optional; factory Sync stays Sync |
 | BPM half / double | learn | optional Prep/performance actions |
 | Key nudge / set | learn | optional |
@@ -60,7 +60,7 @@ type Binding =
   | { kind:'button'; ch:number; note:number }
   | { kind:'cc7';    ch:number; cc:number }
   | { kind:'cc14';   ch:number; msb:number; lsb:number }
-  | { kind:'ccRel';  ch:number; cc:number };          // jogs
+  | { kind:'ccRel';  ch:number; cc:number };          // jogs + FX Mode / relative encoders
 type Mapping = Record<ControlId, Binding>;
 // ControlId includes at least:
 //   deckA|B.play|cue|sync|load|pfl|jog|filter|wet|tapTempo|bpmHalf|bpmDouble|key*
@@ -69,7 +69,9 @@ type Mapping = Record<ControlId, Binding>;
 
 Stored in SQLite (`midi_map`), exported/imported as JSON. Factory map ships as a constant; "Reset to RMX2 defaults" always available.
 
-Learn flow: enable Learn → UI controls get a target overlay → click one → next qualifying message binds it. Qualifying: for buttons, any note-on; for continuous, the **first CC number that repeats with ≥3 distinct values within 500 ms** (rejects one-shot LSB noise); if a second interleaved CC tracks it consistently at +1, record as cc14. Esc cancels; captured binding shown for confirm/undo. Conflict (binding already used) → highlight the other control, require explicit steal.
+Learn flow: enable Learn → UI controls get a target overlay → click one → next qualifying message binds it. Qualifying: for buttons, any note-on; for continuous, **relative** if the CC stream looks incremental (e.g. only 1/127 — RMX2 FX Mode), else the **first CC with ≥3 distinct values within 500 ms** (rejects one-shot LSB noise); if a second interleaved CC tracks it consistently at +1, record as cc14. Esc cancels; captured binding shown for confirm/undo. Conflict (binding already used) → highlight the other control, require explicit steal.
+
+Relative filter/wet amounts always apply (no soft-takeover park — the encoder has no absolute position).
 
 ## Runtime rules
 

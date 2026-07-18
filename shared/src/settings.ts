@@ -140,7 +140,7 @@ export const settingsSchema = z.object({
     jog: z
       .object({
         dualZone: z.boolean(),
-        fineSeekMs: z.number().min(0.05).max(30),
+        fineSeekMs: z.number().min(0.01).max(30),
         spinSeekMs: z.number().min(1).max(100),
         fineRatePercent: z.number().min(0).max(5),
         spinRatePercent: z.number().min(0).max(50),

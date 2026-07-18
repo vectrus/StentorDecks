@@ -1,28 +1,32 @@
 /**
  * Dual-zone jog feel (R2.2 / docs/03):
- * - Fine: SL-1200 fingertip phase nudge (impulse + flood compression)
+ * - Fine: heavy-platter on a small RMX2 wheel (~9 cm vs ~30 cm SL-1200)
+ *   Steady light turn → **rate-primary** (smooth crawl, no chunky seeks).
+ *   Short burst → tiny impulse seek only (wheel mass, not vinyl push).
  * - Spin: fast twist / spinback — larger sticky seek + stronger temp rate
  *
  * Tunables live in settings.mixer.jog (docs/07). Constants below are the defaults.
  *
  * RMX2 relative jogs flood ±1 CCs (~50–150 msg/s on a light turn). Spin thresholds
- * must sit above that flood or every nudge opens spinback and feels "too sensitive".
- * Fine seeks are also window-capped so a short nudge ≠ N × fineSeekMs.
+ * must sit above that flood. Per-tick buffer seeks feel like “pushing the record”;
+ * fine zone therefore suppresses seek once the turn is steady.
  */
 
 /** Default engine units (matches defaultJogSettings) — tests / docs. */
-export const JOG_FINE_SEEK_SEC = 0.00008;
+export const JOG_FINE_SEEK_SEC = 0.000025;
 export const JOG_SPIN_SEEK_SEC = 0.012;
-export const JOG_FINE_RATE = 0.0002;
+export const JOG_FINE_RATE = 0.00035;
 export const JOG_SPIN_RATE = 0.04;
-export const JOG_RATE_DECAY_MS = 280;
+export const JOG_RATE_DECAY_MS = 160;
 export const JOG_PAUSED_FINE_SEEK_SEC = 0.001;
 export const JOG_PAUSED_SPIN_SEEK_SEC = 0.012;
-export const JOG_TPS_FINE = 140;
-export const JOG_TPS_SPIN = 320;
-/** Max sticky phase (sec) applied in one fine-zone impulse window. */
-export const JOG_FINE_IMPULSE_CAP_SEC = 0.0004;
-export const JOG_IMPULSE_WINDOW_MS = 50;
+export const JOG_TPS_FINE = 150;
+export const JOG_TPS_SPIN = 340;
+/** Max sticky phase (sec) applied in one fine-zone impulse window (~0.12 ms). */
+export const JOG_FINE_IMPULSE_CAP_SEC = 0.00012;
+export const JOG_IMPULSE_WINDOW_MS = 60;
+/** Diameter scale: RMX2 jog ≈ 9 cm vs SL-1200 ≈ 30 cm → ~0.3 linear. */
+export const JOG_PLATTER_DIAMETER_SCALE = 0.3;
 
 /** Human-unit jog settings (matches settings.mixer.jog). */
 export type JogSettings = {
@@ -39,24 +43,37 @@ export type JogSettings = {
 };
 
 /**
- * Default = heavy-platter fingertip (SL-1200).
+ * Default = heavy platter on a small wheel (rate crawl + tiny burst impulse).
  * Light push stays in fine; spinback only on a real hard twist.
  */
 export const defaultJogSettings: JogSettings = {
   dualZone: true,
-  fineSeekMs: 0.08,
+  fineSeekMs: 0.025,
   spinSeekMs: 12,
-  fineRatePercent: 0.02,
+  fineRatePercent: 0.035,
   spinRatePercent: 4,
-  rateDecayMs: 280,
+  rateDecayMs: 160,
   pausedFineSeekMs: 1,
   pausedSpinSeekMs: 12,
-  spinStartsAtTps: 140,
-  spinFullAtTps: 320,
+  spinStartsAtTps: 150,
+  spinFullAtTps: 340,
 };
 
 /** Previous factory defaults — migrate once so saved itchy settings quiet down. */
 export const LEGACY_ITCHY_JOG_DEFAULTS: readonly JogSettings[] = [
+  // 2026-07-18 Soft — still too “vinyl push” / chunky on steady light turns
+  {
+    dualZone: true,
+    fineSeekMs: 0.08,
+    spinSeekMs: 12,
+    fineRatePercent: 0.02,
+    spinRatePercent: 4,
+    rateDecayMs: 280,
+    pausedFineSeekMs: 1,
+    pausedSpinSeekMs: 12,
+    spinStartsAtTps: 140,
+    spinFullAtTps: 320,
+  },
   // 2026-07-18 Soft after first quiet pass — still too jumpy on short nudges
   {
     dualZone: true,
@@ -135,7 +152,7 @@ export function migrateItchyJogSettings(jog: JogSettings): JogSettings {
 /** Named bundles for Settings UI — values only; stored state is always the numbers. */
 export const JOG_PRESETS = {
   soft: {
-    label: 'Soft (heavy platter)',
+    label: 'Soft (small heavy wheel)',
     jog: { ...defaultJogSettings } satisfies JogSettings,
   },
   balanced: {
@@ -280,14 +297,27 @@ export type JogScaled = {
 };
 
 /**
- * Flood compression in the fine zone: many ±1 ticks share one fingertip push,
- * so each tick's sticky seek shrinks as tick-rate rises (heavy platter).
+ * Flood compression in the fine zone: many ±1 ticks share one fingertip push.
  */
 export function fineFloodGain(ticksPerSec: number, intensity: number): number {
   if (intensity >= 0.35) return 1;
   const tps = Number.isFinite(ticksPerSec) ? Math.max(0, ticksPerSec) : 0;
-  // ~1.0 at idle; ~0.35 at 80 t/s; ~0.2 at 140 t/s
-  return 1 / (1 + tps / 45);
+  // Stronger than before — RMX2 flood must not stack like vinyl slip.
+  return 1 / (1 + tps / 28);
+}
+
+/**
+ * How much of the fine sticky-seek budget survives.
+ * Steady light turn → ~0 (rate-only crawl, no chunks).
+ * Short burst (low tps) → small fraction (tiny wheel-mass impulse).
+ */
+export function fineSeekBlend(ticksPerSec: number, intensity: number): number {
+  if (intensity >= 0.35) return 1;
+  const tps = Number.isFinite(ticksPerSec) ? Math.max(0, ticksPerSec) : 0;
+  // 0 at idle/burst start… → 1 once the turn is a steady light flood
+  const steady = jogSmoothstep(18, 55, tps);
+  // Diameter scale: small wheel still shouldn't shove like a 30 cm platter push
+  return (1 - steady) * 0.25 * JOG_PLATTER_DIAMETER_SCALE;
 }
 
 /** Map one relative jog tick into dual-zone seek / rate amounts. */
@@ -303,11 +333,16 @@ export function scaleJogTick(
   const unit = Math.min(1, mag);
   const mix = (fine: number, spin: number) => fine + (spin - fine) * intensity;
   const flood = fineFloodGain(ticksPerSec, intensity);
+  const seekBlend = fineSeekBlend(ticksPerSec, intensity);
+  // Fine rate stays available for smooth crawl; spin mixes up as usual.
+  const rateScale =
+    intensity >= 0.35 ? 1 : JOG_PLATTER_DIAMETER_SCALE + (1 - JOG_PLATTER_DIAMETER_SCALE) * 0.55;
   return {
     sign,
     intensity,
-    playingSeekSec: mix(params.fineSeekSec, params.spinSeekSec) * unit * flood,
-    playingRateAmount: mix(params.fineRate, params.spinRate) * unit,
+    playingSeekSec:
+      mix(params.fineSeekSec, params.spinSeekSec) * unit * flood * seekBlend,
+    playingRateAmount: mix(params.fineRate, params.spinRate) * unit * rateScale,
     pausedSeekSec:
       mix(params.pausedFineSeekSec, params.pausedSpinSeekSec) * Math.max(unit, 0.35),
     rateDecayMs: params.rateDecayMs,

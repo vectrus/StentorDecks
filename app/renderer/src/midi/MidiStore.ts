@@ -6,6 +6,7 @@ import {
   cc14PairsFromMapping,
   createLearnState,
   createTakeover,
+  FX_AMOUNT_REL_STEP,
   factoryMidiMapping,
   gainKnobFromTrimDb,
   learnAcceptSteal,
@@ -16,6 +17,7 @@ import {
   learnRejectSteal,
   learnSelectControl,
   lookupControlId,
+  migrateFxEncoderBindings,
   norm14,
   norm7,
   preserveTakeoverAfterLoad,
@@ -114,10 +116,15 @@ export class MidiStore {
   async hydrateMapping(): Promise<void> {
     try {
       const mapping = await invoke('midi:mapping:get');
+      const migrated = migrateFxEncoderBindings(mapping);
       runInAction(() => {
-        this.applyMapping(mapping);
+        this.applyMapping(migrated);
         this.mappingReady = true;
       });
+      // Persist soft-migrate (cc7 54/55 → ccRel) so relative decode sticks.
+      if (JSON.stringify(migrated) !== JSON.stringify(mapping)) {
+        void this.persistMapping(migrated);
+      }
     } catch (err) {
       console.error('[midi] mapping hydrate failed — using factory', err);
       runInAction(() => {
@@ -128,9 +135,13 @@ export class MidiStore {
   }
 
   applyMapping(mapping: MidiMapping): void {
-    this.mapping = { ...mapping };
+    this.mapping = migrateFxEncoderBindings(mapping);
     this.refreshDecodeHints();
     this.rearmAllTakeovers();
+  }
+
+  private isRelativeBinding(id: ControlId): boolean {
+    return this.mapping[id]?.kind === 'ccRel';
   }
 
   private refreshDecodeHints(): void {
@@ -269,10 +280,22 @@ export class MidiStore {
       this.dispatchButton(id, false);
       return;
     }
-    if (ev.kind === 'ccRel' && (id === 'deckA.jog' || id === 'deckB.jog')) {
-      const deck = id === 'deckA.jog' ? this.deckA : this.deckB;
-      deck.nudge(ev.delta);
-      return;
+    if (ev.kind === 'ccRel') {
+      if (id === 'deckA.jog' || id === 'deckB.jog') {
+        const deck = id === 'deckA.jog' ? this.deckA : this.deckB;
+        deck.nudge(ev.delta);
+        return;
+      }
+      // FX Mode encoder / learned relative amount (filter AMT, wet).
+      if (
+        id === 'deckA.filter' ||
+        id === 'deckB.filter' ||
+        id === 'deckA.wet' ||
+        id === 'deckB.wet'
+      ) {
+        this.dispatchRelativeAmount(id, ev.delta);
+        return;
+      }
     }
     if (ev.kind === 'cc14' || ev.kind === 'cc7') {
       let raw = ev.kind === 'cc14' ? norm14(ev.value14) : norm7(ev.value);
@@ -553,6 +576,11 @@ export class MidiStore {
       }
 
       if (suffix === 'filter' || suffix === 'wet') {
+        // Relative FX encoders have no absolute HW park — keep software, stay live.
+        if (this.isRelativeBinding(id)) {
+          this.takeovers.set(id, refreshTakeoverSoftware(cur, soft));
+          continue;
+        }
         const adopted = adoptHardwareTakeover(cur);
         if (adopted) {
           this.applyContinuousSilent(id, adopted.softwareValue);
@@ -565,6 +593,49 @@ export class MidiStore {
 
       // pitch + EQ — do not blanket re-arm
       this.takeovers.set(id, preserveTakeoverAfterLoad(cur, soft));
+    }
+  }
+
+  /**
+   * Relative encoder → amount 0..1 (always live; no soft-takeover park).
+   * Same two's-complement deltas as jogs (RMX2 FX Mode Bx 54/55).
+   */
+  private dispatchRelativeAmount(
+    id: 'deckA.filter' | 'deckB.filter' | 'deckA.wet' | 'deckB.wet',
+    delta: number,
+  ): void {
+    const d = Number.isFinite(delta) ? delta : 0;
+    if (d === 0) return;
+    const cur = this.softwareRaw(id);
+    const next = Math.min(1, Math.max(0, cur + d * FX_AMOUNT_REL_STEP));
+    this.applyingFromMidi = true;
+    try {
+      switch (id) {
+        case 'deckA.filter':
+          this.deckA.setFilterAmount(next);
+          break;
+        case 'deckB.filter':
+          this.deckB.setFilterAmount(next);
+          break;
+        case 'deckA.wet':
+          this.deckA.setFlangerWet(next);
+          break;
+        case 'deckB.wet':
+          this.deckB.setFlangerWet(next);
+          break;
+        default: {
+          const _exhaustive: never = id;
+          void _exhaustive;
+        }
+      }
+      // Relative has no HW park — stay live.
+      this.takeovers.set(id, {
+        armed: false,
+        softwareValue: next,
+        hardwareValue: next,
+      });
+    } finally {
+      this.applyingFromMidi = false;
     }
   }
 

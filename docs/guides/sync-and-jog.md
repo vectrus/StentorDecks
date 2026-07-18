@@ -21,14 +21,14 @@ Phase math uses each track’s **file BPM** grid (same ticks you see on the deta
 
 The RMX2 jog is a relative MIDI stream (lots of tiny ±1 messages) — not a heavy SL-1200 platter. Soft feel is simulated in software.
 
-Dual-zone feel (Settings → Jog feel). Default is **Soft (heavy platter)**:
+Dual-zone feel (Settings → Jog feel). Default is **Soft (small heavy wheel)** — RMX2 jog ≈ 9 cm vs SL-1200 ≈ 30 cm:
 
 | Zone | When | Feel |
 |------|------|------|
-| **Fine** | Gentle fingertip / short nudge | Tiny sticky phase (impulse-capped) + light temp bend |
+| **Fine** | Gentle / steady light turn | **Smooth rate crawl** (not chunky seeks). Short burst = tiny impulse only |
 | **Spin** | Fast whip | Bigger throw for spinbacks |
 
-A short nudge shares one small phase budget across the MIDI flood (so it does not jump). Slow rotate stays subtle; a real hard twist still opens spin. Playing seeks are applied once per frame to reduce clicks.
+Steady light turns should feel like dragging a heavy small platter — offset moves slowly and continuously. A short push must not shoot forward like slipping a record.
 
 Presets: **Soft · Balanced · Spinny**. Changes apply live. Turn **Dual zone** off for fine-only (no spinback boost).
 

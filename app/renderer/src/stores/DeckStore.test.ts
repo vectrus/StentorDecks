@@ -245,7 +245,7 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     expect(deck.syncStatusLine).toMatch(/phase glue/i);
   });
 
-  it('nudge while playing micro-seeks and mutes assist (fine zone)', () => {
+  it('nudge while playing applies fine rate and mutes assist (fine zone)', () => {
     const deck = new DeckStore('A', () => defaultSettings);
     deck.state = 'playing';
     deck.duration = 120;
@@ -253,10 +253,12 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     deck.phaseGluePartner = 'B';
     deck.phaseGlueTargetSec = 0;
     deck.nudge(1);
-    deck.flushJogSeek(); // coalesced to rAF in production
-    expect(deck.position).toBeGreaterThan(10);
-    expect(deck.position).toBeLessThan(10.001); // cold EMA → fine ~0.08 ms
-    expect(deck.nudgeFactor).toBeCloseTo(1.0002, 5);
+    deck.flushJogSeek(); // coalesced; fine burst seek may be sub-threshold
+    // Rate-primary: nudgeFactor moves; sticky seek is tiny / often dropped
+    expect(deck.nudgeFactor).toBeGreaterThan(1);
+    expect(deck.nudgeFactor).toBeLessThan(1.001);
+    expect(deck.position).toBeGreaterThanOrEqual(10);
+    expect(deck.position).toBeLessThan(10.001);
     expect(deck.phaseGlueRetarget).toBe(true);
     expect(deck.phaseAssistMuteUntil).toBeGreaterThan(0);
   });

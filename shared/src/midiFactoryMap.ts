@@ -26,6 +26,8 @@ export const RMX2_FACTORY_MAP: MidiMapping = {
   // FX pads — Hercules PDF + owner [HW] PASS 2026-07-18 (FX mode).
   'deckA.filterPad': { kind: 'button', ch: 0, note: 0x01 },
   'deckA.flangerPad': { kind: 'button', ch: 0, note: 0x02 },
+  // FX Mode encoder — relative incremental (01…3F CW / 40…7F CCW), not absolute.
+  'deckA.filter': { kind: 'ccRel', ch: 0, cc: 0x54 },
 
   'deckB.play': { kind: 'button', ch: 0, note: 0x32 },
   'deckB.cue': { kind: 'button', ch: 0, note: 0x33 },
@@ -47,6 +49,7 @@ export const RMX2_FACTORY_MAP: MidiMapping = {
   'deckB.eqLow': { kind: 'cc7', ch: 0, cc: 0x50 },
   'deckB.filterPad': { kind: 'button', ch: 0, note: 0x11 },
   'deckB.flangerPad': { kind: 'button', ch: 0, note: 0x12 },
+  'deckB.filter': { kind: 'ccRel', ch: 0, cc: 0x55 },
 
   'mixer.faderA': { kind: 'cc14', ch: 0, msb: 0x3a, lsb: 0x3b },
   'mixer.faderB': { kind: 'cc14', ch: 0, msb: 0x4a, lsb: 0x4b },
@@ -92,6 +95,30 @@ export function factoryRelativeCcs(): Set<number> {
   set.add(0x33);
   return set;
 }
+
+/**
+ * Soft-migrate maps that learned FX Mode encoders as absolute cc7 (only ever
+ * saw 1/127). Also fill missing filter bindings from factory.
+ */
+export function migrateFxEncoderBindings(mapping: MidiMapping): MidiMapping {
+  const next: MidiMapping = { ...mapping };
+  const fix = (id: 'deckA.filter' | 'deckB.filter', cc: number) => {
+    const b = next[id];
+    if (!b) {
+      next[id] = { kind: 'ccRel', ch: 0, cc };
+      return;
+    }
+    if (b.kind === 'cc7' && b.cc === cc) {
+      next[id] = { kind: 'ccRel', ch: b.ch, cc };
+    }
+  };
+  fix('deckA.filter', 0x54);
+  fix('deckB.filter', 0x55);
+  return next;
+}
+
+/** Step in 0..1 domain per relative delta unit (FX encoder / learned rel). */
+export const FX_AMOUNT_REL_STEP = 0.01;
 
 export function lookupControlId(
   mapping: MidiMapping,

@@ -105,6 +105,20 @@ describe('midiLearn (E3)', () => {
     expect(s.phase.binding).toEqual({ kind: 'cc7', ch: 0, cc: 0x11 });
   });
 
+  it('learns FX Mode encoder (1/127 only) as ccRel', () => {
+    let s = learnEnable(createLearnState());
+    s = learnSelectControl(s, 'deckA.wet');
+    const map = { ...RMX2_FACTORY_MAP };
+    // Avoid factory filter binding conflict — use a free relative-looking CC
+    s = learnFeedRaw(s, cc(0, 0x5c, 1, 0), map);
+    s = learnFeedRaw(s, cc(0, 0x5c, 1, 20), map);
+    s = learnFeedRaw(s, cc(0, 0x5c, 127, 40), map);
+    s = learnFeedRaw(s, cc(0, 0x5c, 127, 60), map);
+    expect(s.phase.phase).toBe('confirm');
+    if (s.phase.phase !== 'confirm') return;
+    expect(s.phase.binding).toEqual({ kind: 'ccRel', ch: 0, cc: 0x5c });
+  });
+
   it('Esc cancel returns to off', () => {
     let s = learnEnable(createLearnState());
     s = learnSelectControl(s, 'deckA.filter');

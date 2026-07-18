@@ -14,9 +14,11 @@ export {
   RMX2_FACTORY_MAP,
   RMX2_PAD_NOTES_STATUS,
   RMX2_PAD_NOTES_UNVERIFIED,
+  FX_AMOUNT_REL_STEP,
   factoryCc14Pairs,
   factoryRelativeCcs,
   lookupControlId,
+  migrateFxEncoderBindings,
 } from './midiFactoryMap.js';
 export {
   MidiMappingParseError,
@@ -40,6 +42,7 @@ export {
   learnFeedRaw,
   learnRejectSteal,
   learnSelectControl,
+  looksLikeRelativeCc,
   qualifyContinuous,
   type LearnCommit,
   type LearnPhase,

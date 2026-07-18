@@ -5,6 +5,18 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-18 — Jog: small heavy wheel (rate crawl)
+
+RMX2 jog ≈ 9 cm vs SL-1200 ≈ 30 cm — short bursts felt like vinyl slip and steady light turns felt chunky (sticky seeks). Fine zone is now **rate-primary** when turning steadily; seek only a tiny impulse on short bursts (diameter-scaled + harder flood/impulse caps). Soft defaults migrate again. R2.2 / R2.3.
+
+---
+
+## 2026-07-18 — FX Mode encoder is relative (filter AMT)
+
+RMX2 FX Mode knobs (`CC 54`/`55`) only send incremental 1/127 — not absolute. Factory map + learn bind them as `ccRel`; filter amount steps from deltas. Soft-migrates prior `cc7` learns on those CCs. R3.1 / R8.1, docs/04.
+
+---
+
 ## 2026-07-18 — SYNC: load on master freezes slave
 
 Loading a track into the SYNC master no longer retargets the playing slave to the new analyzed BPM mid-play — slave SYNC clears and pitch stays frozen. R2.3 / R3.3.
