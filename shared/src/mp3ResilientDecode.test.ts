@@ -4,6 +4,8 @@ import {
   expectedMpegDurationSec,
   findMpegSync,
   isLikelyTruncatedDecode,
+  MPEG_CONTINUATION_TRIM_SAMPLES,
+  MPEG_SEAM_CROSSFADE_SAMPLES,
   parseXingInfo,
   type PcmBuffer,
 } from './mp3ResilientDecode.js';
@@ -74,14 +76,42 @@ describe('mp3ResilientDecode helpers', () => {
     expect(expectedMpegDurationSec(new Uint8Array(8), 123.4)).toBe(123.4);
   });
 
-  it('concatPcmBuffers joins channels', () => {
+  it('concatPcmBuffers hard-abut when fade/trim disabled', () => {
     const a = pcm(1, 44100, 2);
     const b = pcm(0.5, 44100, 2);
     a.getChannelData(0).fill(0.25);
     b.getChannelData(0).fill(0.5);
-    const out = concatPcmBuffers([a, b]);
+    const out = concatPcmBuffers([a, b], {
+      crossfadeSamples: 0,
+      continuationTrimSamples: 0,
+    });
     expect(out.duration).toBeCloseTo(1.5, 5);
     expect(out.getChannelData(0)[0]).toBe(0.25);
     expect(out.getChannelData(0)[44100]).toBe(0.5);
+  });
+
+  it('concatPcmBuffers seam-heals: trims continuation + blends discontinuity', () => {
+    const sr = 44100;
+    const a = pcm(1, sr, 1);
+    const b = pcm(1, sr, 1);
+    a.getChannelData(0).fill(1);
+    b.getChannelData(0).fill(-1);
+    const fade = 64;
+    const trim = 100;
+    const out = concatPcmBuffers([a, b], {
+      crossfadeSamples: fade,
+      continuationTrimSamples: trim,
+    });
+    // length = 1s + (1s - trim) - fade
+    expect(out.length).toBe(sr + (sr - trim) - fade);
+    expect(out.getChannelData(0)[0]).toBe(1);
+    // Mid-seam (equal-power of +1 and -1) should be near 0, not a hard step.
+    const seamMid = sr - fade + Math.floor(fade / 2);
+    const mid = out.getChannelData(0)[seamMid]!;
+    expect(Math.abs(mid)).toBeLessThan(0.25);
+    // After seam, continuation body is still -1.
+    expect(out.getChannelData(0)[sr]!).toBe(-1);
+    expect(MPEG_SEAM_CROSSFADE_SAMPLES).toBe(256);
+    expect(MPEG_CONTINUATION_TRIM_SAMPLES).toBe(576);
   });
 });

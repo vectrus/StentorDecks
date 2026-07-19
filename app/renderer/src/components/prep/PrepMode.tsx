@@ -1,5 +1,5 @@
 import { observer } from 'mobx-react-lite';
-import { deckA, deckB, libraryStore } from '../../stores/root';
+import { deckA, deckB, libraryStore, sessionPlayedStore } from '../../stores/root';
 import { CorrectionStrip } from './CorrectionStrip';
 import { DeckStrip } from './DeckStrip';
 import { FolderTree } from './FolderTree';
@@ -49,7 +49,19 @@ export const PrepMode = observer(function PrepMode() {
             <span>
               Load: deck buttons
               {libraryStore.loadError ? ` · ${libraryStore.loadError}` : ''}
+              {sessionPlayedStore.playedCount > 0
+                ? ` · ${sessionPlayedStore.playedCount} played`
+                : ''}
             </span>
+            <button
+              type="button"
+              className="prep-clear-played"
+              disabled={sessionPlayedStore.playedCount === 0}
+              onClick={() => sessionPlayedStore.clear()}
+              title="Clear session played marks (R5.8)"
+            >
+              Clear session played
+            </button>
           </div>
         </section>
       </div>

@@ -143,6 +143,21 @@ export type IpcInvokeMap = {
     };
     res: TrackRow | null;
   };
+  /**
+   * Prep R5.9 — write a Fixed-by-SD sibling WAV next to the source MP3.
+   * Never overwrites the source. `wavBytes` is PCM16 LE RIFF from the renderer decode.
+   */
+  'library:mp3FixWrite': {
+    req: {
+      sourceTrackId: number;
+      wavBytes: Uint8Array;
+      title: string;
+      artist: string | null;
+    };
+    res:
+      | { ok: true; path: string; trackId: number }
+      | { ok: false; reason: string };
+  };
   'analysis:enqueue': {
     req: { trackIds: number[]; priority: 'deck' | 'new' | 'backfill' };
     res: { ok: true; queueDepth: number };
@@ -184,6 +199,7 @@ export const IPC_INVOKE_CHANNELS = [
   'library:waveform',
   'library:pickRoot',
   'library:updateManual',
+  'library:mp3FixWrite',
   'analysis:enqueue',
   'settings:get',
   'settings:set',

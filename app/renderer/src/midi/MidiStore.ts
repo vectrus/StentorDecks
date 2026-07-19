@@ -171,10 +171,19 @@ export class MidiStore {
     this.applyMapping(mapping);
   }
 
+  /**
+   * Surface MIDI port presence. Soft takeover (R2.7) re-arms only on a real
+   * reconnect or port change — not on every statechange / audio rescan of the
+   * same port (that was parking live channel faders after pickup).
+   */
   setConnection(connected: boolean, portName: string | null): void {
+    const wasConnected = this.connected;
+    const prevPort = this.portName;
     this.connected = connected;
     this.portName = portName;
-    if (connected) this.rearmAllTakeovers();
+    if (connected && (!wasConnected || prevPort !== portName)) {
+      this.rearmAllTakeovers();
+    }
   }
 
   rearmAllTakeovers(): void {

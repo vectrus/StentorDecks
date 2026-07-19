@@ -97,6 +97,7 @@ Columns:
 - **`…`** means “not known yet” (often still analyzing).  
 - **`≈`** before BPM means “we’re not very sure” — check it with Tap / Detect if Sync feels wrong.  
 - A faint **`~`** next to the key means “this song could fit after the one you’re playing / have loaded” (same key, neighbour on the Camelot wheel, or relative major/minor). Hover for a short tip. It does **not** auto-sort the list.
+- A dimmed row with a **`✓`** means you already **played** that track this session (Play on for at least half a minute). Cleared when you quit the app, or with **Clear session played** (Prep footer or Settings → Library).
 
 ### Search box
 
@@ -114,6 +115,8 @@ Select a **track** (not a folder). Then you can:
 | **Tap** | Tap along with the beat (at least 4 taps). Then **Apply tap** to save |
 | **½** / **×2** | If the number is double or half of the real tempo (very common), fix it in one click |
 | **Detect** | Ask the app to re-analyze that song (BPM, key, **beatgrid**, waveform, loudness). Good SYNC needs a beatgrid — run Detect if Sync says “no beatgrid”. |
+| **Check MP3** | See if Chromium truncates this MP3 (short decode vs real length). |
+| **Write fixed WAV** | Makes a **new** file next to it named `… (Fixed by SD).wav`. The original MP3 is **never** changed. Use the Fixed file on the decks. |
 | **Camelot** | Pick the key yourself (`8A`, `9B`, …) or clear it with `—` |
 
 Your fixes are remembered. You don’t have to do them again next time.

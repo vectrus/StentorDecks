@@ -10,7 +10,14 @@ import {
   type Settings,
 } from '@stentordeck/shared';
 import { invoke, onIpc } from '../ipc/client';
-import { deckA, deckB, libraryStore, mixerStore, settingsStore } from '../stores/root';
+import {
+  deckA,
+  deckB,
+  libraryStore,
+  mixerStore,
+  sessionPlayedStore,
+  settingsStore,
+} from '../stores/root';
 import { FaderCurveEditor } from './settings/FaderCurveEditor';
 
 const SCALES: Settings['ui']['scale'][] = [100, 125, 150];
@@ -30,7 +37,7 @@ type SectionId = 'faders' | 'jog' | 'library' | 'display' | 'updates';
 const SECTIONS: { id: SectionId; label: string; hint: string }[] = [
   { id: 'faders', label: 'Faders & mixer', hint: 'Channel curve, pitch, EQ' },
   { id: 'jog', label: 'Jog feel', hint: 'Vinyl / CDJ nudge' },
-  { id: 'library', label: 'Library', hint: 'Roots & sort' },
+  { id: 'library', label: 'Library', hint: 'Roots, sort, session played' },
   { id: 'display', label: 'Display', hint: 'Scale & ticks' },
   { id: 'updates', label: 'Updates', hint: 'GitHub Releases' },
 ];
@@ -521,6 +528,28 @@ const LibrarySection = observer(function LibrarySection() {
       {libraryStore.error && <div className="temp-meta">{libraryStore.error}</div>}
       <div className="temp-meta mono">
         {libraryStore.entries.length} browse entries · {libraryStore.tracks.length} tracks
+      </div>
+
+      <h3 className="settings-section-title" style={{ marginTop: '1.25rem' }}>
+        Session played
+      </h3>
+      <p className="settings-section-lead">
+        Tracks turn dim + ✓ after ≥ 30 s of Play this session (R5.8). Cleared on quit, or
+        here.
+      </p>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <button
+          type="button"
+          disabled={sessionPlayedStore.playedCount === 0}
+          onClick={() => sessionPlayedStore.clear()}
+        >
+          Clear session played
+        </button>
+        <span className="temp-meta mono">
+          {sessionPlayedStore.playedCount === 0
+            ? 'None marked'
+            : `${sessionPlayedStore.playedCount} marked`}
+        </span>
       </div>
     </div>
   );

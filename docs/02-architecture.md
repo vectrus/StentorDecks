@@ -39,6 +39,8 @@ library:rescan           (path?) → ack            (progress via library:progre
 library:read             (id) → { path, bytes, tags… } | null   (deck load; path must be under a library root)
 library:pickRoot         () → { path } | null                   (native folder dialog for roots)
 library:updateManual     (id, bpm?, key…) → TrackRow | null     (Prep R6.6; sources → manual)
+library:mp3FixWrite      (sourceTrackId, wavBytes, title, artist) → {ok,path,trackId}|error
+                         (Prep R5.9 — sibling WAV only; never overwrites source)
 analysis:enqueue         (trackIds[], priority)   main → analysis window internally
 analysis:progress        event → { trackId, stage, queueDepth }
 settings:get / settings:set / settings:changed event

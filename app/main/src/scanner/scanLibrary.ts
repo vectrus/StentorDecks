@@ -37,19 +37,24 @@ export function isAudioPath(filePath: string): boolean {
   return AUDIO_EXT.has(path.extname(filePath).toLowerCase());
 }
 
+export type IndexAudioResult = {
+  kind: 'insert' | 'update' | 'move' | 'skip';
+  id: number | null;
+};
+
 /** Index one audio file (scan + watcher path). */
 export async function indexAudioFile(
   db: DbHandle,
   filePath: string,
-): Promise<'insert' | 'update' | 'move' | 'skip'> {
+): Promise<IndexAudioResult> {
   const abs = normalizePath(filePath);
-  if (!isAudioPath(abs) || !fs.existsSync(abs)) return 'skip';
+  if (!isAudioPath(abs) || !fs.existsSync(abs)) return { kind: 'skip', id: null };
   let st: fs.Stats;
   try {
     st = fs.statSync(abs);
-    if (!st.isFile()) return 'skip';
+    if (!st.isFile()) return { kind: 'skip', id: null };
   } catch {
-    return 'skip';
+    return { kind: 'skip', id: null };
   }
 
   const partialHash = computePartialHashSync(abs);
@@ -111,7 +116,7 @@ export async function indexAudioFile(
     keyName,
     keySource,
   });
-  return result.kind;
+  return { kind: result.kind, id: result.id };
 }
 
 export async function scanLibraryRoots(
@@ -141,7 +146,7 @@ export async function scanLibraryRoots(
     live.add(normalizePath(filePath));
     scanned += 1;
     try {
-      const kind = await indexAudioFile(db, filePath);
+      const { kind } = await indexAudioFile(db, filePath);
       if (kind === 'insert') inserted += 1;
       else if (kind === 'move') moved += 1;
       else if (kind === 'update') updated += 1;

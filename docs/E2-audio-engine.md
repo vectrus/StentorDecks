@@ -20,7 +20,7 @@ Reads: docs/02 (routing), docs/03 (engine), docs/07. **Dual-output routing risk 
 - `[HW]` Plan A on the owner's RMX2: different tracks simultaneously on sound-system outputs (1-2) and headphones (3-4); PFL toggles per deck; cue/mix blend audibly sweeps.
 - `[HW]` Plan B forced: same behaviors with two stereo endpoints; app states the active plan truthfully.
 - `[HW]` Unplug the RMX2 mid-playback → banner, decks pause, positions kept; replug → playable within 2 s without restart.
-- Decode + play MP3, FLAC, WAV; a 60-minute WAV loads without UI freeze (decode off the main thread of the renderer via async decode; loading indicator).
+- Decode + play MP3, FLAC, WAV; a 60-minute WAV loads without UI freeze (decode off the main thread of the renderer via async decode; loading indicator). Long/damaged MP3s use resilient resume-at-sync decode; multi-segment joins seam-heal (short trim + ~6 ms overlap-add) so stitch clicks stay quiet without a second full decode.
 - Pitch fader model at ±8 % and ±16 % changes effective rate correctly; range switch re-arms takeover; nudge decays per spec; brake toggle audibly brakes.
 - Classic CDJ cue: set/preview-while-held when stopped; jump-and-continue when playing (unit tests for the state table in docs/03).
 - End of track: stops and jumps to cue; warning timestamps exposed to UI store at 30/15/10 s.

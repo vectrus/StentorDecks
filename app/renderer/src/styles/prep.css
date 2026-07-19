@@ -247,6 +247,27 @@
   color: var(--text-faint);
 }
 
+/* R5.8 — session played: dim + mark */
+.prep-row.played {
+  color: var(--text-faint);
+  opacity: 0.72;
+}
+
+.prep-row.played.sel {
+  color: var(--text-dim);
+  opacity: 0.92;
+}
+
+.played-mark {
+  display: inline-block;
+  width: 1.15rem;
+  margin-right: 0.2rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-faint);
+  vertical-align: 0.05em;
+}
+
 .prep-row:hover:not(.sel) {
   background: var(--bg-raised);
 }
@@ -326,8 +347,24 @@
   color: var(--deck-a);
 }
 
+.prep-correct button.prep-mp3-fix {
+  border-color: var(--deck-b);
+  color: var(--deck-b);
+}
+
+.prep-mp3-detail {
+  flex: 1 1 100%;
+  color: var(--text-dim);
+}
+
+.prep-mp3-detail.needs-fix {
+  color: var(--vu-hot, #ffb454);
+}
+
 .prep-foot {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 0.85rem;
   margin-top: 0.45rem;
   font-size: 0.75rem;
@@ -335,8 +372,26 @@
   flex-shrink: 0;
 }
 
-.prep-foot span:last-child {
+.prep-clear-played {
   margin-left: auto;
+  font: inherit;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+}
+
+.prep-clear-played:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.prep-clear-played:not(:disabled):hover {
+  color: var(--text);
+  border-color: var(--border-strong);
 }
 
 @media (max-width: 800px) {

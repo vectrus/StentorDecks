@@ -76,6 +76,8 @@ export class MidiEngine {
     }
 
     if (this.input?.id === preferredIn.id) {
+      // Same port: keep handler fresh, but do not force soft-takeover re-arm
+      // (setConnection is idempotent for takeover when already connected).
       this.bindHandler(this.input);
       this.store.setConnection(true, preferredIn.name ?? null);
       return;
@@ -84,8 +86,8 @@ export class MidiEngine {
     this.detachInput();
     this.input = preferredIn;
     this.bindHandler(preferredIn);
+    // setConnection rearms takeovers on port change / reconnect (R2.7).
     this.store.setConnection(true, preferredIn.name ?? null);
-    this.store.rearmAllTakeovers();
   }
 
   private bindHandler(input: MIDIInput): void {

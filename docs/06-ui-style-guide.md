@@ -53,7 +53,7 @@ Deck panel: title/artist + phones PFL; BPM · pitch% · key chip · remaining (E
 
 Mixer (7 columns L→R): **GAIN A** · blue kill LEDs A · EQ knobs + fader/VU A · centered HI/MID/LOW labels · EQ knobs + fader/VU B · blue kill LEDs B · **GAIN B**. Kill LEDs lit when kill on. Fader cap centered in a lane; VU clear beside it. Master/cue/phones in the app topbar. No crossfader.
 
-**Prep mode** — compact deck strips pinned top (accent left border, play state icon, title, BPM, remaining); below: folder tree (~190 px) + large browser with breadcrumb and search; **BPM/key correction strip** (tap, ½, ×2, key picker) required (R6.6); footer hints for encoder navigation. Operator walkthrough: [`guides/prep-library.md`](./guides/prep-library.md).
+**Prep mode** — compact deck strips pinned top (accent left border, play state icon, title, BPM, remaining); below: folder tree (~190 px) + large browser with breadcrumb and search; **BPM/key correction strip** (tap, ½, ×2, key picker) required (R6.6); **Check MP3 / Write fixed WAV** on the same strip (R5.9 — sibling `(Fixed by SD).wav` only); footer hints for encoder navigation. Operator walkthrough: [`guides/prep-library.md`](./guides/prep-library.md).
 
 ## States & feedback
 
@@ -63,6 +63,7 @@ Mixer (7 columns L→R): **GAIN A** · blue kill LEDs A · EQ knobs + fader/VU A
 - **Cue (headphone) state**: headphone icon per deck, lit deck-accent when in phones.
 - **Sync armed**: SYNC button lit until released.
 - **Analysis pending**: `…` in BPM/key cells, `text-faint`; low-confidence values dimmed with `≈` prefix.
+- **Session played** (R5.8): after ≥ 30 s cumulative play on a deck, that track’s Prep/Performance row uses `text-faint` / reduced opacity **and** a small `✓` mark before the title (`aria-label` “Played this session”). Selected played rows stay readable (slightly less dim). Settings → Library and Prep footer expose **Clear session played**.
 - **Empty deck**: all chrome in `disabled` tones, `---.-` placeholders, LOAD lit.
 - **Hardware banners**: controller/audio device lost → single top banner, `vu-clip` accent, auto-dismiss on reconnect.
 - **End-of-track warning** (R2.11): time-remaining switches to `vu-clip` at ≤ 30 s; pulses once at 15 s and 10 s (120 ms). Waveform overview trailing region tints per docs/05 rendering contract.

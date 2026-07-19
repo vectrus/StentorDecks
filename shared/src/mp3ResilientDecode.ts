@@ -5,7 +5,19 @@
  * concatenates segments until Xing/Info (or size/bitrate) duration is covered.
  *
  * Pure orchestration — caller supplies decode + concat (DOM Offline/AudioContext).
+ *
+ * Seam healing (booth MP3 reality): mid-stream restarts leave MDCT / priming
+ * discontinuities. Multi-part concat trims a short continuation head and
+ * overlap-adds a few ms at each seam — O(seams × fade) vs full-track decode.
  */
+
+/** ~5.8 ms @ 44.1 kHz — softens stitch clicks without audible duck. */
+export const MPEG_SEAM_CROSSFADE_SAMPLES = 256;
+/**
+ * Drop decoder priming / encoder-delay garbage from each segment after the first
+ * (~half MPEG-1 layer III frame @ 44.1).
+ */
+export const MPEG_CONTINUATION_TRIM_SAMPLES = 576;
 
 export type PcmBuffer = {
   duration: number;
@@ -174,16 +186,44 @@ export async function decodeMpegResilient(
   }
 
   if (parts.length === 0) return naive;
+  // api.concat → concatPcmBuffers (seam-healed by default) → one AudioBuffer wrap.
   const merged = api.concat(parts);
   // Prefer resilient if it recovered substantially more audio.
   if (merged.duration > naive.duration * 1.2) return merged;
   return naive;
 }
 
-/** Concatenate PCM channel data (used by decodeMpegResilient callers / tests). */
-export function concatPcmBuffers(parts: PcmBuffer[]): PcmBuffer {
+export type ConcatPcmOpts = {
+  /** Overlap-add length at each seam (0 = hard abut). */
+  crossfadeSamples?: number;
+  /** Samples trimmed from the start of each segment after the first. */
+  continuationTrimSamples?: number;
+};
+
+/**
+ * Concatenate PCM channel data (deck load + analysis).
+ * Multi-part defaults heal MPEG stitch seams (R2.1 booth MP3s).
+ */
+export function concatPcmBuffers(
+  parts: PcmBuffer[],
+  opts?: ConcatPcmOpts,
+): PcmBuffer {
   if (parts.length === 0) throw new Error('concatPcmBuffers: empty');
   if (parts.length === 1) return parts[0]!;
+
+  const crossfade = Math.max(0, Math.floor(opts?.crossfadeSamples ?? MPEG_SEAM_CROSSFADE_SAMPLES));
+  const contTrim = Math.max(
+    0,
+    Math.floor(opts?.continuationTrimSamples ?? MPEG_CONTINUATION_TRIM_SAMPLES),
+  );
+
+  if (crossfade === 0 && contTrim === 0) {
+    return concatPcmHard(parts);
+  }
+  return concatPcmSeamHealed(parts, crossfade, contTrim);
+}
+
+function concatPcmHard(parts: PcmBuffer[]): PcmBuffer {
   const sampleRate = parts[0]!.sampleRate;
   const numberOfChannels = Math.max(...parts.map((p) => p.numberOfChannels));
   let length = 0;
@@ -200,10 +240,99 @@ export function concatPcmBuffers(parts: PcmBuffer[]): PcmBuffer {
     }
     o += p.length;
   }
+  return makePcm(channels, sampleRate);
+}
+
+/**
+ * Trim continuation heads + equal-power overlap-add at seams.
+ * Cost is O(seams × fade × channels); bulk copy is still one pass.
+ */
+function concatPcmSeamHealed(
+  parts: PcmBuffer[],
+  crossfade: number,
+  contTrim: number,
+): PcmBuffer {
+  const sampleRate = parts[0]!.sampleRate;
+  const numberOfChannels = Math.max(...parts.map((p) => p.numberOfChannels));
+
+  type Slice = { starts: number[]; lengths: number[]; src: PcmBuffer };
+  const slices: Slice[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i]!;
+    let start = i === 0 ? 0 : Math.min(contTrim, Math.max(0, p.length - 1));
+    // Keep enough samples for a crossfade into the next piece.
+    const minKeep = crossfade > 0 && i < parts.length - 1 ? crossfade + 1 : 1;
+    if (p.length - start < minKeep) start = Math.max(0, p.length - minKeep);
+    slices.push({
+      starts: Array.from({ length: numberOfChannels }, () => start),
+      lengths: Array.from({ length: numberOfChannels }, () => p.length - start),
+      src: p,
+    });
+  }
+
+  let length = slices[0]!.lengths[0]!;
+  for (let i = 1; i < slices.length; i++) {
+    const fade = Math.min(
+      crossfade,
+      slices[i - 1]!.lengths[0]!,
+      slices[i]!.lengths[0]!,
+    );
+    length += slices[i]!.lengths[0]! - fade;
+  }
+
+  const channels: Float32Array[] = Array.from(
+    { length: numberOfChannels },
+    () => new Float32Array(length),
+  );
+
+  // First segment: straight copy.
+  {
+    const s0 = slices[0]!;
+    const start0 = s0.starts[0]!;
+    const len0 = s0.lengths[0]!;
+    for (let c = 0; c < numberOfChannels; c++) {
+      const src = s0.src.getChannelData(Math.min(c, s0.src.numberOfChannels - 1));
+      channels[c]!.set(src.subarray(start0, start0 + len0), 0);
+    }
+  }
+
+  let o = slices[0]!.lengths[0]!;
+  for (let i = 1; i < slices.length; i++) {
+    const prev = slices[i - 1]!;
+    const cur = slices[i]!;
+    const fade = Math.min(crossfade, prev.lengths[0]!, cur.lengths[0]!);
+    const seamAt = o - fade;
+    const curStart = cur.starts[0]!;
+
+    for (let c = 0; c < numberOfChannels; c++) {
+      const out = channels[c]!;
+      const src = cur.src.getChannelData(Math.min(c, cur.src.numberOfChannels - 1));
+      for (let k = 0; k < fade; k++) {
+        // Equal-power-ish cosine ramp — cheaper than full EQ pow, smooth enough.
+        const t = (k + 1) / (fade + 1);
+        const wIn = Math.sin(t * (Math.PI / 2));
+        const wOut = Math.cos(t * (Math.PI / 2));
+        const a = out[seamAt + k]!;
+        const b = src[curStart + k]!;
+        out[seamAt + k] = a * wOut + b * wIn;
+      }
+      const rest = cur.lengths[0]! - fade;
+      if (rest > 0) {
+        out.set(src.subarray(curStart + fade, curStart + fade + rest), o);
+      }
+    }
+    o += cur.lengths[0]! - fade;
+  }
+
+  return makePcm(channels, sampleRate);
+}
+
+function makePcm(channels: Float32Array[], sampleRate: number): PcmBuffer {
+  const length = channels[0]!.length;
   return {
     duration: length / sampleRate,
     length,
-    numberOfChannels,
+    numberOfChannels: channels.length,
     sampleRate,
     getChannelData: (c: number) => channels[c]!,
   };

@@ -163,6 +163,21 @@ describe('MidiStore ingest (fixture traffic)', () => {
     expect(store.monitor.some((e) => e.controlId === 'deckA.filter')).toBe(true);
   });
 
+  it('setConnection does not re-arm takeovers when already on the same port (R2.7)', () => {
+    const { store } = makeStore();
+    store.setConnection(true, 'RMX2');
+    store.takeovers.set('mixer.faderA', {
+      armed: false,
+      softwareValue: 0.8,
+      hardwareValue: 0.8,
+    });
+    store.setConnection(true, 'RMX2'); // statechange / audio rescan
+    expect(store.takeoverView('mixer.faderA')?.armed).toBe(false);
+    store.setConnection(false, null);
+    store.setConnection(true, 'RMX2'); // real reconnect
+    expect(store.takeoverView('mixer.faderA')?.armed).toBe(true);
+  });
+
   it('Shift+FX relative encoder steps flanger wet (CC 5C = 1 / 127)', () => {
     const { store, deckA } = makeStore();
     deckA.flangerWet = 0;

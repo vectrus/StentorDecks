@@ -2,13 +2,19 @@ import { makeAutoObservable, runInAction } from 'mobx';
 import {
   averageTapBpm,
   camelotDisplayName,
+  encodeWavPcm16le,
+  expectedMpegDurationSec,
   isCamelotKey,
+  isLikelyTruncatedDecode,
   rescaleBeatGridOffsetSec,
+  withFixedBySdTitle,
   type AnalysisProgress,
   type FolderNode,
   type LibraryProgress,
+  type Mp3InspectResult,
   type TrackRow,
 } from '@stentordeck/shared';
+import { decodeArrayBufferOffThread } from '../audio/decodeAudio';
 import { invoke, onIpc } from '../ipc/client';
 import { settingsStore } from './SettingsStore';
 
@@ -42,6 +48,10 @@ export class LibraryStore {
   /** Last analysis:enqueue / progress hint for Prep Detect (E5 fills this in). */
   detectStatus: string | null = null;
   analysisProgress: AnalysisProgress | null = null;
+  /** Prep R5.9 — last MP3 health check for the selected track. */
+  mp3Inspect: Mp3InspectResult | null = null;
+  mp3FixStatus: string | null = null;
+  mp3FixBusy = false;
   /** Live library size for Perf strip summary. */
   trackCount = 0;
 
@@ -458,6 +468,139 @@ export class LibraryStore {
     } catch (err) {
       runInAction(() => {
         this.detectStatus = err instanceof Error ? err.message : String(err);
+      });
+    }
+  }
+
+  /**
+   * Prep R5.9 — quick Chromium decode vs Xing/tag duration (does not write files).
+   */
+  async checkSelectedMp3(): Promise<void> {
+    const row = this.selectedTrack;
+    if (!row) return;
+    const isMp3 = /\.mp3$/i.test(row.path);
+    runInAction(() => {
+      this.mp3FixStatus = isMp3 ? 'Checking MP3…' : null;
+      this.mp3Inspect = null;
+    });
+    if (!isMp3) {
+      runInAction(() => {
+        this.mp3Inspect = {
+          trackId: row.id,
+          path: row.path,
+          isMp3: false,
+          expectedSec: null,
+          decodedSec: 0,
+          needsFix: false,
+          detail: 'Not an MP3 — fix is only for damaged MP3s (writes a sibling WAV).',
+        };
+        this.mp3FixStatus = null;
+      });
+      return;
+    }
+
+    try {
+      const payload = await invoke('library:read', { id: row.id });
+      if (!payload) throw new Error('Could not read track file');
+      const u8 = payload.bytes;
+      const ab = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+      const expected =
+        expectedMpegDurationSec(u8, (payload.durationMs ?? row.durationMs ?? 0) / 1000) ??
+        null;
+      const probe = new OfflineAudioContext(2, 128, 44100);
+      const naive = await probe.decodeAudioData(ab.slice(0));
+      const needsFix = isLikelyTruncatedDecode(naive.duration, expected);
+      const detail = needsFix
+        ? `Chromium hears ${naive.duration.toFixed(1)}s but file looks like ~${(expected ?? 0).toFixed(1)}s — write a Fixed-by-SD WAV.`
+        : `Decode looks complete (${naive.duration.toFixed(1)}s). You can still write a Fixed WAV if you hear clicks.`;
+      runInAction(() => {
+        this.mp3Inspect = {
+          trackId: row.id,
+          path: payload.path,
+          isMp3: true,
+          expectedSec: expected,
+          decodedSec: naive.duration,
+          needsFix,
+          detail,
+        };
+        this.mp3FixStatus = needsFix ? 'Needs fix' : 'OK';
+      });
+    } catch (err) {
+      runInAction(() => {
+        this.mp3FixStatus = err instanceof Error ? err.message : String(err);
+      });
+    }
+  }
+
+  /**
+   * Prep R5.9 — resilient decode → sibling `* (Fixed by SD).wav`. Never touches the MP3.
+   */
+  async fixSelectedMp3(): Promise<void> {
+    const row = this.selectedTrack;
+    if (!row || this.mp3FixBusy) return;
+    if (!/\.mp3$/i.test(row.path)) {
+      runInAction(() => {
+        this.mp3FixStatus = 'Select an MP3 first';
+      });
+      return;
+    }
+
+    runInAction(() => {
+      this.mp3FixBusy = true;
+      this.mp3FixStatus = 'Decoding (resilient)…';
+    });
+
+    try {
+      const payload = await invoke('library:read', { id: row.id });
+      if (!payload) throw new Error('Could not read track file');
+      const u8 = payload.bytes;
+      const ab = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+      const expected =
+        expectedMpegDurationSec(u8, (payload.durationMs ?? row.durationMs ?? 0) / 1000) ??
+        null;
+      const probe = new OfflineAudioContext(2, 128, 44100);
+      const buf = await decodeArrayBufferOffThread(probe, ab, {
+        expectedDurationSec: expected,
+      });
+
+      runInAction(() => {
+        this.mp3FixStatus = 'Writing sibling WAV…';
+      });
+
+      const channels: Float32Array[] = [];
+      for (let c = 0; c < buf.numberOfChannels; c++) {
+        channels.push(buf.getChannelData(c));
+      }
+      const wavBytes = encodeWavPcm16le({
+        sampleRate: buf.sampleRate,
+        numberOfChannels: buf.numberOfChannels,
+        channelData: channels,
+      });
+
+      const title = withFixedBySdTitle(payload.title ?? row.title, 'Track');
+      const result = await invoke('library:mp3FixWrite', {
+        sourceTrackId: row.id,
+        wavBytes,
+        title,
+        artist: payload.artist ?? row.artist,
+      });
+
+      if (!result.ok) throw new Error(result.reason);
+
+      await this.refresh();
+      runInAction(() => {
+        const idx = this.entries.findIndex(
+          (e) => e.kind === 'track' && e.track.id === result.trackId,
+        );
+        if (idx >= 0) this.cursor = idx;
+        this.mp3FixStatus = `Wrote ${result.path.split(/[/\\]/).pop()} — original untouched`;
+        this.mp3Inspect = null;
+        this.mp3FixBusy = false;
+      });
+    } catch (err) {
+      runInAction(() => {
+        this.mp3FixBusy = false;
+        this.mp3FixStatus = err instanceof Error ? err.message : String(err);
       });
     }
   }

@@ -8,6 +8,7 @@ export * from './midiDecode.js';
 export * from './camelot.js';
 export * from './analysisContract.js';
 export * from './mp3ResilientDecode.js';
+export * from './mp3Fix.js';
 export * from './syncPhase.js';
 export * from './jogFeel.js';
 export {

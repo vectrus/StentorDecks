@@ -5,6 +5,30 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Prep: Check MP3 + Write fixed WAV (R5.9)
+
+Owner: Prep tools to inspect bad MP3s and write a **sibling** fixed file — never touch the original. Output is always `* (Fixed by SD).wav` (PCM16; no ffmpeg). Check compares Chromium decode vs Xing/tag; Write runs resilient decode + index + analysis enqueue. R5.9, docs/02, docs/06.
+
+---
+
+## 2026-07-19 — MP3 resilient stitch: seam crossfade (clicks)
+
+Booth library is mostly MP3. Chromium truncate recovery concatenates decode segments; hard abut left ticks at seams (worse on damaged/VBR files). Multi-part concat now trims continuation priming (~576 samples) and overlap-adds ~6 ms (256 samples) per seam — O(seams × fade), no extra decode passes. Clean single-decode MP3s unchanged. R2.1, docs/E2.
+
+---
+
+## 2026-07-19 — Soft takeover: stop re-arming on every MIDI rescan
+
+Channel faders (and other continuous controls) went live after pickup, then “lost connection” because `setConnection(true)` / MIDI `statechange` / audio `rescan` re-armed soft takeover even when the RMX2 port never changed. Re-arm only on real reconnect or port change. R2.7, docs/03.
+
+---
+
+## 2026-07-19 — Session played marks (R5.8)
+
+Owner: mark tracks already played this session — transport play cumulative ≥ 30 s; Prep + Performance rows dim **and** show a `✓`; clear on quit/restart **and** via Clear session played. R5.8, docs/06, E4.
+
+---
+
 ## 2026-07-19 — Jog Soft: smoother nudges (rate-led flick)
 
 Skippy Soft nudges came from ~3 ms sticky seeks stacking. Soft flicks are now **rate-led** (stronger temp bend) with tiny flood-compressed sticky seasoning (~0.85 ms, ~4.5 ms impulse cap); seek opens with nudge². Migrate prior Soft 3 ms / 42–90 t/s bundle. R2.2, docs/03, docs/07.

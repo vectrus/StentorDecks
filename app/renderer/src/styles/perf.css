@@ -836,6 +836,16 @@
   color: var(--text-faint);
 }
 
+.perf-row.played {
+  color: var(--text-faint);
+  opacity: 0.72;
+}
+
+.perf-row.played.sel {
+  color: var(--text-dim);
+  opacity: 0.92;
+}
+
 .perf-row.empty {
   color: var(--text-faint);
   font-size: 0.875rem;

@@ -8,8 +8,8 @@ Reads: docs/05 (scanner, schema), docs/06 (browser layouts), R5. Depends on E1; 
 2. Scanner in main: initial walk, chokidar watcher (debounced), tag extraction via music-metadata, tag-BPM/key validation and trust rules, identity model with partial hash, move detection, change invalidation, missing/purge lifecycle. Scan progress events.
 3. `library:*` IPC per docs/02: folder tree, filtered/sorted track queries, search (whole-library, indexed LIKE, debounced 150 ms), single-track detail.
 4. `LibraryStore` (renderer): folder tree state, selection model (row cursor as the single selection the RMX2 browse cluster and load buttons act on), search state, sort.
-5. Browser UI — Prep mode per mockup `prep_mode_folder_browser`: folder tree (open/closed, active folder accented), breadcrumb, 42 px rows at 16 px, columns Track (artist — title) / BPM / Key / Time, `…` placeholders, `≈` low-confidence dimming, virtualized list (5000 rows smooth). BPM/key correction strip (tap, ½, ×2, key picker) writing `manual` sources (R6.6).
-6. Browser UI — Performance mode: the 3-row strip with search summary line and analyzing counter.
+5. Browser UI — Prep mode per mockup `prep_mode_folder_browser`: folder tree (open/closed, active folder accented), breadcrumb, 42 px rows at 16 px, columns Track (artist — title) / BPM / Key / Time, `…` placeholders, `≈` low-confidence dimming, virtualized list (5000 rows smooth). BPM/key correction strip (tap, ½, ×2, key picker) writing `manual` sources (R6.6). Session-played rows (R5.8): dim + `✓` mark; Clear session played in Prep footer.
+6. Browser UI — Performance mode: the 3-row strip with search summary line and analyzing counter; same session-played dim + mark as Prep.
 7. First-run library root picker; roots editable in settings; multiple roots merge into one tree with root nodes.
 8. Load pathways: double-click and per-deck Load buttons call `DeckStore.load(track)` (interlock behavior from E2 surfaces here as the flash/toast once E6 lands; until then, console-visible rejection is acceptable).
 
@@ -25,3 +25,5 @@ Reads: docs/05 (scanner, schema), docs/06 (browser layouts), R5. Depends on E1; 
 - Copy the same file into a second watched folder → two rows, same analysis fields after either is analyzed (R5.7).
 - Keyboard: arrows move cursor, right/left enter/parent folder, Enter = load to last-targeted deck — identical semantics to the RMX2 browse cluster (shared action layer with E3).
 - Virtualized list: 5000-row folder scrolls at 60 fps on the reference laptop.
+- Session played (R5.8): play a track ≥ 30 s → that row dims and shows `✓` in Prep and Performance; Clear session played removes all marks; relaunch starts clean.
+- Prep MP3 fix (R5.9): Check MP3 reports truncate; Write fixed WAV creates only a sibling `* (Fixed by SD).wav`; source MP3 bytes unchanged; new row appears and analyzes.

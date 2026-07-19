@@ -2,7 +2,7 @@ import { observer } from 'mobx-react-lite';
 import { useEffect, useRef, useState } from 'react';
 import type { LibraryBrowseEntry } from '../../stores/LibraryStore';
 import { mixReferenceKey } from '../../stores/mixReferenceKey';
-import { deckA, deckB, libraryStore } from '../../stores/root';
+import { deckA, deckB, libraryStore, sessionPlayedStore } from '../../stores/root';
 import { KeyHint } from '../browse/KeyHint';
 import { fmtBpm, fmtDur } from './fmt';
 
@@ -101,9 +101,13 @@ const BrowseRow = observer(function BrowseRow(props: {
   referenceKey: string | null;
 }) {
   const { entry, index, selected, offsetY, referenceKey } = props;
+  const played =
+    entry.kind === 'track' && sessionPlayedStore.isPlayed(entry.track.id);
   return (
     <div
-      className={`prep-row${selected ? ' sel' : ''}${entry.kind === 'track' && entry.track.lowConfidence ? ' low' : ''}`}
+      className={`prep-row${selected ? ' sel' : ''}${
+        entry.kind === 'track' && entry.track.lowConfidence ? ' low' : ''
+      }${played ? ' played' : ''}`}
       style={{ top: offsetY, height: ROW_H }}
       role="option"
       aria-selected={selected}
@@ -123,7 +127,14 @@ const BrowseRow = observer(function BrowseRow(props: {
         </>
       ) : (
         <>
-          <span className="prep-col track">{entry.name}</span>
+          <span className="prep-col track">
+            {played ? (
+              <span className="played-mark" aria-label="Played this session">
+                ✓
+              </span>
+            ) : null}
+            {entry.name}
+          </span>
           <span className="prep-col bpm mono">
             {fmtBpm(entry.track.bpm, entry.track.lowConfidence)}
           </span>

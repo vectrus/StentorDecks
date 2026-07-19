@@ -1,6 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import { useLayoutEffect, useRef, useState } from 'react';
-import { deckA, deckB, libraryStore } from '../../stores/root';
+import { deckA, deckB, libraryStore, sessionPlayedStore } from '../../stores/root';
 import { mixReferenceKey } from '../../stores/mixReferenceKey';
 import { KeyHint } from '../browse/KeyHint';
 import { fmtBpm, fmtDur } from '../prep/fmt';
@@ -93,12 +93,14 @@ export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
         {visible.map((entry) => {
           const index = entries.indexOf(entry);
           const selected = index === cursor;
+          const played =
+            entry.kind === 'track' && sessionPlayedStore.isPlayed(entry.track.id);
           return (
             <li
               key={entry.kind === 'folder' ? entry.path : entry.track.id}
               className={`perf-row${selected ? ' sel' : ''}${
                 entry.kind === 'track' && entry.track.lowConfidence ? ' low' : ''
-              }`}
+              }${played ? ' played' : ''}`}
               role="option"
               aria-selected={selected}
               onClick={() => libraryStore.selectIndex(index)}
@@ -117,7 +119,14 @@ export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
                 </>
               ) : (
                 <>
-                  <span className="perf-col track">{entry.name}</span>
+                  <span className="perf-col track">
+                    {played ? (
+                      <span className="played-mark" aria-label="Played this session">
+                        ✓
+                      </span>
+                    ) : null}
+                    {entry.name}
+                  </span>
                   <span className="perf-col bpm mono">
                     {fmtBpm(entry.track.bpm, entry.track.lowConfidence)}
                   </span>
