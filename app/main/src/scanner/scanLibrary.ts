@@ -135,11 +135,17 @@ export async function scanLibraryRoots(
   const files: string[] = [];
   for (const root of roots) {
     const abs = normalizePath(root);
-    if (!fs.existsSync(abs)) continue;
+    if (!fs.existsSync(abs)) {
+      console.warn('[scanner] root missing — skipped', abs);
+      continue;
+    }
     walkAudioFiles(abs, files);
   }
 
   const total = files.length;
+  console.info(
+    `[scanner] walk found ${total} audio file(s) (.mp3/.flac/.wav) under ${roots.length} root(s)`,
+  );
   onProgress?.({ phase: 'scan', scanned: 0, total });
 
   for (const filePath of files) {
@@ -183,6 +189,35 @@ function extractKeyTag(meta: {
   return null;
 }
 
+/**
+ * Classify a dirent for library walk.
+ * OneDrive / cloud placeholders often report neither isFile nor isDirectory —
+ * those must be resolved with statSync or almost the whole library is skipped.
+ */
+export function classifyWalkEntry(
+  ent: Pick<fs.Dirent, 'name' | 'isDirectory' | 'isFile'>,
+  fullPath: string,
+  stat: (p: string) => fs.Stats,
+): 'dir' | 'file' | 'skip' {
+  if (ent.name === '.' || ent.name === '..') return 'skip';
+  if (ent.isDirectory()) {
+    if (ent.name.startsWith('.')) return 'skip';
+    return 'dir';
+  }
+  if (ent.isFile()) return 'file';
+  try {
+    const st = stat(fullPath);
+    if (st.isDirectory()) {
+      if (ent.name.startsWith('.')) return 'skip';
+      return 'dir';
+    }
+    if (st.isFile()) return 'file';
+  } catch {
+    /* unreadable / online-only failure */
+  }
+  return 'skip';
+}
+
 function walkAudioFiles(dir: string, out: string[]): void {
   let entries: fs.Dirent[];
   try {
@@ -192,11 +227,8 @@ function walkAudioFiles(dir: string, out: string[]): void {
   }
   for (const ent of entries) {
     const full = path.join(dir, ent.name);
-    if (ent.isDirectory()) {
-      if (ent.name.startsWith('.')) continue;
-      walkAudioFiles(full, out);
-    } else if (ent.isFile()) {
-      if (isAudioPath(full)) out.push(full);
-    }
+    const kind = classifyWalkEntry(ent, full, (p) => fs.statSync(p));
+    if (kind === 'dir') walkAudioFiles(full, out);
+    else if (kind === 'file' && isAudioPath(full)) out.push(full);
   }
 }

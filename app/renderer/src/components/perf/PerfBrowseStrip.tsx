@@ -3,13 +3,17 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { deckA, deckB, libraryStore, sessionPlayedStore } from '../../stores/root';
 import { mixReferenceKey } from '../../stores/mixReferenceKey';
 import { KeyHint } from '../browse/KeyHint';
+import { FolderTree } from '../prep/FolderTree';
 import { fmtBpm, fmtDur } from '../prep/fmt';
 
 /** Row height matches R7.1 (≥42 px) — keep in sync with `.perf-row` in perf.css. */
 const ROW_PX = 42;
 const MIN_ROWS = 3;
 
-/** Performance library — fills leftover height; windowed list around cursor. */
+/**
+ * Performance library — Djuced-style two panes:
+ * small folder tree (left) + track list (right).
+ */
 export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
   const listRef = useRef<HTMLUListElement>(null);
   const [visibleCount, setVisibleCount] = useState(MIN_ROWS);
@@ -33,7 +37,10 @@ export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
   const start =
     entries.length === 0
       ? 0
-      : Math.max(0, Math.min(cursor - Math.floor((visibleCount - 1) / 2), entries.length - visibleCount));
+      : Math.max(
+          0,
+          Math.min(cursor - Math.floor((visibleCount - 1) / 2), entries.length - visibleCount),
+        );
   const visible = entries.slice(start, start + visibleCount);
   const analyzing = libraryStore.analyzingCount;
   const refKey = mixReferenceKey(deckA, deckB);
@@ -59,66 +66,62 @@ export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
         </span>
       </div>
 
-      <div className="perf-head">
-        <span className="perf-col track">Track</span>
-        <span className="perf-col bpm">BPM</span>
-        <span className="perf-col key">Key</span>
-        <span className="perf-col time">Time</span>
-      </div>
+      <div className="perf-brow-split">
+        <aside className="perf-tree-panel" aria-label="Folders">
+          <FolderTree />
+        </aside>
 
-      <ul
-        ref={listRef}
-        className="perf-rows"
-        role="listbox"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            libraryStore.down();
-          } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            libraryStore.up();
-          } else if (e.key === 'ArrowRight') {
-            e.preventDefault();
-            libraryStore.enter();
-          } else if (e.key === 'ArrowLeft') {
-            e.preventDefault();
-            libraryStore.parent();
-          } else if (e.key === 'Enter') {
-            e.preventDefault();
-            libraryStore.requestLoad(deckA);
-          }
-        }}
-      >
-        {visible.map((entry) => {
-          const index = entries.indexOf(entry);
-          const selected = index === cursor;
-          const played =
-            entry.kind === 'track' && sessionPlayedStore.isPlayed(entry.track.id);
-          return (
-            <li
-              key={entry.kind === 'folder' ? entry.path : entry.track.id}
-              className={`perf-row${selected ? ' sel' : ''}${
-                entry.kind === 'track' && entry.track.lowConfidence ? ' low' : ''
-              }${played ? ' played' : ''}`}
-              role="option"
-              aria-selected={selected}
-              onClick={() => libraryStore.selectIndex(index)}
-              onDoubleClick={() => {
-                libraryStore.selectIndex(index);
-                if (entry.kind === 'folder') libraryStore.enter();
-                else libraryStore.requestLoad(deckA);
-              }}
-            >
-              {entry.kind === 'folder' ? (
-                <>
-                  <span className="perf-col track">[dir] {entry.name}</span>
-                  <span className="perf-col bpm mono">…</span>
-                  <span className="perf-col key mono">…</span>
-                  <span className="perf-col time mono">…</span>
-                </>
-              ) : (
-                <>
+        <div className="perf-brow-files">
+          <div className="perf-head">
+            <span className="perf-col track">Track</span>
+            <span className="perf-col bpm">BPM</span>
+            <span className="perf-col key">Key</span>
+            <span className="perf-col time">Time</span>
+          </div>
+
+          <ul
+            ref={listRef}
+            className="perf-rows"
+            role="listbox"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                libraryStore.down();
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                libraryStore.up();
+              } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                libraryStore.enter();
+              } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                libraryStore.parent();
+              } else if (e.key === 'Enter') {
+                e.preventDefault();
+                libraryStore.requestLoad(deckA);
+              }
+            }}
+          >
+            {visible.map((entry) => {
+              const index = entries.indexOf(entry);
+              const selected = index === cursor;
+              if (entry.kind !== 'track') return null;
+              const played = sessionPlayedStore.isPlayed(entry.track.id);
+              return (
+                <li
+                  key={entry.track.id}
+                  className={`perf-row${selected ? ' sel' : ''}${
+                    entry.track.lowConfidence ? ' low' : ''
+                  }${played ? ' played' : ''}`}
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => libraryStore.selectIndex(index)}
+                  onDoubleClick={() => {
+                    libraryStore.selectIndex(index);
+                    libraryStore.requestLoad(deckA);
+                  }}
+                >
                   <span className="perf-col track">
                     {played ? (
                       <span className="played-mark" aria-label="Played this session">
@@ -136,22 +139,28 @@ export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
                     referenceKey={refKey}
                   />
                   <span className="perf-col time mono">{fmtDur(entry.track.durationMs)}</span>
-                </>
-              )}
-            </li>
-          );
-        })}
-        {visible.length === 0 && (
-          <li className="perf-row empty">Search or open a folder in Prep · RMX2 browse works here</li>
-        )}
-      </ul>
+                </li>
+              );
+            })}
+            {visible.length === 0 && (
+              <li className="perf-row empty">
+                {libraryStore.search.trim()
+                  ? 'No matches'
+                  : libraryStore.openFolder == null
+                    ? 'Select a folder on the left'
+                    : 'No tracks in this folder'}
+              </li>
+            )}
+          </ul>
+        </div>
+      </div>
 
       <div className="perf-brow-actions">
         <button type="button" onClick={() => libraryStore.parent()}>
           Parent
         </button>
-        <button type="button" onClick={() => libraryStore.enter()}>
-          Enter
+        <button type="button" onClick={() => libraryStore.enter()} title="Open first subfolder">
+          Subfolder
         </button>
         <button
           type="button"

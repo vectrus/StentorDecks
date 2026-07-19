@@ -5,6 +5,18 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Library explorer: Djuced-style two panes
+
+Folder tree (narrow, left) + track list (wide, right) in Prep and Performance. File pane is **tracks only** — no `[dir]` rows mixed into the list. RMX2 browse-right drills the first child subfolder; left = parent. R5.2–R5.3, docs/06, mockup 02.
+
+---
+
+## 2026-07-19 — Scanner: OneDrive / cloud placeholders skipped almost everything
+
+Library walk used `dirent.isFile()` / `isDirectory()` only. OneDrive and similar reparse points often report neither, so a folder with ~1000 files indexed as ~2 tracks — no waveforms to analyze. Walk now `statSync`s ambiguous entries. Settings shows real `trackCount`. R5.1–R5.4, docs/05.
+
+---
+
 ## 2026-07-19 — Prep: Check MP3 + Write fixed WAV (R5.9)
 
 Owner: Prep tools to inspect bad MP3s and write a **sibling** fixed file — never touch the original. Output is always `* (Fixed by SD).wav` (PCM16; no ffmpeg). Check compares Chromium decode vs Xing/tag; Write runs resilient decode + index + analysis enqueue. R5.9, docs/02, docs/06.

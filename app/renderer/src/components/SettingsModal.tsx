@@ -521,14 +521,23 @@ const LibrarySection = observer(function LibrarySection() {
       </label>
       {prog && (
         <div className="temp-meta mono">
-          {prog.phase} {prog.scanned}
+          {prog.phase === 'scan' ? 'Indexing audio' : prog.phase} {prog.scanned}
           {prog.total != null ? ` / ${prog.total}` : ''}
+          {prog.phase === 'scan' ? ' (.mp3 / .flac / .wav)' : ''}
         </div>
       )}
       {libraryStore.error && <div className="temp-meta">{libraryStore.error}</div>}
       <div className="temp-meta mono">
-        {libraryStore.entries.length} browse entries · {libraryStore.tracks.length} tracks
+        Library indexed: {libraryStore.trackCount.toLocaleString()} tracks
+        {libraryStore.openFolder
+          ? ` · this folder list: ${libraryStore.tracks.length}`
+          : ` · browse rows: ${libraryStore.entries.length}`}
       </div>
+      <p className="settings-section-lead" style={{ marginTop: 6 }}>
+        Waveforms appear after analysis (auto backfill, or Prep → Detect). Only .mp3 / .flac /
+        .wav are indexed. If a huge folder shows only a handful of tracks, check OneDrive
+        “online-only” files (make available offline) and Rescan.
+      </p>
 
       <h3 className="settings-section-title" style={{ marginTop: '1.25rem' }}>
         Session played

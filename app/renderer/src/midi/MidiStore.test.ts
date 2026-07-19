@@ -15,11 +15,34 @@ import {
 describe('MidiStore ingest (fixture traffic)', () => {
   function makeLibrary(): LibraryStore {
     const lib = new LibraryStore();
-    lib.folders = [
-      { path: 'C:\\Music\\a', name: 'a', children: [] },
-      { path: 'C:\\Music\\b', name: 'b', children: [] },
+    lib.folders = [{ path: 'C:\\Music\\crate', name: 'crate', children: [] }];
+    lib.openFolder = 'C:\\Music\\crate';
+    lib.tracks = [
+      {
+        id: 1,
+        path: 'C:\\Music\\crate\\a.mp3',
+        title: 'Alpha',
+        artist: 'A',
+        bpm: null,
+        keyCamelot: null,
+        durationMs: null,
+        bpmSource: null,
+        lowConfidence: false,
+        beatGridOffsetSec: null,
+      },
+      {
+        id: 2,
+        path: 'C:\\Music\\crate\\b.mp3',
+        title: 'Beta',
+        artist: 'B',
+        bpm: null,
+        keyCamelot: null,
+        durationMs: null,
+        bpmSource: null,
+        lowConfidence: false,
+        beatGridOffsetSec: null,
+      },
     ];
-    lib.tracks = [];
     lib.cursor = 0;
     return lib;
   }
@@ -56,12 +79,12 @@ describe('MidiStore ingest (fixture traffic)', () => {
     expect(store.monitor[0]?.annotation).toContain('ccRel');
   });
 
-  it('browse down moves LibraryStore cursor', () => {
+  it('browse down moves LibraryStore cursor in the file pane', () => {
     const library = makeLibrary();
     const { store } = makeStore(library);
-    expect(library.selected?.name).toBe('a');
+    expect(library.selectedTrack?.title).toBe('Alpha');
     store.ingest(FIXTURE_BROWSE_DOWN[0]!, 0);
-    expect(library.selected?.name).toBe('b');
+    expect(library.selectedTrack?.title).toBe('Beta');
     expect(store.monitor[0]?.controlId).toBe('browse.down');
   });
 

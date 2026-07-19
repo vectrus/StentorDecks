@@ -87,7 +87,13 @@ export const VirtualBrowseList = observer(function VirtualBrowseList() {
         })}
       </div>
       {entries.length === 0 && (
-        <div className="prep-empty">Select a folder or add a library root</div>
+        <div className="prep-empty">
+          {libraryStore.search.trim()
+            ? 'No matches'
+            : libraryStore.openFolder == null
+              ? 'Select a folder on the left'
+              : 'No tracks in this folder'}
+        </div>
       )}
     </div>
   );

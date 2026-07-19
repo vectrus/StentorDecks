@@ -79,7 +79,8 @@
 
 .prep-main {
   display: grid;
-  grid-template-columns: 12.5rem 1fr;
+  /* Djuced-style: small folder pane · large file pane */
+  grid-template-columns: 13rem minmax(0, 1fr);
   gap: 0.65rem;
   flex: 1;
   min-height: 0;

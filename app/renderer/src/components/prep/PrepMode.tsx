@@ -45,7 +45,7 @@ export const PrepMode = observer(function PrepMode() {
           <CorrectionStrip />
 
           <div className="prep-foot">
-            <span>Encoder: up/down browse · right open · left back</span>
+            <span>Folders left · tracks right · encoder: up/down · right=subfolder · left=parent</span>
             <span>
               Load: deck buttons
               {libraryStore.loadError ? ` · ${libraryStore.loadError}` : ''}

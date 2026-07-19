@@ -74,15 +74,18 @@ You can add more folders later and press **Rescan** if something new doesn’t s
 Tiny status for each deck: song name, BPM, time left, playing or not.  
 This is so you can see what’s loaded while you dig through folders.
 
-### Left: folder tree
+### Left: folder tree (small pane)
 
-- Click **Library** to see your top music folders.  
-- Click a folder name to open it in the big list.  
-- Use the little arrows to expand / collapse without changing the list.
+- Click a folder to show **its tracks** in the big pane on the right (Djuced-style).  
+- Expand / collapse with the arrows.  
+- **Library** clears the selection (empty file pane until you pick a crate).  
+- Subfolders are opened here — they do **not** appear as `[dir]` rows in the track list.
 
 **Tip:** Your real folders on disk = your crates. Keep sets organized on the hard drive the way you want to browse them.
 
-### Middle: song list
+### Right: song list (large pane)
+
+Tracks only for the folder you selected on the left (or whole-library search results).
 
 Columns:
 

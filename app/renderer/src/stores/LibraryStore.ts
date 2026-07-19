@@ -72,6 +72,10 @@ export class LibraryStore {
     );
   }
 
+  /**
+   * File pane rows (Djuced-style / mockup 02): tracks only.
+   * Folders live exclusively in the left tree — never as `[dir]` rows here.
+   */
   get entries(): LibraryBrowseEntry[] {
     if (this.search.trim()) {
       return this.tracks.map((t) => ({
@@ -80,25 +84,13 @@ export class LibraryStore {
         name: displayName(t),
       }));
     }
-    if (this.openFolder == null) {
-      return this.folders.map((f) => ({
-        kind: 'folder' as const,
-        path: f.path,
-        name: f.name,
-      }));
-    }
-    const node = findFolderNode(this.folders, this.openFolder);
-    const childFolders: LibraryBrowseEntry[] = (node?.children ?? []).map((c) => ({
-      kind: 'folder' as const,
-      path: c.path,
-      name: c.name,
-    }));
-    const trackEntries: LibraryBrowseEntry[] = this.tracks.map((t) => ({
+    // No folder selected — empty file pane (pick a crate in the tree).
+    if (this.openFolder == null) return [];
+    return this.tracks.map((t) => ({
       kind: 'track' as const,
       track: t,
       name: displayName(t),
     }));
-    return [...childFolders, ...trackEntries];
   }
 
   get selected(): LibraryBrowseEntry | null {
@@ -213,11 +205,19 @@ export class LibraryStore {
     this.selectIndex(this.cursor + 1);
   }
 
-  /** Right — enter folder (R5.3). */
+  /**
+   * Right — drill into a child crate (R5.3).
+   * File pane is tracks-only; browse-right enters the first child folder of the
+   * current open folder (or the first library root when none is open).
+   */
   enter(): void {
     const sel = this.selected;
-    if (!sel || sel.kind !== 'folder') return;
-    this.setOpenFolder(sel.path);
+    if (sel?.kind === 'folder') {
+      this.setOpenFolder(sel.path);
+      return;
+    }
+    const child = this.firstChildFolderPath(this.openFolder);
+    if (child) this.setOpenFolder(child);
   }
 
   /** Left — parent folder or clear search. */
@@ -247,6 +247,20 @@ export class LibraryStore {
   private isRootPath(folder: string): boolean {
     const n = normPath(folder);
     return this.folders.some((f) => normPath(f.path) === n);
+  }
+
+  /** First child crate under `folder` (null = first library root). */
+  private firstChildFolderPath(folder: string | null): string | null {
+    if (folder == null) {
+      return this.folders[0]?.path ?? null;
+    }
+    const node = findFolderNode(this.folders, folder);
+    const kids = node?.children ?? [];
+    if (kids.length === 0) return null;
+    const sorted = [...kids].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+    );
+    return sorted[0]?.path ?? null;
   }
 
   setOpenFolder(folder: string | null): void {

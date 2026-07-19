@@ -29,6 +29,15 @@ export const FolderTree = observer(function FolderTree() {
 
   return (
     <nav className="prep-tree" aria-label="Folder tree">
+      <button
+        type="button"
+        className={`prep-node${open == null && !libraryStore.search ? ' open' : ''}`}
+        onClick={() => libraryStore.setOpenFolder(null)}
+        title="Clear folder selection"
+      >
+        <span className="prep-folder-icon">⌂</span>
+        Library
+      </button>
       {roots.map((node) => (
         <TreeNode
           key={node.path}
@@ -47,14 +56,6 @@ export const FolderTree = observer(function FolderTree() {
           onSelect={(path) => libraryStore.setOpenFolder(path)}
         />
       ))}
-      <button
-        type="button"
-        className={`prep-node${open == null && !libraryStore.search ? ' open' : ''}`}
-        onClick={() => libraryStore.setOpenFolder(null)}
-      >
-        <span className="prep-folder-icon">·</span>
-        Library
-      </button>
     </nav>
   );
 });
