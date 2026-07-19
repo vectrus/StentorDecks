@@ -44,4 +44,11 @@ describe('autoUpdate (dev / unpackaged)', () => {
     expect(resolveAutoUpdater({ default: { autoUpdater: updater as never } })).toBe(updater);
     expect(() => resolveAutoUpdater({})).toThrow(/autoUpdater export missing/);
   });
+
+  it('humanizeUpdateError explains missing GitHub latest.yml feed', async () => {
+    const { humanizeUpdateError } = await import('./autoUpdate');
+    expect(humanizeUpdateError('404 Not Found')).toMatch(/latest\.yml/i);
+    expect(humanizeUpdateError('Unable to find latest version on GitHub')).toMatch(/GH_TOKEN/);
+    expect(humanizeUpdateError('disk full')).toBe('disk full');
+  });
 });

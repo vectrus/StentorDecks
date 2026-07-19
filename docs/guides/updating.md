@@ -12,7 +12,7 @@ This is the real product path (R1.1 / E7).
    npm run release
    ```
 
-   Needs a GitHub token with `repo` scope (`GH_TOKEN` or `GITHUB_TOKEN`). Publishes a GitHub Release with `StentorDeck-Setup-*.exe` and `latest.yml`.
+   Needs a GitHub token with `repo` scope (`GH_TOKEN` or `GITHUB_TOKEN`). Publishes a **full** GitHub Release (tag `v*`, not Pre-release) with `StentorDeck-Setup-*.exe` **and** `latest.yml`. Uploading only the Setup.exe (or marking Pre-release without `latest.yml`) makes Settings → Check for updates report no feed.
 
 2. On the booth laptop (installed app):
    - Open **Settings → Updates → Check for updates**, or wait a few seconds after launch.

@@ -70,8 +70,25 @@ export async function checkForAppUpdates(): Promise<AppUpdateStatus> {
     return getUpdateStatus();
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return publish({ phase: 'error', error: message });
+    return publish({ phase: 'error', error: humanizeUpdateError(message) });
   }
+}
+
+/** Map cryptic electron-updater / GitHub failures to booth-actionable text. */
+export function humanizeUpdateError(raw: string): string {
+  const m = raw.toLowerCase();
+  if (
+    m.includes('404') ||
+    m.includes('unable to find latest') ||
+    m.includes('no published versions') ||
+    m.includes('releases/latest')
+  ) {
+    return (
+      'No update feed on GitHub (need a full Release with latest.yml — ' +
+      'not a prerelease Setup.exe alone). Run npm run release with GH_TOKEN.'
+    );
+  }
+  return raw;
 }
 
 export async function installAppUpdate(): Promise<{ ok: true } | { ok: false; reason: string }> {
@@ -121,6 +138,10 @@ export function startAutoUpdater(): void {
       // Unsigned NSIS builds (no code-signing cert yet).
       // electron-builder writes verifyUpdateCodeSignature:false into app-update.yml.
       autoUpdater.forceDevUpdateConfig = false;
+      // Manual GitHub uploads were often marked prerelease + missing latest.yml.
+      // Prefer full releases (releaseType: release); still accept prereleases that
+      // ship latest.yml so booth machines can update.
+      autoUpdater.allowPrerelease = true;
 
       autoUpdater.on('checking-for-update', () => {
         publish({ phase: 'checking', error: null });
@@ -159,7 +180,7 @@ export function startAutoUpdater(): void {
       autoUpdater.on('error', (err) => {
         publish({
           phase: 'error',
-          error: err?.message ?? String(err),
+          error: humanizeUpdateError(err?.message ?? String(err)),
         });
       });
 

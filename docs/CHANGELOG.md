@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Ship 0.2.5: auto-update feed + dual-pane browse
+
+In-app Check for updates found nothing because GitHub only had **prerelease** Setup.exe uploads **without** `latest.yml` (electron-updater’s feed). Publish config now forces a full `release` (tag `v*`); updater accepts prereleases that ship `latest.yml`; clearer Settings error when the feed is missing. Includes dual-pane browse focus (R5.3). E7 / R1.1.
+
+---
+
 ## 2026-07-19 — Browse cluster: dual-pane focus (R5.3)
 
 Up/down navigate the **focused** pane (folder tree or track list). Right expands a collapsed folder or moves focus to tracks; left returns focus to the tree, collapses, or walks to the parent folder — no more “enter first child” / jump to blank Library root. Tree expand state lives in `LibraryStore` so MIDI and mouse share it. Owner clarification of R5.3.

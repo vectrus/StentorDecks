@@ -1,0 +1,6 @@
+owner: vectrus
+repo: StentorDecks
+provider: github
+releaseType: release
+vPrefixedTagName: true
+updaterCacheDirName: stentordeck-updater

@@ -1,6 +1,6 @@
 {
   "name": "stentordeck",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "description": "Two-deck DJ application for Windows — Hercules DJConsole RMX2",
   "author": "Julius",
@@ -26,6 +26,7 @@
     "dist": "npm run icons && npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64",
     "dist:dir": "npm run icons && npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64 --dir",
     "release": "npm run icons && npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win --x64 --publish always",
+    "publish:github": "node scripts/publish-github-release.mjs",
     "update": "node scripts/update-source.mjs",
     "shortcut": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Create-DesktopShortcut.ps1",
     "lint": "eslint .",
@@ -84,7 +85,9 @@
       {
         "provider": "github",
         "owner": "vectrus",
-        "repo": "StentorDecks"
+        "repo": "StentorDecks",
+        "releaseType": "release",
+        "vPrefixedTagName": true
       }
     ],
     "afterPack": "./scripts/embed-win-icon.cjs",

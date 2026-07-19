@@ -37,9 +37,12 @@ Packaged updates use **GitHub Releases** + `electron-updater` (E7 / R1.1).
 
    (`CSC_IDENTITY_AUTO_DISCOVERY=false` — unsigned for now.)
 
-5. On GitHub → Releases: verify assets include:
+5. On GitHub → Releases: verify the release is a **full release** (not Pre-release) tagged `v<version>`, and assets include:
    - `StentorDeck-Setup-<version>.exe`
-   - `latest.yml` (and blockmap if present)
+   - `latest.yml` (**required** — without it Settings → Check for updates finds nothing)
+   - `*.blockmap` if present
+
+   Do **not** hand-upload only the Setup.exe as a prerelease/tag like `mp3` — that breaks auto-update.
 6. On a booth machine with the **previous** installed build:
    - Settings → **Check for updates** (or wait for quiet startup check)
    - Status → download → **Restart & update** (confirm if a deck is playing)
