@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Ship 0.2.8: Harmonic neighbours + rules Next up
+
+Booth polish since 0.2.7: Settings → Library **Harmonic neighbours first** (soft-ranks Camelot fits when a deck is playing); opt-in **Next up** strip (`ai.mixmatch = rules`) — Camelot + BPM suggestions, human load only; Help shows the same screenshot pack as the website; Controllers & MIDI guide; DJ vs developer docs split. Defaults stay off for new Library options. R5.6, R6.*, R8.2, V2-B.
+
+---
+
 ## 2026-07-19 — Harmonic soft-rank + V2-B rules mixmatch
 
 Library setting **Harmonic neighbours first** soft-ranks Camelot band 0 then ±2 when a deck is playing (`playingReferenceKey`). Opened v2 with **Next up** rules shortlist (`ai.mixmatch = rules`) — Camelot + BPM, suggest-only, R4.2 intact. Epic [`V2-B-mixmatch-rules.md`](./V2-B-mixmatch-rules.md). R5.6, R6.*, BACKLOG-v2.
