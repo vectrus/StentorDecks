@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Ship 0.2.9: Click & squeak fixer + phones preview / normalize
+
+Library tools since 0.2.8: right-click **Click & squeak fixer…**; **Preview fix** and **Preview normalize** on **headphones only** (never booth/master; not both at once); **Write fixed WAV** (`… (Fixed by SD).wav`) and separate **Write normalized** (`… (Normalized by SD).wav`) toward auto-gain LUFS — originals never overwritten. R5.9, R2.13.
+
+---
+
 ## 2026-07-19 — Prep: phones-only fix/normalize preview (R5.9)
 
 Library correction strip + context menu: **Preview fix** and **Preview normalize** play on **headphones only** (never booth/master), mutually exclusive. **Write normalized** writes a sibling `* (Normalized by SD).wav` toward the auto-gain LUFS target — separate from **Write fixed WAV**. Source files still never overwritten. R5.9, R2.13 target LUFS.
