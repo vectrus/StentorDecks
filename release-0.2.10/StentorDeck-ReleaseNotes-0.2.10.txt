@@ -1,0 +1,20 @@
+StentorDeck 0.2.10
+Installer: StentorDeck-Setup-0.2.10.exe
+Date: 2026-07-19
+
+Install over your current build. Library, settings, and MIDI map stay in %APPDATA%.
+
+What's new
+-----------
+2026-07-19 - Ship 0.2.10: Fixer knobs, SD WAV purge, title/artist, update toggles
+Booth polish since 0.2.9: Library fixer presets (Gentle/Normal/Aggressive) + seam fade/trim + de-click; Delete SD WAV / Purge SD WAVs for StentorDeck siblings only; title/artist edit in DB (no disk rename); Settings -> Updates Check on launch + Download automatically. R5.1, R5.9, R5.10, R1.1.
+
+How to update
+-------------
+- Run StentorDeck-Setup-0.2.10.exe, or use Settings > Updates > Check for updates (needs latest.yml on GitHub).
+- Open StentorDeck from the desktop shortcut (not only the source .bat).
+
+Notes
+-----
+- Builds are unsigned - Windows SmartScreen may warn once.
+- Auto-update requires a full GitHub Release with latest.yml (not Setup.exe alone).
