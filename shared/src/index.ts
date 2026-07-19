@@ -10,6 +10,7 @@ export * from './mixmatchRules.js';
 export * from './analysisContract.js';
 export * from './mp3ResilientDecode.js';
 export * from './mp3Fix.js';
+export * from './declickPcm.js';
 export * from './syncPhase.js';
 export * from './jogFeel.js';
 export {

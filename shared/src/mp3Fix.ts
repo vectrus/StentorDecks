@@ -84,6 +84,13 @@ export function withNormalizedBySdTitle(title: string | null, fallbackStem: stri
   return `${base}${NORMALIZED_BY_SD_MARK}`;
 }
 
+/** True for StentorDeck-created sibling WAVs only (safe to delete per R5.1 exception). */
+export function isSdSiblingWavPath(filePath: string): boolean {
+  const base = splitPath(filePath).base;
+  if (!/\.wav$/i.test(base)) return false;
+  return base.includes(FIXED_BY_SD_MARK) || base.includes(NORMALIZED_BY_SD_MARK);
+}
+
 /** Peak of |samples| across channels. */
 export function peakAbsChannels(channelData: Float32Array[]): number {
   let peak = 0;

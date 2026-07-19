@@ -89,7 +89,7 @@ async function boot(): Promise<void> {
       mode = m;
     },
   });
-  startAutoUpdater();
+  startAutoUpdater(settingsState.settings.updates);
 
   const startWindowedDev = process.env.STENTOR_WINDOWED === '1' || !app.isPackaged;
   const rendererUrl = process.env.VITE_DEV_SERVER_URL ?? null;

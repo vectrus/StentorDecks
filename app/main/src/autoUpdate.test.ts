@@ -51,4 +51,11 @@ describe('autoUpdate (dev / unpackaged)', () => {
     expect(humanizeUpdateError('Unable to find latest version on GitHub')).toMatch(/GH_TOKEN/);
     expect(humanizeUpdateError('disk full')).toBe('disk full');
   });
+
+  it('applyUpdatesPolicy is safe before updater init', async () => {
+    const { applyUpdatesPolicy } = await import('./autoUpdate');
+    expect(() =>
+      applyUpdatesPolicy({ checkOnLaunch: false, autoDownload: false }),
+    ).not.toThrow();
+  });
 });

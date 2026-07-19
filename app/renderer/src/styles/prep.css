@@ -400,6 +400,21 @@
   color: var(--deck-a);
 }
 
+.prep-correct button.prep-mp3-delete,
+.prep-correct button.prep-mp3-purge {
+  border-color: var(--text-faint);
+  color: var(--text-dim);
+}
+
+.prep-correct-title input,
+.prep-correct-artist input {
+  width: 8rem;
+}
+
+.prep-fixer-num input {
+  width: 3.5rem;
+}
+
 .prep-correct button.prep-mp3-preview.on,
 .prep-correct button.prep-mp3-preview-stop {
   border-color: var(--vu-hot, #ffb454);

@@ -106,7 +106,11 @@ export function mockStentorInitScript(
       if (channel === 'app:fullscreen:toggle') {
         return { fullscreen: false };
       }
-      if (channel === 'app:update:status' || channel === 'app:update:check') {
+      if (
+        channel === 'app:update:status' ||
+        channel === 'app:update:check' ||
+        channel === 'app:update:download'
+      ) {
         return {
           phase: 'disabled',
           packaged: false,
@@ -132,6 +136,12 @@ export function mockStentorInitScript(
       if (channel === 'midi:mapping:import') return req && req.json ? JSON.parse(req.json) : {};
       if (channel === 'midi:mapping:reset') {
         return { 'deckA.play': { kind: 'button', ch: 0, note: 0x21 } };
+      }
+      if (channel === 'library:deleteSdSibling') {
+        return { ok: false, reason: 'e2e mock — no delete' };
+      }
+      if (channel === 'library:purgeSdSiblings') {
+        return { ok: true, deleted: 0, skipped: 0 };
       }
       if (channel === 'library:query') return queryTracks(req);
       if (channel === 'library:folders') return library.folders;

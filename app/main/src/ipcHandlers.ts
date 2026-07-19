@@ -11,7 +11,9 @@ import {
   type AnalysisSupervisor,
 } from './analysisSupervisor';
 import {
+  applyUpdatesPolicy,
   checkForAppUpdates,
+  downloadAppUpdate,
   getUpdateStatus,
   installAppUpdate,
 } from './autoUpdate';
@@ -33,6 +35,7 @@ import {
   updateManualMeta,
 } from './db/tracksRepo';
 import { writeSiblingWav } from './library/mp3FixWrite';
+import { deleteSdSiblingById, purgeSdSiblings } from './library/sdSiblingDelete';
 import { broadcast } from './ipcBroadcast';
 import { createLibraryWatcher, type LibraryWatcher } from './scanner/libraryWatcher';
 import { scanLibraryRoots } from './scanner/scanLibrary';
@@ -113,6 +116,8 @@ export function registerIpcHandlers(ctx: Ctx): void {
       keyCamelot: req.keyCamelot,
       keyName: req.keyName,
       beatGridOffsetSec: req.beatGridOffsetSec,
+      title: req.title,
+      artist: req.artist,
     }),
   );
   handle('library:mp3FixWrite', async (req) => {
@@ -127,6 +132,18 @@ export function registerIpcHandlers(ctx: Ctx): void {
       });
     }
     return result;
+  });
+  handle('library:deleteSdSibling', (req) => {
+    const roots = ctx.getSettingsState().settings.library.roots;
+    return deleteSdSiblingById(getDb(), roots, req.id);
+  });
+  handle('library:purgeSdSiblings', (req) => {
+    const roots = ctx.getSettingsState().settings.library.roots;
+    return purgeSdSiblings(getDb(), roots, {
+      scope: req.scope,
+      folder: req.folder,
+      dryRun: req.dryRun === true,
+    });
   });
   handle('library:rescan', async (req) => {
     const settings = ctx.getSettingsState().settings;
@@ -164,6 +181,7 @@ export function registerIpcHandlers(ctx: Ctx): void {
     const next = applySettingsPatch(ctx.userDataPath, current, patch as DeepPartial<Settings>);
     ctx.setSettings(next);
     libraryWatcher?.setRoots(next.library.roots);
+    applyUpdatesPolicy(next.updates);
     broadcast('settings:changed', next);
     return next;
   });
@@ -199,6 +217,7 @@ export function registerIpcHandlers(ctx: Ctx): void {
 
   handle('app:update:status', () => getUpdateStatus());
   handle('app:update:check', () => checkForAppUpdates());
+  handle('app:update:download', () => downloadAppUpdate());
   handle('app:update:install', () => installAppUpdate());
 }
 

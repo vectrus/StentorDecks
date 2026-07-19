@@ -133,7 +133,7 @@ export type IpcInvokeMap = {
   };
   /** Native folder dialog for library roots (E4 first-run / settings). */
   'library:pickRoot': { req: void; res: { path: string } | null };
-  /** Prep manual BPM/key (R6.6) — source becomes `manual`. */
+  /** Prep manual BPM/key/title/artist (R6.6 / R5.10) — source becomes `manual` for BPM/key. */
   'library:updateManual': {
     req: {
       id: number;
@@ -142,6 +142,9 @@ export type IpcInvokeMap = {
       keyName?: string | null;
       /** Set/clear grid offset; omit to leave unchanged. Numeric BPM clear uses null. */
       beatGridOffsetSec?: number | null;
+      /** Display only — never renames the file (R5.10). */
+      title?: string | null;
+      artist?: string | null;
     };
     res: TrackRow | null;
   };
@@ -162,6 +165,25 @@ export type IpcInvokeMap = {
       | { ok: true; path: string; trackId: number }
       | { ok: false; reason: string };
   };
+  /** Delete one Fixed/Normalized sibling WAV (R5.1 exception). */
+  'library:deleteSdSibling': {
+    req: { id: number };
+    res: { ok: true } | { ok: false; reason: string };
+  };
+  /**
+   * Purge Fixed/Normalized sibling WAVs. dryRun=true returns count in `deleted`
+   * without removing files.
+   */
+  'library:purgeSdSiblings': {
+    req: {
+      scope: 'folder' | 'library';
+      folder?: string;
+      dryRun?: boolean;
+    };
+    res:
+      | { ok: true; deleted: number; skipped: number }
+      | { ok: false; reason: string };
+  };
   'analysis:enqueue': {
     req: { trackIds: number[]; priority: 'deck' | 'new' | 'backfill' };
     res: { ok: true; queueDepth: number };
@@ -178,6 +200,8 @@ export type IpcInvokeMap = {
   'app:fullscreen:toggle': { req: void; res: { fullscreen: boolean } };
   'app:update:status': { req: void; res: AppUpdateStatus };
   'app:update:check': { req: void; res: AppUpdateStatus };
+  /** When settings.updates.autoDownload is false — download after check finds a release. */
+  'app:update:download': { req: void; res: AppUpdateStatus };
   'app:update:install': { req: void; res: { ok: true } | { ok: false; reason: string } };
 };
 
@@ -204,6 +228,8 @@ export const IPC_INVOKE_CHANNELS = [
   'library:pickRoot',
   'library:updateManual',
   'library:mp3FixWrite',
+  'library:deleteSdSibling',
+  'library:purgeSdSiblings',
   'analysis:enqueue',
   'settings:get',
   'settings:set',
@@ -217,6 +243,7 @@ export const IPC_INVOKE_CHANNELS = [
   'app:fullscreen:toggle',
   'app:update:status',
   'app:update:check',
+  'app:update:download',
   'app:update:install',
 ] as const satisfies readonly IpcChannel[];
 

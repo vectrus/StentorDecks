@@ -40,6 +40,13 @@ export type Settings = {
     sort: 'filename' | 'artist' | 'title' | 'bpm' | 'key' | 'duration';
     /** Soft-rank Camelot neighbours first when a deck is playing. */
     harmonicBoost: boolean;
+    /** Prep R5.9 fixer — Preview + Write share these. */
+    fixer: {
+      preset: 'gentle' | 'normal' | 'aggressive';
+      seamFadeMs: number;
+      seamTrimMs: number;
+      declick: 'off' | 'light' | 'strong';
+    };
   };
   /** v2 mixmatch — Off | rules-only shortlist (LLM later). */
   ai: {
@@ -57,6 +64,16 @@ export type Settings = {
   midi: {
     preferredPort: string | null;
     sendLeds: boolean;
+  };
+  /**
+   * Packaged-app GitHub Updates (R1.1). Install always needs Restart & update
+   * (or quit with a downloaded package) — never silent mid-set restart.
+   */
+  updates: {
+    /** Quiet check a few seconds after launch. */
+    checkOnLaunch: boolean;
+    /** When a release is found, download in the background. Off = check only; Download button. */
+    autoDownload: boolean;
   };
 };
 
@@ -99,6 +116,13 @@ export const defaultSettings: Settings = {
     purgeMissingAfterDays: 30,
     sort: 'filename',
     harmonicBoost: false,
+    fixer: {
+      preset: 'normal',
+      // ≈ 256 / 44100 * 1000 and 576 / 44100 * 1000 (MPEG seam defaults).
+      seamFadeMs: 5.8,
+      seamTrimMs: 13.1,
+      declick: 'off',
+    },
   },
   ai: {
     mixmatch: 'off',
@@ -115,6 +139,10 @@ export const defaultSettings: Settings = {
   midi: {
     preferredPort: null,
     sendLeds: true,
+  },
+  updates: {
+    checkOnLaunch: true,
+    autoDownload: true,
   },
 };
 
@@ -177,6 +205,12 @@ export const settingsSchema = z.object({
     purgeMissingAfterDays: z.number().int().positive(),
     sort: z.enum(['filename', 'artist', 'title', 'bpm', 'key', 'duration']),
     harmonicBoost: z.boolean(),
+    fixer: z.object({
+      preset: z.enum(['gentle', 'normal', 'aggressive']),
+      seamFadeMs: z.number().min(3).max(40),
+      seamTrimMs: z.number().min(0).max(26),
+      declick: z.enum(['off', 'light', 'strong']),
+    }),
   }),
   ai: z.object({
     mixmatch: z.enum(['off', 'rules']),
@@ -194,6 +228,10 @@ export const settingsSchema = z.object({
     preferredPort: z.string().nullable(),
     sendLeds: z.boolean(),
   }),
+  updates: z.object({
+    checkOnLaunch: z.boolean(),
+    autoDownload: z.boolean(),
+  }),
 }) satisfies z.ZodType<Settings>;
 
 export function parseSettings(raw: unknown):
@@ -204,6 +242,36 @@ export function parseSettings(raw: unknown):
     return { ok: false, error: result.error.message };
   }
   return { ok: true, settings: result.data };
+}
+
+export type FixerPreset = Settings['library']['fixer']['preset'];
+
+/** Preset shortcut — overwrites fade/trim/declick knobs. */
+export function fixerKnobsForPreset(
+  preset: FixerPreset,
+): Settings['library']['fixer'] {
+  switch (preset) {
+    case 'gentle':
+      return { preset, seamFadeMs: 12, seamTrimMs: 8, declick: 'off' };
+    case 'aggressive':
+      return { preset, seamFadeMs: 22, seamTrimMs: 20, declick: 'light' };
+    case 'normal':
+    default:
+      return {
+        preset: 'normal',
+        seamFadeMs: 5.8,
+        seamTrimMs: 13.1,
+        declick: 'off',
+      };
+  }
+}
+
+/** Convert ms → samples at sampleRate (rounded, clamped ≥ 0). */
+export function msToSamples(ms: number, sampleRate: number): number {
+  if (!Number.isFinite(ms) || ms <= 0 || !Number.isFinite(sampleRate) || sampleRate <= 0) {
+    return 0;
+  }
+  return Math.max(0, Math.round((ms / 1000) * sampleRate));
 }
 
 /** Deep-merge a partial patch onto settings (top-level domains + nested keys). */

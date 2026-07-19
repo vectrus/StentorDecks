@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { isSdSiblingWavPath } from '@stentordeck/shared';
 import { deckA, deckB, libraryStore, uiStore } from '../../stores/root';
 
 export type TrackContextTarget = {
@@ -57,6 +58,7 @@ export function TrackContextMenu({ target, onClose }: Props) {
   if (!target) return null;
 
   const isMp3 = /\.mp3$/i.test(target.path);
+  const isSdWav = isSdSiblingWavPath(target.path);
   const busy = libraryStore.mp3FixBusy;
 
   const openFixer = () => {
@@ -169,6 +171,31 @@ export function TrackContextMenu({ target, onClose }: Props) {
         }}
       >
         Write normalized WAV
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        disabled={busy || !isSdWav}
+        title={
+          isSdWav
+            ? 'Delete this Fixed/Normalized sibling from disk'
+            : 'Only Fixed/Normalized by SD WAVs'
+        }
+        onClick={() => {
+          onClose();
+          void (async () => {
+            if (uiStore.mode !== 'prep') await uiStore.setMode('prep');
+            libraryStore.openInMp3Fixer(target.trackId, { runCheck: false });
+            const name = target.path.split(/[/\\]/).pop() ?? 'file';
+            const ok = window.confirm(
+              `Delete ${name} from disk?\n\nOnly StentorDeck sibling WAVs can be removed.`,
+            );
+            if (!ok) return;
+            await libraryStore.deleteSelectedSdSibling();
+          })();
+        }}
+      >
+        Delete SD WAV
       </button>
       <div className="track-ctx-sep" role="separator" />
       <button

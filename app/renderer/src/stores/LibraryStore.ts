@@ -4,10 +4,12 @@ import {
   averageTapBpm,
   camelotDisplayName,
   camelotHarmonicSortRank,
+  declickChannelsInPlace,
   encodeWavPcm16le,
   expectedMpegDurationSec,
   isCamelotKey,
   isLikelyTruncatedDecode,
+  isSdSiblingWavPath,
   normalizeChannelsTowardLufs,
   rescaleBeatGridOffsetSec,
   trimDbToGain,
@@ -20,7 +22,7 @@ import {
   type TrackRow,
 } from '@stentordeck/shared';
 import { audioEngine } from '../audio/AudioEngine';
-import { decodeArrayBufferOffThread } from '../audio/decodeAudio';
+import { decodeArrayBufferOffThread, type DecodeAudioOpts } from '../audio/decodeAudio';
 import { phonesPreviewPlayer } from '../audio/PhonesPreviewPlayer';
 import { invoke, onIpc } from '../ipc/client';
 import { getPlayingReferenceKey } from './playingRefProvider';
@@ -654,6 +656,21 @@ export class LibraryStore {
     this.patchLocalTrack(next);
   }
 
+  /** Prep R5.10 — display title/artist only; path unchanged. */
+  async setManualTitleArtist(patch: {
+    title?: string | null;
+    artist?: string | null;
+  }): Promise<void> {
+    const row = this.selectedTrack;
+    if (!row) return;
+    const next = await invoke('library:updateManual', {
+      id: row.id,
+      title: patch.title,
+      artist: patch.artist,
+    });
+    this.patchLocalTrack(next);
+  }
+
   async setManualKey(camelot: string | null): Promise<void> {
     const row = this.selectedTrack;
     if (!row) return;
@@ -805,13 +822,17 @@ export class LibraryStore {
     });
     try {
       await phonesPreviewPlayer.stop();
-      const buf = await this.decodeSelectedLive({ resilient: true });
+      const { buf, declickHits } = await this.decodeSelectedForFixer();
       if (!buf) return;
       await phonesPreviewPlayer.start(buf, { kind: 'fixer', gainLinear: 0.85 });
+      const fx = settingsStore.settings.library.fixer;
       runInAction(() => {
         this.phonesPreviewKind = 'fixer';
         this.phonesPreviewBusy = false;
-        this.mp3FixStatus = 'Phones preview (fix) — Stop preview to end';
+        this.mp3FixStatus =
+          `Phones preview (fix · ${fx.preset}` +
+          (declickHits > 0 ? ` · de-click ${declickHits}` : '') +
+          ') — Stop preview to end';
       });
     } catch (err) {
       runInAction(() => {
@@ -956,6 +977,54 @@ export class LibraryStore {
     }
   }
 
+  private fixerDecodeOpts(expectedDurationSec: number | null): DecodeAudioOpts {
+    const fx = settingsStore.settings.library.fixer;
+    return {
+      expectedDurationSec,
+      seamFadeMs: fx.seamFadeMs,
+      seamTrimMs: fx.seamTrimMs,
+    };
+  }
+
+  private applyFixerDeclick(buf: AudioBuffer): number {
+    const level = settingsStore.settings.library.fixer.declick;
+    if (level === 'off') return 0;
+    const channels: Float32Array[] = [];
+    for (let c = 0; c < buf.numberOfChannels; c++) {
+      channels.push(buf.getChannelData(c));
+    }
+    return declickChannelsInPlace(channels, level);
+  }
+
+  /** Resilient decode + fixer seam/de-click (Prep preview / write). */
+  private async decodeSelectedForFixer(): Promise<{
+    buf: AudioBuffer | null;
+    declickHits: number;
+  }> {
+    const row = this.selectedTrack;
+    if (!row) return { buf: null, declickHits: 0 };
+    const payload = await invoke('library:read', { id: row.id });
+    if (!payload) throw new Error('Could not read track file');
+    const u8 = payload.bytes;
+    const ab = copyToArrayBuffer(u8);
+    const expected =
+      expectedMpegDurationSec(u8, (payload.durationMs ?? row.durationMs ?? 0) / 1000) ?? null;
+    await audioEngine.acquireDecode();
+    try {
+      const ctx = audioEngine.masterCtx;
+      if (!ctx) throw new Error('Audio engine not ready');
+      const buf = await decodeArrayBufferOffThread(
+        ctx,
+        ab.slice(0),
+        this.fixerDecodeOpts(expected),
+      );
+      const declickHits = this.applyFixerDeclick(buf);
+      return { buf, declickHits };
+    } finally {
+      audioEngine.endDecode();
+    }
+  }
+
   private async decodeSelectedLive(opts: {
     resilient: boolean;
   }): Promise<AudioBuffer | null> {
@@ -1007,9 +1076,12 @@ export class LibraryStore {
         expectedMpegDurationSec(u8, (payload.durationMs ?? row.durationMs ?? 0) / 1000) ??
         null;
       const probe = new OfflineAudioContext(2, 128, 44100);
-      const buf = await decodeArrayBufferOffThread(probe, ab, {
-        expectedDurationSec: expected,
-      });
+      const buf = await decodeArrayBufferOffThread(
+        probe,
+        ab,
+        this.fixerDecodeOpts(expected),
+      );
+      const declickHits = this.applyFixerDeclick(buf);
 
       runInAction(() => {
         this.mp3FixStatus = 'Writing sibling WAV…';
@@ -1037,13 +1109,106 @@ export class LibraryStore {
       if (!result.ok) throw new Error(result.reason);
 
       await this.refresh();
+      const fx = settingsStore.settings.library.fixer;
       runInAction(() => {
         const idx = this.entries.findIndex(
           (e) => e.kind === 'track' && e.track.id === result.trackId,
         );
         if (idx >= 0) this.cursor = idx;
-        this.mp3FixStatus = `Wrote ${result.path.split(/[/\\]/).pop()} — original untouched`;
+        this.mp3FixStatus =
+          `Wrote ${result.path.split(/[/\\]/).pop()} (${fx.preset}` +
+          (declickHits > 0 ? ` · de-click ${declickHits}` : '') +
+          ') — original untouched';
         this.mp3Inspect = null;
+        this.mp3FixBusy = false;
+      });
+    } catch (err) {
+      runInAction(() => {
+        this.mp3FixBusy = false;
+        this.mp3FixStatus = err instanceof Error ? err.message : String(err);
+      });
+    }
+  }
+
+  /** Delete selected Fixed/Normalized sibling WAV from disk + DB (R5.1 exception). */
+  async deleteSelectedSdSibling(): Promise<void> {
+    const row = this.selectedTrack;
+    if (!row || this.mp3FixBusy) return;
+    if (!isSdSiblingWavPath(row.path)) {
+      runInAction(() => {
+        this.mp3FixStatus = 'Select a Fixed/Normalized by SD WAV to delete';
+      });
+      return;
+    }
+    // Dynamic import avoids LibraryStore ↔ root cycle.
+    const { deckA, deckB } = await import('./root');
+    if (
+      (deckA.state === 'playing' && deckA.libraryTrackId === row.id) ||
+      (deckB.state === 'playing' && deckB.libraryTrackId === row.id)
+    ) {
+      runInAction(() => {
+        this.mp3FixStatus = 'Stop the playing deck that has this file loaded first';
+      });
+      return;
+    }
+    runInAction(() => {
+      this.mp3FixBusy = true;
+      this.mp3FixStatus = 'Deleting SD WAV…';
+    });
+    try {
+      await this.stopPhonesPreview();
+      const result = await invoke('library:deleteSdSibling', { id: row.id });
+      if (!result.ok) throw new Error(result.reason);
+      await this.refresh();
+      runInAction(() => {
+        this.mp3FixStatus = 'Deleted SD sibling WAV';
+        this.mp3FixBusy = false;
+      });
+    } catch (err) {
+      runInAction(() => {
+        this.mp3FixBusy = false;
+        this.mp3FixStatus = err instanceof Error ? err.message : String(err);
+      });
+    }
+  }
+
+  /** Count SD siblings in scope (for confirm dialog). */
+  async countSdSiblings(scope: 'folder' | 'library'): Promise<number> {
+    const folder = scope === 'folder' ? this.openFolder : null;
+    const res = await invoke('library:purgeSdSiblings', {
+      scope,
+      folder: folder ?? undefined,
+      dryRun: true,
+    });
+    return res.ok ? res.deleted : 0;
+  }
+
+  /** Purge Fixed/Normalized WAVs in open folder or whole library. */
+  async purgeSdSiblings(scope: 'folder' | 'library'): Promise<void> {
+    if (this.mp3FixBusy) return;
+    const folder = scope === 'folder' ? this.openFolder : null;
+    if (scope === 'folder' && folder == null) {
+      runInAction(() => {
+        this.mp3FixStatus = 'Open a folder first, or purge the whole library';
+      });
+      return;
+    }
+    runInAction(() => {
+      this.mp3FixBusy = true;
+      this.mp3FixStatus = 'Purging SD WAVs…';
+    });
+    try {
+      await this.stopPhonesPreview();
+      const result = await invoke('library:purgeSdSiblings', {
+        scope,
+        folder: folder ?? undefined,
+        dryRun: false,
+      });
+      if (!result.ok) throw new Error(result.reason);
+      await this.refresh();
+      runInAction(() => {
+        this.mp3FixStatus = `Purged ${result.deleted} SD WAV(s)` +
+          (result.skipped > 0 ? ` (${result.skipped} skipped)` : '');
         this.mp3FixBusy = false;
       });
     } catch (err) {

@@ -7,9 +7,18 @@ For DJs who installed StentorDeck with the **Setup.exe** (normal booth install).
 ## How to update (installed app)
 
 1. Open **Settings → Updates**.  
-2. Click **Check for updates** (or wait a few seconds after launch).  
-3. When a download finishes → **Restart & update**.  
+2. By default the app **checks a few seconds after launch** and **downloads** when a newer release is found.  
+3. When the download finishes → **Restart & update** (install never starts by itself mid-set).  
 4. If a deck is playing, the app asks before it restarts.
+
+### Options (Settings → Updates)
+
+| Option | Default | What it does |
+|--------|---------|----------------|
+| **Check for updates on launch** | On | Quiet GitHub check after start. Off = only when you press **Check for updates**. |
+| **Download automatically** | On | Download when a release is found. Off = check only; press **Download** when you want the file. |
+
+Install is always your choice (**Restart & update**), even when both options are on.
 
 Your music library, settings, and MIDI map stay on the computer. They are **not** wiped by an update.
 

@@ -56,7 +56,13 @@ Stored as `settings.json` in `app.getPath('userData')`, written atomically (temp
     "roots": [],                                     // absolute paths; ≥1 required after setup
     "purgeMissingAfterDays": 30,
     "sort": "filename",                              // filename | artist | title | bpm | key | duration (R5.6)
-    "harmonicBoost": false                           // soft-rank Camelot neighbours (±1/rel, then ±2) when a deck plays
+    "harmonicBoost": false,                          // soft-rank Camelot neighbours (±1/rel, then ±2) when a deck plays
+    "fixer": {                                       // R5.9 Prep MP3 fix — Preview + Write share these
+      "preset": "normal",                            // gentle | normal | aggressive (shortcut; knobs editable after)
+      "seamFadeMs": 5.8,                             // ~3–40; Normal ≈ 256 samples @ 44.1
+      "seamTrimMs": 13.1,                            // ~0–26; Normal ≈ 576 samples @ 44.1
+      "declick": "off"                               // off | light | strong
+    }
   },
 
   "ai": {
@@ -76,6 +82,11 @@ Stored as `settings.json` in `app.getPath('userData')`, written atomically (temp
   "midi": {
     "preferredPort": null,                           // substring match; null = auto ("RMX")
     "sendLeds": true
+  },
+
+  "updates": {
+    "checkOnLaunch": true,                           // quiet GitHub check ~8 s after launch (packaged)
+    "autoDownload": true                             // download when found; install still Restart & update
   }
 }
 ```

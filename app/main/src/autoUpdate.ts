@@ -1,9 +1,13 @@
 /**
  * Packaged-app updates via electron-updater + GitHub Releases (E7 / R1.1).
  * No-op in dev (`!app.isPackaged`).
+ *
+ * Policy (settings.updates): checkOnLaunch + autoDownload. Install is always
+ * operator-driven (Restart & update) or on quit once downloaded — never silent
+ * mid-set restart.
  */
 import { app } from 'electron';
-import type { AppUpdateStatus } from '@stentordeck/shared';
+import type { AppUpdateStatus, Settings } from '@stentordeck/shared';
 import type { AppUpdater } from 'electron-updater';
 import { broadcast } from './ipcBroadcast';
 
@@ -39,6 +43,8 @@ let status: AppUpdateStatus = {
 };
 
 let started = false;
+let policy: Settings['updates'] = { checkOnLaunch: true, autoDownload: true };
+let updaterReady: AppUpdater | null = null;
 
 function publish(partial: Partial<AppUpdateStatus>): AppUpdateStatus {
   status = { ...status, ...partial, currentVersion: app.getVersion(), packaged: app.isPackaged };
@@ -54,6 +60,17 @@ export function getUpdateStatus(): AppUpdateStatus {
   };
 }
 
+/** Apply Settings → Updates toggles (live). */
+export function applyUpdatesPolicy(next: Settings['updates']): void {
+  policy = {
+    checkOnLaunch: next.checkOnLaunch,
+    autoDownload: next.autoDownload,
+  };
+  if (updaterReady) {
+    updaterReady.autoDownload = policy.autoDownload;
+  }
+}
+
 export async function checkForAppUpdates(): Promise<AppUpdateStatus> {
   if (!app.isPackaged) {
     return publish({
@@ -65,8 +82,30 @@ export async function checkForAppUpdates(): Promise<AppUpdateStatus> {
   }
   try {
     const autoUpdater = await loadAutoUpdater();
+    autoUpdater.autoDownload = policy.autoDownload;
     publish({ phase: 'checking', error: null });
     await autoUpdater.checkForUpdates();
+    return getUpdateStatus();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return publish({ phase: 'error', error: humanizeUpdateError(message) });
+  }
+}
+
+/** Manual download when autoDownload is off (phase `available`). */
+export async function downloadAppUpdate(): Promise<AppUpdateStatus> {
+  if (!app.isPackaged) {
+    return publish({
+      phase: 'disabled',
+      error: null,
+      availableVersion: null,
+      percent: null,
+    });
+  }
+  try {
+    const autoUpdater = await loadAutoUpdater();
+    publish({ phase: 'downloading', percent: status.percent ?? 0, error: null });
+    await autoUpdater.downloadUpdate();
     return getUpdateStatus();
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -110,10 +149,17 @@ export async function installAppUpdate(): Promise<{ ok: true } | { ok: false; re
   }
 }
 
-/** Call once after app.whenReady + IPC registered. */
-export function startAutoUpdater(): void {
+/**
+ * Call once after app.whenReady + IPC registered.
+ * @param initialUpdates settings.updates at boot
+ */
+export function startAutoUpdater(initialUpdates?: Settings['updates']): void {
   if (started) return;
   started = true;
+
+  if (initialUpdates) {
+    applyUpdatesPolicy(initialUpdates);
+  }
 
   status = {
     phase: app.isPackaged ? 'idle' : 'disabled',
@@ -132,8 +178,9 @@ export function startAutoUpdater(): void {
   void (async () => {
     try {
       const autoUpdater = await loadAutoUpdater();
+      updaterReady = autoUpdater;
       autoUpdater.logger = console;
-      autoUpdater.autoDownload = true;
+      autoUpdater.autoDownload = policy.autoDownload;
       autoUpdater.autoInstallOnAppQuit = true;
       // Unsigned NSIS builds (no code-signing cert yet).
       // electron-builder writes verifyUpdateCodeSignature:false into app-update.yml.
@@ -151,7 +198,7 @@ export function startAutoUpdater(): void {
           phase: 'available',
           availableVersion: info.version,
           error: null,
-          percent: 0,
+          percent: policy.autoDownload ? 0 : null,
         });
       });
       autoUpdater.on('update-not-available', () => {
@@ -185,9 +232,11 @@ export function startAutoUpdater(): void {
       });
 
       // Quiet startup check — failures stay in status, never crash boot.
-      setTimeout(() => {
-        void checkForAppUpdates();
-      }, 8_000);
+      if (policy.checkOnLaunch) {
+        setTimeout(() => {
+          void checkForAppUpdates();
+        }, 8_000);
+      }
     } catch (err) {
       console.error('[update] failed to init', err);
       publish({

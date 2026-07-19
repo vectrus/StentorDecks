@@ -520,7 +520,7 @@ export function commitAnalysis(db: DbHandle, result: AnalysisResult): void {
   tx();
 }
 
-/** Prep R6.6 — write manual BPM and/or key; does not touch analysis blobs. */
+/** Prep R6.6 / R5.10 — manual BPM/key/title/artist; does not touch analysis blobs or path. */
 export function updateManualMeta(
   db: DbHandle,
   id: number,
@@ -530,6 +530,9 @@ export function updateManualMeta(
     keyName?: string | null;
     /** Omit = leave offset; null = clear; number = set. */
     beatGridOffsetSec?: number | null;
+    /** Display only — never renames the file (R5.10). */
+    title?: string | null;
+    artist?: string | null;
   },
 ): TrackRow | null {
   const existing = db
@@ -568,7 +571,57 @@ export function updateManualMeta(
       ).run(patch.keyCamelot ?? null, patch.keyName ?? null, id);
     }
   }
+  if (patch.title !== undefined) {
+    const t = patch.title == null || patch.title.trim() === '' ? null : patch.title.trim();
+    db.prepare(`UPDATE tracks SET title = ? WHERE id = ?`).run(t, id);
+  }
+  if (patch.artist !== undefined) {
+    const a = patch.artist == null || patch.artist.trim() === '' ? null : patch.artist.trim();
+    db.prepare(`UPDATE tracks SET artist = ? WHERE id = ?`).run(a, id);
+  }
   return getTrackDetail(db, id);
+}
+
+/** Hard-delete track row + waveforms (SD sibling cleanup). */
+export function deleteTrackById(db: DbHandle, id: number): void {
+  const tx = db.transaction(() => {
+    db.prepare(`DELETE FROM waveforms WHERE track_id = ?`).run(id);
+    db.prepare(`DELETE FROM tracks WHERE id = ?`).run(id);
+  });
+  tx();
+}
+
+/** Live Fixed/Normalized sibling WAV rows (optional folder filter). */
+export function listSdSiblingTracks(
+  db: DbHandle,
+  opts: { folder: string | null },
+): Array<{ id: number; path: string }> {
+  const markFixed = '%(Fixed by SD)%';
+  const markNorm = '%(Normalized by SD)%';
+  if (opts.folder != null && opts.folder !== '') {
+    return db
+      .prepare(
+        `SELECT id, path FROM tracks
+         WHERE missing_since IS NULL
+           AND path LIKE '%.wav' COLLATE NOCASE
+           AND (path LIKE ? OR path LIKE ?)
+           AND folder = ?
+         ORDER BY id`,
+      )
+      .all(markFixed, markNorm, normalizePath(opts.folder)) as Array<{
+      id: number;
+      path: string;
+    }>;
+  }
+  return db
+    .prepare(
+      `SELECT id, path FROM tracks
+       WHERE missing_since IS NULL
+         AND path LIKE '%.wav' COLLATE NOCASE
+         AND (path LIKE ? OR path LIKE ?)
+       ORDER BY id`,
+    )
+    .all(markFixed, markNorm) as Array<{ id: number; path: string }>;
 }
 
 /** Mark a single path missing (watcher unlink). */

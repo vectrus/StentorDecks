@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { migrateItchyJogSettings } from './jogFeel.js';
 import {
   defaultSettings,
+  fixerKnobsForPreset,
   mergeSettings,
+  msToSamples,
   parseSettings,
+  type DeepPartial,
   type Settings,
 } from './settings.js';
 
@@ -25,6 +28,46 @@ describe('settings schema', () => {
     const next = mergeSettings(defaultSettings, { ui: { scale: 150 } });
     expect(next.ui.scale).toBe(150);
     expect(next.ui.deckAColor).toBe(defaultSettings.ui.deckAColor);
+  });
+
+  it('fills updates when missing from older settings files', () => {
+    const legacy = structuredClone(defaultSettings);
+    const { updates: _removed, ...withoutUpdates } = legacy;
+    void _removed;
+    const merged = mergeSettings(defaultSettings, withoutUpdates as DeepPartial<Settings>);
+    expect(merged.updates.checkOnLaunch).toBe(true);
+    expect(merged.updates.autoDownload).toBe(true);
+    expect(parseSettings(merged).ok).toBe(true);
+  });
+
+  it('accepts updates policy patch', () => {
+    const next = mergeSettings(defaultSettings, {
+      updates: { checkOnLaunch: false, autoDownload: false },
+    });
+    expect(next.updates.checkOnLaunch).toBe(false);
+    expect(next.updates.autoDownload).toBe(false);
+    expect(parseSettings(next).ok).toBe(true);
+  });
+
+  it('fills library.fixer when missing from older settings files', () => {
+    const legacy = structuredClone(defaultSettings);
+    const { fixer: _removed, ...libWithout } = legacy.library;
+    void _removed;
+    const merged = mergeSettings(defaultSettings, {
+      library: libWithout as Settings['library'],
+    });
+    expect(merged.library.fixer.preset).toBe('normal');
+    expect(merged.library.fixer.declick).toBe('off');
+    expect(parseSettings(merged).ok).toBe(true);
+  });
+
+  it('fixerKnobsForPreset and msToSamples', () => {
+    expect(fixerKnobsForPreset('aggressive').declick).toBe('light');
+    expect(fixerKnobsForPreset('gentle').seamFadeMs).toBeGreaterThan(
+      fixerKnobsForPreset('normal').seamFadeMs,
+    );
+    expect(msToSamples(5.8, 44100)).toBe(256);
+    expect(msToSamples(0, 44100)).toBe(0);
   });
 
   it('fills mixer.jog when missing from older settings files', () => {

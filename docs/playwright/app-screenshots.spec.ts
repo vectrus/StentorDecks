@@ -197,7 +197,9 @@ test.describe('Live app documentation screenshots', () => {
   test('11 settings updates', async ({ page }) => {
     await bootApp(page);
     const panel = await openSettingsSection(page, /Updates/i);
-    await expect(panel.getByText(/Check for updates|GitHub|version/i).first()).toBeVisible();
+    await expect(
+      panel.getByText(/Check for updates on launch|Download automatically|Check for updates/i).first(),
+    ).toBeVisible();
     await shotLocator(panel, '11-settings-updates.png');
   });
 

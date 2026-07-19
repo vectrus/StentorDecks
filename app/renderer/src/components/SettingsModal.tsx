@@ -612,16 +612,24 @@ const LibrarySection = observer(function LibrarySection() {
   );
 });
 
-function updateStatusLine(s: AppUpdateStatus): string {
+function updateStatusLine(
+  s: AppUpdateStatus,
+  autoDownload: boolean,
+  checkOnLaunch: boolean,
+): string {
   switch (s.phase) {
     case 'disabled':
       return 'Dev / source build — use UPDATE.bat for git sync. Auto-update needs the installed app.';
     case 'idle':
-      return 'Idle — will check shortly after launch.';
+      return checkOnLaunch
+        ? 'Idle — will check shortly after launch.'
+        : 'Idle — check only when you press the button.';
     case 'checking':
       return 'Checking GitHub Releases…';
     case 'available':
-      return `Update ${s.availableVersion ?? ''} available — downloading…`;
+      return autoDownload
+        ? `Update ${s.availableVersion ?? ''} available — downloading…`
+        : `Update ${s.availableVersion ?? ''} available — press Download when ready.`;
     case 'not-available':
       return 'You are on the latest release.';
     case 'downloading':
@@ -638,6 +646,7 @@ function updateStatusLine(s: AppUpdateStatus): string {
 const UpdateSection = observer(function UpdateSection() {
   const [status, setStatus] = useState<AppUpdateStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  const { checkOnLaunch, autoDownload } = settingsStore.settings.updates;
 
   useEffect(() => {
     void invoke('app:update:status').then(setStatus);
@@ -645,6 +654,8 @@ const UpdateSection = observer(function UpdateSection() {
   }, []);
 
   const playing = deckA.state === 'playing' || deckB.state === 'playing';
+  const canDownload =
+    status?.phase === 'available' && !autoDownload && status.packaged;
 
   return (
     <div className="settings-section">
@@ -653,7 +664,37 @@ const UpdateSection = observer(function UpdateSection() {
         v{status?.currentVersion ?? '…'}
         {status?.packaged ? ' · installed' : ' · source'}
       </div>
-      <div className="temp-meta">{status ? updateStatusLine(status) : '…'}</div>
+      <label className="temp-jog-switch" style={{ marginTop: 8 }}>
+        <input
+          type="checkbox"
+          checked={checkOnLaunch}
+          onChange={(e) => {
+            void settingsStore.set({ updates: { checkOnLaunch: e.target.checked } });
+          }}
+        />
+        <span>
+          Check for updates on launch
+          <span className="temp-jog-hint">Quiet GitHub check a few seconds after start</span>
+        </span>
+      </label>
+      <label className="temp-jog-switch" style={{ marginTop: 6 }}>
+        <input
+          type="checkbox"
+          checked={autoDownload}
+          onChange={(e) => {
+            void settingsStore.set({ updates: { autoDownload: e.target.checked } });
+          }}
+        />
+        <span>
+          Download automatically
+          <span className="temp-jog-hint">
+            Get the file ready in the background. Install still needs Restart &amp; update
+          </span>
+        </span>
+      </label>
+      <div className="temp-meta" style={{ marginTop: 8 }}>
+        {status ? updateStatusLine(status, autoDownload, checkOnLaunch) : '…'}
+      </div>
       <div className="row" style={{ gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
         <button
           type="button"
@@ -665,8 +706,22 @@ const UpdateSection = observer(function UpdateSection() {
               .finally(() => setBusy(false));
           }}
         >
-          {busy ? 'Checking…' : 'Check for updates'}
+          {busy && status?.phase === 'checking' ? 'Checking…' : 'Check for updates'}
         </button>
+        {canDownload ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true);
+              void invoke('app:update:download')
+                .then(setStatus)
+                .finally(() => setBusy(false));
+            }}
+          >
+            Download
+          </button>
+        ) : null}
         <button
           type="button"
           disabled={busy || status?.phase !== 'downloaded'}
@@ -694,7 +749,7 @@ const UpdateSection = observer(function UpdateSection() {
         </button>
       </div>
       <div className="temp-meta" style={{ marginTop: 6 }}>
-        Booth: GitHub Releases auto-update. Source tree: UPDATE.bat (not GitHub Desktop).
+        Booth: GitHub Releases. Install never starts by itself mid-set. Source tree: UPDATE.bat.
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import {
   NORMALIZED_BY_SD_MARK,
   encodeWavPcm16le,
   fixedSiblingWavPath,
+  isSdSiblingWavPath,
   normalizeChannelsTowardLufs,
   uniqueFixedSiblingWavPath,
   uniqueNormalizedSiblingWavPath,
@@ -44,6 +45,14 @@ describe('mp3Fix (R5.9)', () => {
       `C:\\Music\\a${NORMALIZED_BY_SD_MARK}.wav`,
     );
     expect(withNormalizedBySdTitle('Tune', 'a')).toBe(`Tune${NORMALIZED_BY_SD_MARK}`);
+  });
+
+  it('isSdSiblingWavPath only matches Fixed/Normalized WAVs', () => {
+    expect(isSdSiblingWavPath(`C:\\a\\x${FIXED_BY_SD_MARK}.wav`)).toBe(true);
+    expect(isSdSiblingWavPath(`C:\\a\\x${NORMALIZED_BY_SD_MARK}.wav`)).toBe(true);
+    expect(isSdSiblingWavPath('C:\\a\\x.mp3')).toBe(false);
+    expect(isSdSiblingWavPath('C:\\a\\x.wav')).toBe(false);
+    expect(isSdSiblingWavPath(`C:\\a\\x${FIXED_BY_SD_MARK}.mp3`)).toBe(false);
   });
 
   it('normalizeChannelsTowardLufs applies gain and respects peak', () => {

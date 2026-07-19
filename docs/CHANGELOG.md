@@ -5,6 +5,24 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Ship 0.2.10: Fixer knobs, SD WAV purge, title/artist, update toggles
+
+Booth polish since 0.2.9: Library fixer presets (Gentle/Normal/Aggressive) + seam fade/trim + de-click; **Delete SD WAV** / **Purge SD WAVs** for StentorDeck siblings only; title/artist edit in DB (no disk rename); Settings → Updates **Check on launch** + **Download automatically**. R5.1, R5.9, R5.10, R1.1.
+
+---
+
+## 2026-07-19 — Prep: fixer knobs, SD WAV delete/purge, title/artist (R5.9 / R5.10)
+
+Library fixer presets (Gentle/Normal/Aggressive) + seam fade/trim + de-click; phones Preview and Write share the same policy. Operator may **Delete SD WAV** / **Purge SD WAVs** for `(Fixed by SD)` / `(Normalized by SD)` siblings only (never source music). Title/artist editable in DB only — no disk rename. R5.1 exception, R5.9, R5.10, docs/07.
+
+---
+
+## 2026-07-19 — Settings → Updates: check on launch + auto-download (R1.1)
+
+Two toggles (defaults on): **Check for updates on launch**, **Download automatically**. Install stays **Restart & update** only (never silent mid-set). With auto-download off, **Download** appears after a check finds a release. Soft-migrates into `settings.updates`. R1.1, docs/07.
+
+---
+
 ## 2026-07-19 — Ship 0.2.9: Click & squeak fixer + phones preview / normalize
 
 Library tools since 0.2.8: right-click **Click & squeak fixer…**; **Preview fix** and **Preview normalize** on **headphones only** (never booth/master; not both at once); **Write fixed WAV** (`… (Fixed by SD).wav`) and separate **Write normalized** (`… (Normalized by SD).wav`) toward auto-gain LUFS — originals never overwritten. R5.9, R2.13.

@@ -34,7 +34,7 @@ When you pick a music folder, StentorDeck:
 
 Works with **MP3**, **FLAC**, **WAV**.
 
-The app **never moves, renames, or deletes** your music files. It only reads them.
+The app **never moves or renames** files on disk, and **never deletes your original** music. Exception: you may delete **StentorDeck sibling WAVs** named `(Fixed by SD)` or `(Normalized by SD)` (one file or purge many). Title/artist in the list can be edited in the app — that does **not** rename the file.
 
 ---
 
@@ -88,14 +88,19 @@ Select a **track**, then:
 | **Tap** | Tap the beat (at least 4 taps), then **Apply tap** |
 | **½** / **×2** | Fix half/double tempo mistakes |
 | **Detect** | Re-analyze that song (BPM, key, beatgrid, waveform). Need this if Sync says “no beatgrid” |
+| **Title** / **Artist** | Edit how the track shows in the list (saved in the library DB; file name unchanged) |
 | **Check MP3** | See if a damaged MP3 plays short |
+| **Fixer preset** | Gentle / Normal / Aggressive — sets seam fade, trim, and de-click |
+| **Fade / Trim / De-click** | Fine-tune stitch healing; Preview and Write use the same settings |
 | **Preview fix** | **Phones only** — hear the resilient decode before writing. Not on booth/master |
 | **Write fixed WAV** | Makes a **new** fixed file next to it (`… (Fixed by SD).wav`). Original never changed |
 | **Preview normalize** | **Phones only** — hear loudness normalize (after **Detect**). Separate from fix preview — not both at once |
 | **Write normalized** | Makes a **new** file (`… (Normalized by SD).wav`) toward the auto-gain LUFS target. Original never changed |
 | **Stop preview** | Ends whichever phones preview is running |
+| **Delete SD WAV** | Remove the selected Fixed/Normalized sibling from disk (confirm). Originals stay |
+| **Purge SD WAVs…** | Delete all Fixed/Normalized siblings in the open folder (or whole library if none) |
 
-**Right-click** a track → **Click & squeak fixer…** selects it, jumps to these tools (switches to Library if you were in Performance), and runs Check for MP3s. Same menu has Check / Preview fix / Write fixed / Preview normalize / Write normalized / Load A / Load B.
+**Right-click** a track → **Click & squeak fixer…** selects it, jumps to these tools (switches to Library if you were in Performance), and runs Check for MP3s. Same menu has Check / Preview / Write / Delete SD WAV / Load A / Load B.
 | **Camelot** | Set the key yourself, or clear with `—` |
 
 Fixes are remembered next time.
@@ -180,7 +185,7 @@ A DJ-friendly code for musical key. Nearby numbers usually mix nicer. The `~` ma
 Not in this version. Use folders on your disk.
 
 **Does Library delete files?**  
-No. Never.
+Never your originals. You may delete **Fixed by SD** / **Normalized by SD** sibling WAVs (or purge them in a folder).
 
 ---
 
