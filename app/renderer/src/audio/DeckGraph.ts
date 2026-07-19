@@ -33,7 +33,10 @@ export class DeckGraph {
   readonly input: GainNode;
   readonly pflOut: GainNode;
   readonly masterOut: GainNode;
+  /** Post-fader (mix / PA level). */
   readonly channelMeter: AnalyserNode;
+  /** Pre-fader (trim+EQ+FX) — shown when PFL is on so gain can be matched with fader down. */
+  readonly preFaderMeter: AnalyserNode;
 
   private readonly trim: GainNode;
   private readonly eqLow: BiquadFilterNode;
@@ -78,6 +81,8 @@ export class DeckGraph {
     this.masterOut = ctx.createGain();
     this.channelMeter = ctx.createAnalyser();
     this.channelMeter.fftSize = 2048;
+    this.preFaderMeter = ctx.createAnalyser();
+    this.preFaderMeter.fftSize = 2048;
 
     this.eqLow.type = 'lowshelf';
     this.eqLow.frequency.value = 180;
@@ -121,6 +126,7 @@ export class DeckGraph {
     this.flangerDry.connect(flangerSum);
     this.flangerWetGain.connect(flangerSum);
 
+    flangerSum.connect(this.preFaderMeter);
     flangerSum.connect(this.pflGain);
     this.pflGain.connect(this.pflOut);
 

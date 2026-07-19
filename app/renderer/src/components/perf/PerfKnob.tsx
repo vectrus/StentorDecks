@@ -7,6 +7,7 @@ export function PerfKnob(props: {
   onChange: (v: number) => void;
   label?: string;
   ariaLabel: string;
+  title?: string;
   size?: 'sm' | 'md';
   reset?: number;
   disabled?: boolean;
@@ -19,6 +20,7 @@ export function PerfKnob(props: {
     onChange,
     label,
     ariaLabel,
+    title,
     size = 'md',
     reset = 0.5,
     disabled,
@@ -43,7 +45,7 @@ export function PerfKnob(props: {
         aria-valuemax={1}
         aria-valuenow={value}
         role="slider"
-        title={`${ariaLabel} — drag up/down`}
+        title={title ?? `${ariaLabel} — drag up/down`}
         disabled={disabled}
         onPointerDown={(e) => {
           if (disabled) return;

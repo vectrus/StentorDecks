@@ -4,6 +4,7 @@ import {
   trimDbFromGainKnob,
   type ControlId,
 } from '@stentordeck/shared';
+import { dbToVuNorm, vuSegments } from '../../audio/vuMeter';
 import { deckA, deckB, midiStore, mixerStore } from '../../stores/root';
 import type { DeckStore } from '../../stores/DeckStore';
 import { PerfKnob } from './PerfKnob';
@@ -15,14 +16,6 @@ const EQ_BANDS: { band: EqBand; label: string; control: (d: 'A' | 'B') => Contro
   { band: 'mid', label: 'MID', control: (d) => `deck${d}.eqMid` as ControlId },
   { band: 'low', label: 'LOW', control: (d) => `deck${d}.eqLow` as ControlId },
 ];
-
-/** VU zones per mockup 05 / docs/03: green < -9, amber -9..-3, red > -3. */
-function vuSegments(db: number): { ok: number; hot: number; clip: number } {
-  const clip = db > -3 ? Math.min(1, (db + 3) / 3) : 0;
-  const hot = db > -9 ? Math.min(1, (Math.min(db, -3) + 9) / 6) : 0;
-  const ok = db > -60 ? Math.min(1, (Math.min(db, -9) + 60) / 51) : 0;
-  return { ok, hot, clip };
-}
 
 function GainCol(props: { deck: DeckStore; deckId: 'A' | 'B' }) {
   const { deck, deckId } = props;
@@ -86,18 +79,23 @@ function KnobFaderCol(props: {
   deckId: 'A' | 'B';
   fader: number;
   db: number;
+  peakDb: number;
+  peaking: boolean;
+  pflMeter: boolean;
   onFader: (v: number) => void;
   faderControl: ControlId;
 }) {
-  const { deck, deckId, fader, db, onFader, faderControl } = props;
+  const { deck, deckId, fader, db, peakDb, peaking, pflMeter, onFader, faderControl } = props;
   const accent = deckId === 'A' ? 'a' : 'b';
   const segs = vuSegments(db);
+  const peakNorm = dbToVuNorm(peakDb);
   const takeover = midiStore.takeoverView(faderControl);
   const showGhost = takeover?.armed === true;
   const hw = takeover?.hardwareValue ?? fader;
   /** Cap rides the lane centerline; inset matches .perf-ft groove/padding. */
   const capTop = `calc(0.55rem + (100% - 1.1rem) * ${1 - fader})`;
   const ghostTop = `calc(0.55rem + (100% - 1.1rem) * ${1 - hw})`;
+  const tip = pflMeter ? 'PFL / pre-fader' : 'post-fader';
 
   return (
     <div className={`perf-mx-col perf-mx-ch accent-${accent}`}>
@@ -153,10 +151,20 @@ function KnobFaderCol(props: {
           <span className="perf-cap" style={{ top: capTop }} />
           {showGhost && <span className="perf-ghost" style={{ top: ghostTop }} aria-hidden />}
         </div>
-        <div className="perf-vu" title={`${db.toFixed(1)} dBFS`}>
+        <div
+          className={`perf-vu${peaking ? ' peaking' : ''}${pflMeter ? ' pfl' : ''}`}
+          title={`${db.toFixed(1)} dBFS (${tip}) · peak ${peakDb.toFixed(1)}`}
+        >
           <div className="ok" style={{ height: `${segs.ok * 100}%` }} />
           <div className="hot" style={{ height: `${segs.hot * 100}%` }} />
           <div className="clip" style={{ height: `${segs.clip * 100}%` }} />
+          {peakNorm > 0.02 ? (
+            <span
+              className="perf-vu-peak"
+              style={{ bottom: `${peakNorm * 100}%` }}
+              aria-hidden
+            />
+          ) : null}
         </div>
       </div>
 
@@ -193,6 +201,9 @@ export const PerfMixerMini = observer(function PerfMixerMini() {
         deckId="A"
         fader={mixerStore.faderA}
         db={mixerStore.meters.aDb}
+        peakDb={mixerStore.meters.aPeakDb}
+        peaking={mixerStore.meters.aPeaking}
+        pflMeter={mixerStore.meters.aPflMeter}
         onFader={(v) => mixerStore.setFaderA(v)}
         faderControl="mixer.faderA"
       />
@@ -202,6 +213,9 @@ export const PerfMixerMini = observer(function PerfMixerMini() {
         deckId="B"
         fader={mixerStore.faderB}
         db={mixerStore.meters.bDb}
+        peakDb={mixerStore.meters.bPeakDb}
+        peaking={mixerStore.meters.bPeaking}
+        pflMeter={mixerStore.meters.bPflMeter}
         onFader={(v) => mixerStore.setFaderB(v)}
         faderControl="mixer.faderB"
       />

@@ -21,5 +21,7 @@ If the PA is hot, turn **MST** down first — don’t bury everything in EQ kill
 ## Headphones
 
 - Per-deck **PFL** (headphone icon) sends that deck to the cue bus.  
+- With PFL on, that deck’s **VU** shows pre-fader level (gain/EQ) even if the channel fader is down — use it to match volumes before you open the fader.  
+- VU **red / peak tip** means you’re peaking (above about −3 dBFS).  
 - **CUE / PHN** knobs blend cue vs master and set phone volume.  
 - Default head-mix leans **cue-only** so PFL isn’t drowned by the master bus.

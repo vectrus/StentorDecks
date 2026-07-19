@@ -82,8 +82,8 @@ Insert chain: `input → [filter] → [flanger] → output`, each independently 
 
 **Flanger** — split dry/wet; wet path: DelayNode (base 2 ms) with LFO (OscillatorNode sine → GainNode depth → delayTime), feedback GainNode loop. Params: rate 0.05–2 Hz (default 0.25), depth 0.5–3 ms (default 1.5), feedback 0–0.85 (default 0.5), wet 0–1 (`deckA.wet` / `deckB.wet`, equal-power mix). Defaults tuned by ear on real material before E6 closes.
 
-Pad behavior: pad toggles the effect on/off (latching). Filter amount and wet are **never** mode-shared (avoids soft-takeover fights when switching FX). Active effect state must be visually loud (R3.2).
+Pad behavior: pad toggles the effect on/off (latching). While flanger is on, writing filter amount also sets wet to the same value (engage adopts current AMT → wet). Dedicated wet ControlId still works. Active effect state must be visually loud (R3.2).
 
 ## Metering
 
-Per channel + master: `AnalyserNode` (fftSize 2048) read each rAF; RMS → dB. VU zones: green < -9 dBFS, amber -9..-3, red > -3 (post-fader, pre-master for channels; post-limiter-input for master clip light). Meters live beside faders (style guide).
+Per channel + master: `AnalyserNode` (fftSize 2048) read each rAF; RMS → dB for the bar fill, plus a short **peak hold** tip (true peak of the block). VU zones: green < -9 dBFS, amber -9..-3, red > -3 — segment heights are stacked fractions of the full bar (mockup 05). Channel default = **post-fader** (mix/PA). When that deck’s **PFL is on**, the bar shows `max(pre-fader, post-fader)` so trim/EQ/gain are readable with the channel fader down (cue matching). Master meter stays post-limiter-input. Meters live beside faders (style guide).

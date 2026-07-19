@@ -5,6 +5,24 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Ship 0.2.6: VU / folder scroll / shared FX AMT
+
+Booth polish since 0.2.5: channel VU peaking tip + red when hot, PFL shows pre-fader levels for gain match; left folder tree scrolls selection into view + sticky folder name; while FLANGER is on, AMT also drives wet (both pads → shared amount). R7.6, R2.8, R5.3, R3.1.
+
+---
+
+## 2026-07-19 — FX: AMT shares flanger wet when FLANGER on (R3.1)
+
+While the flanger pad is on, the filter AMT knob/encoder also drives flanger wet (same 0…1). Both pads on → AMT is filter amount + wetness. Wet still resets to 0 on load; dedicated WET / Shift+FX remains. Owner request. R3.1, docs/03.
+
+---
+
+## 2026-07-19 — VU: peaking tip + PFL pre-fader levels (R7.6 / R2.8)
+
+Channel VU segment math was wrong (green filled 100% in the amber/red zone so peaking never read). Bars now stack green→amber→red per mockup 05; peak-hold tip + red border when > −3 dBFS. With PFL on, meter uses max(pre-fader, post-fader) so gain can be matched with the fader down. Owner request. R7.6, R2.8, docs/03.
+
+---
+
 ## 2026-07-19 — Ship 0.2.5: auto-update feed + dual-pane browse
 
 In-app Check for updates found nothing because GitHub only had **prerelease** Setup.exe uploads **without** `latest.yml` (electron-updater’s feed). Publish config now forces a full `release` (tag `v*`); updater accepts prereleases that ship `latest.yml`; clearer Settings error when the feed is missing. Every release publishes `StentorDeck-ReleaseNotes-<version>.txt` next to the Setup.exe (from CHANGELOG). Includes dual-pane browse focus (R5.3). E7 / R1.1.

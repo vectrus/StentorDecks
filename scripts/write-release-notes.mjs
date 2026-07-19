@@ -53,7 +53,7 @@ function extractNotes(changelog, ver) {
   const rest = lines.slice(1).join('\n');
   // Stop at next horizontal rule leftover if present
   const cut = rest.split(/\n---\n/)[0] ?? rest;
-  return { title, body: stripMd(cut) };
+  return { title: stripMd(title), body: stripMd(cut) };
 }
 
 const changelog = existsSync(changelogPath)
@@ -71,8 +71,8 @@ const text = [
   'Install over your current build. Library, settings, and MIDI map stay in %APPDATA%.',
   '',
   extracted?.title ? `What's new` : null,
-  extracted?.title ? `-----------` : null,
-  extracted?.title ? extracted.title.replace(/^—\s*/, '— ') : null,
+  extracted?.title ? '-----------' : null,
+  extracted?.title || null,
   extracted?.body || '(See docs/CHANGELOG.md)',
   '',
   'How to update',

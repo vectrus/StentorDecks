@@ -172,11 +172,22 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
         <PerfKnob
           size="sm"
           label="AMT"
-          ariaLabel={`Deck ${deck.id} filter amount`}
+          ariaLabel={
+            deck.flangerOn && deck.filterOn
+              ? `Deck ${deck.id} filter amount + flanger wet`
+              : deck.flangerOn
+                ? `Deck ${deck.id} flanger wet (shared AMT)`
+                : `Deck ${deck.id} filter amount`
+          }
+          title={
+            deck.flangerOn
+              ? 'AMT = filter amount and flanger wet while FLANGER is on'
+              : 'Filter amount (LP ← center → HP)'
+          }
           value={deck.filterAmount}
           disabled={empty}
           reset={0.5}
-          className={deck.filterOn ? 'fx-active' : undefined}
+          className={deck.filterOn || deck.flangerOn ? 'fx-active' : undefined}
           pickup={filterPickup?.armed ? filterPickup.hardwareValue : null}
           onChange={(v) => deck.setFilterAmount(v)}
         />
@@ -193,6 +204,7 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
             size="sm"
             label="WET"
             ariaLabel={`Deck ${deck.id} flanger wet`}
+            title="Flanger wet (also driven by AMT while FLANGER is on)"
             value={deck.flangerWet}
             disabled={empty}
             reset={0}

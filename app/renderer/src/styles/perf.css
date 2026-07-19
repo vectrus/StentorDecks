@@ -717,6 +717,7 @@
 }
 
 .perf-vu {
+  position: relative;
   width: 0.7rem;
   height: 100%;
   background: var(--bg-app);
@@ -726,6 +727,15 @@
   flex-direction: column-reverse;
   overflow: hidden;
   box-sizing: border-box;
+}
+
+.perf-vu.pfl {
+  border-color: color-mix(in srgb, var(--text) 55%, var(--border));
+}
+
+.perf-vu.peaking {
+  border-color: var(--vu-clip);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--vu-clip) 55%, transparent);
 }
 
 .perf-vu .ok {
@@ -744,6 +754,21 @@
   background: var(--vu-clip);
   width: 100%;
   flex-shrink: 0;
+}
+
+.perf-vu-peak {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  margin-bottom: -1px;
+  background: var(--text);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.perf-vu.peaking .perf-vu-peak {
+  background: var(--vu-clip);
 }
 
 
@@ -775,6 +800,11 @@
   overflow: auto;
   min-height: 0;
   font-size: 0.8125rem;
+}
+
+.perf-tree-panel .prep-tree-sel {
+  background: color-mix(in srgb, var(--bg-app) 92%, var(--bg-panel));
+  margin: -0.1rem -0.05rem 0.3rem;
 }
 
 .perf-brow-files {

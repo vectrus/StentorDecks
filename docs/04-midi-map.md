@@ -44,8 +44,8 @@ Browse cluster (shared): up `45` prev row, down `46` next row, left `44` parent 
 | EQ B high/mid/low | 4C / 4E / 50 | 7-bit, soft takeover |
 | Jog A / B (turn) | 30 / 31 | relative two's-complement: v<64 → +v, else v−128 |
 | Jog A / B (scratch mode) | 32 / 33 | aliased to `deckA.jog` / `deckB.jog` (Vinyl platter often uses these; same feel, no scratching) |
-| Filter amount A / B | **54 / 55** | FX Mode encoder — **relative** (01…3F CW / 40…7F CCW; slow turns often only 01/7F). Not absolute 0…127. |
-| WET A / B | **5C / 5D** | Shift+FX Mode encoder — **relative** (same 1/127 pattern). Or learn a spare absolute knob. |
+| Filter amount A / B | **54 / 55** | FX Mode encoder — **relative** (01…3F CW / 40…7F CCW; slow turns often only 01/7F). Not absolute 0…127. While flanger pad is on, also writes flanger wet (R3.1). |
+| WET A / B | **5C / 5D** | Shift+FX Mode encoder — **relative** (same 1/127 pattern). Or learn a spare absolute knob. Dedicated wet; AMT also drives wet when flanger is on. |
 | Tap tempo A / B | learn | optional; factory Sync stays Sync |
 | BPM half / double | learn | optional Prep/performance actions |
 | Key nudge / set | learn | optional |

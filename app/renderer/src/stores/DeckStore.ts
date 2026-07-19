@@ -911,19 +911,33 @@ export class DeckStore {
     this.pushGraph();
   }
 
+  /**
+   * Filter AMT knob (R3.1). When flanger pad is on, the same value also drives
+   * flanger wet — booth: one encoder for filter amount and/or flanger wetness.
+   */
   setFilterAmount(v: number): void {
-    this.filterAmount = v;
+    const next = Math.min(1, Math.max(0, v));
+    this.filterAmount = next;
+    if (this.flangerOn) {
+      this.flangerWet = next;
+      this.notify('wet');
+    }
     this.pushGraph();
     this.notify('filter');
   }
 
   toggleFlanger(): void {
     this.flangerOn = !this.flangerOn;
+    // Adopt current AMT so the shared knob position matches wet on engage.
+    if (this.flangerOn) {
+      this.flangerWet = this.filterAmount;
+      this.notify('wet');
+    }
     this.pushGraph();
   }
 
   setFlangerWet(v: number): void {
-    this.flangerWet = v;
+    this.flangerWet = Math.min(1, Math.max(0, v));
     this.pushGraph();
     this.notify('wet');
   }

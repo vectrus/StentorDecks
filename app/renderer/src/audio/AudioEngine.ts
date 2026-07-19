@@ -47,9 +47,20 @@ export function connectStereoToChannelPair(
 }
 
 export type MeterLevels = {
+  /** Display level (RMS): post-fader, or max(pre, post) when PFL on. */
   aDb: number;
   bDb: number;
   masterDb: number;
+  /** Peak-hold tip (dBFS) for the same display path. */
+  aPeakDb: number;
+  bPeakDb: number;
+  masterPeakDb: number;
+  aPeaking: boolean;
+  bPeaking: boolean;
+  masterPeaking: boolean;
+  /** True when the bar is showing pre-fader cue level (PFL on). */
+  aPflMeter: boolean;
+  bPflMeter: boolean;
 };
 
 export type EngineTransportState = {
@@ -95,6 +106,8 @@ export class AudioEngine {
   private cueBridgeSrc: MediaStreamAudioSourceNode | null = null;
 
   private meterBuf = new Float32Array(2048);
+  private peakHold = { a: -120, b: -120, master: -120 };
+  private peakHoldUntil = { a: 0, b: 0, master: 0 };
 
   async ensureRunning(): Promise<void> {
     if (this.masterCtx?.state === 'suspended') {
@@ -408,25 +421,73 @@ export class AudioEngine {
     linearRampParam(this.cueFromMaster.gain, b, this.masterCtx, 0.02);
   }
 
-  readMeters(): MeterLevels {
+  /**
+   * Channel meters: post-fader by default (mix level).
+   * With PFL on: max(pre-fader, post-fader) so gain/EQ are visible with the fader down (R2.8 / R7.6).
+   */
+  readMeters(opts?: { aPfl?: boolean; bPfl?: boolean }): MeterLevels {
+    const aPfl = opts?.aPfl === true;
+    const bPfl = opts?.bPfl === true;
+    const aPost = this.readAnalyserPair(this.deckA?.channelMeter ?? null);
+    const aPre = this.readAnalyserPair(this.deckA?.preFaderMeter ?? null);
+    const bPost = this.readAnalyserPair(this.deckB?.channelMeter ?? null);
+    const bPre = this.readAnalyserPair(this.deckB?.preFaderMeter ?? null);
+    const master = this.readAnalyserPair(this.masterMeter);
+
+    const aRms = aPfl ? Math.max(aPre.rmsDb, aPost.rmsDb) : aPost.rmsDb;
+    const bRms = bPfl ? Math.max(bPre.rmsDb, bPost.rmsDb) : bPost.rmsDb;
+    const aPeakInst = aPfl ? Math.max(aPre.peakDb, aPost.peakDb) : aPost.peakDb;
+    const bPeakInst = bPfl ? Math.max(bPre.peakDb, bPost.peakDb) : bPost.peakDb;
+
+    const now = performance.now();
+    const aPeakDb = this.holdPeak('a', aPeakInst, now);
+    const bPeakDb = this.holdPeak('b', bPeakInst, now);
+    const masterPeakDb = this.holdPeak('master', master.peakDb, now);
+
     return {
-      aDb: this.readAnalyser(this.deckA?.channelMeter ?? null),
-      bDb: this.readAnalyser(this.deckB?.channelMeter ?? null),
-      masterDb: this.readAnalyser(this.masterMeter),
+      aDb: aRms,
+      bDb: bRms,
+      masterDb: master.rmsDb,
+      aPeakDb,
+      bPeakDb,
+      masterPeakDb,
+      aPeaking: aPeakDb > -3 || aRms > -3,
+      bPeaking: bPeakDb > -3 || bRms > -3,
+      masterPeaking: masterPeakDb > -3 || master.rmsDb > -3,
+      aPflMeter: aPfl,
+      bPflMeter: bPfl,
     };
   }
 
-  private readAnalyser(node: AnalyserNode | null): number {
-    if (!node) return -120;
+  private holdPeak(ch: 'a' | 'b' | 'master', peakDb: number, nowMs: number): number {
+    const HOLD_MS = 900;
+    const FALL_DB_PER_MS = 0.024; // ~24 dB/s after hold
+    if (peakDb >= this.peakHold[ch]) {
+      this.peakHold[ch] = peakDb;
+      this.peakHoldUntil[ch] = nowMs + HOLD_MS;
+      return peakDb;
+    }
+    if (nowMs < this.peakHoldUntil[ch]) return this.peakHold[ch];
+    const next = Math.max(peakDb, this.peakHold[ch] - FALL_DB_PER_MS * 16);
+    this.peakHold[ch] = next;
+    return next;
+  }
+
+  private readAnalyserPair(node: AnalyserNode | null): { rmsDb: number; peakDb: number } {
+    if (!node) return { rmsDb: -120, peakDb: -120 };
     node.getFloatTimeDomainData(this.meterBuf);
     let sum = 0;
+    let peak = 0;
     for (let i = 0; i < this.meterBuf.length; i++) {
       const v = this.meterBuf[i]!;
+      const a = Math.abs(v);
+      if (a > peak) peak = a;
       sum += v * v;
     }
     const rms = Math.sqrt(sum / this.meterBuf.length);
-    if (rms < 1e-8) return -120;
-    return 20 * Math.log10(rms);
+    const rmsDb = rms < 1e-8 ? -120 : 20 * Math.log10(rms);
+    const peakDb = peak < 1e-8 ? -120 : 20 * Math.log10(peak);
+    return { rmsDb, peakDb };
   }
 
   async testMaster(): Promise<void> {

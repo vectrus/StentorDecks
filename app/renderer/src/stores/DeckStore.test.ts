@@ -45,6 +45,28 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     expect(deck.state).toBe('stopped');
   });
 
+  it('AMT drives flanger wet while flanger pad is on (R3.1 shared)', () => {
+    const deck = new DeckStore('A', () => defaultSettings);
+    deck.filterAmount = 0.5;
+    deck.flangerWet = 0;
+    deck.setFilterAmount(0.25);
+    expect(deck.flangerWet).toBe(0); // flanger off — wet untouched
+
+    deck.toggleFlanger();
+    expect(deck.flangerOn).toBe(true);
+    expect(deck.flangerWet).toBe(0.25); // adopt AMT on engage
+
+    deck.setFilterAmount(0.8);
+    expect(deck.filterAmount).toBe(0.8);
+    expect(deck.flangerWet).toBe(0.8); // both when flanger on
+
+    deck.toggleFilter();
+    deck.setFilterAmount(0.35);
+    expect(deck.filterOn).toBe(true);
+    expect(deck.filterAmount).toBe(0.35);
+    expect(deck.flangerWet).toBe(0.35); // both pads — shared AMT
+  });
+
   it('resetOnLoad clears FX, kills, sync, cue, nudge, PFL', () => {
     const deck = new DeckStore('B', () => defaultSettings);
     deck.filterOn = true;

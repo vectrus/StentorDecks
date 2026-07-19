@@ -19,7 +19,19 @@ export class MixerStore {
     audioEngine.setHeadMix(this.headMix);
     audioEngine.setPhonesGain(this.phones);
   }
-  meters = { aDb: -120, bDb: -120, masterDb: -120 };
+  meters = {
+    aDb: -120,
+    bDb: -120,
+    masterDb: -120,
+    aPeakDb: -120,
+    bPeakDb: -120,
+    masterPeakDb: -120,
+    aPeaking: false,
+    bPeaking: false,
+    masterPeaking: false,
+    aPflMeter: false,
+    bPflMeter: false,
+  };
 
   constructor(
     private readonly deckA: DeckStore,
@@ -64,6 +76,9 @@ export class MixerStore {
   }
 
   tickMeters(): void {
-    this.meters = audioEngine.readMeters();
+    this.meters = audioEngine.readMeters({
+      aPfl: this.deckA.pfl,
+      bPfl: this.deckB.pfl,
+    });
   }
 }
