@@ -18,17 +18,18 @@ export default defineConfig({
   timeout: 90_000,
   use: {
     ...devices['Desktop Chrome'],
-    baseURL: 'http://127.0.0.1:5173',
+    // Dedicated port — :5173 is often the marketing site or booth Vite; never reuse that.
+    baseURL: 'http://127.0.0.1:5174',
     viewport: { width: 1440, height: 900 },
     deviceScaleFactor: 1,
     colorScheme: 'dark',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'npm run dev -w @stentordeck/renderer -- --host 127.0.0.1 --port 5173',
+    command: 'npm run dev -w @stentordeck/renderer -- --host 127.0.0.1 --port 5174',
     cwd: root,
-    url: 'http://127.0.0.1:5173',
-    reuseExistingServer: !process.env.CI,
+    url: 'http://127.0.0.1:5174',
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

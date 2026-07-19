@@ -8,8 +8,10 @@ Maintains visual documentation for StentorDeck. Ruled by `.cursorrules` §2b.
 npm run docs:screenshots
 ```
 
-Boots the Vite renderer with mocked `window.stentor` / devices (same approach as e2e),
-opens Performance / Library / Audio / Settings, and writes PNGs to [`../screenshots/`](../screenshots/).
+Boots the Vite renderer with mocked `window.stentor` / devices (same approach as e2e)
+on **port 5174** (never reuses :5173 — that is often the marketing site),
+opens Performance / Library / Audio / Help / Settings (all tabs), and writes PNGs to
+[`../screenshots/`](../screenshots/). Catalog + website `manifest.json` live there.
 Commit the PNGs when the UI changes in a user-visible way.
 
 HTML design-contract mockups remain under [`../mockups/`](../mockups/) for layout reference;

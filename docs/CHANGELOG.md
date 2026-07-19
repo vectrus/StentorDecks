@@ -5,6 +5,18 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Doc screenshots pack for website (Settings + Help)
+
+Expanded Playwright suite: Help panel + Settings tabs (Faders, Jog, Library, Display, MIDI, Updates); cropped Settings panels; `docs/screenshots/README.md` + `manifest.json` for the marketing site. README embeds Faders / MIDI / Updates. E6 / E7 / R7.4.
+
+---
+
+## 2026-07-19 — README: SmartScreen “unsafe app” workaround
+
+Document More info → Run anyway for unsigned Setup.exe / first launch. Operator note synced in [`guides/updating.md`](./guides/updating.md). E7 / R1.1 packaging.
+
+---
+
 ## 2026-07-19 — DIY macOS from-source guide (unsupported)
 
 Owner: no Mac product/installer — document how a willing person can try `npm start` on macOS from git. R1.1 stays Windows-only. Guide: [`guides/run-from-source-macos.md`](./guides/run-from-source-macos.md); README pointer. Not in in-app Help.

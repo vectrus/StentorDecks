@@ -1,0 +1,84 @@
+{
+  "generatedBy": "npm run docs:screenshots",
+  "suite": "docs/playwright/app-screenshots.spec.ts",
+  "images": [
+    {
+      "file": "01-performance-mode.png",
+      "id": "performance",
+      "caption": "Performance mode — decks, waveforms, mixer, library",
+      "tags": ["hero", "performance", "mixer"]
+    },
+    {
+      "file": "02-prep-mode.png",
+      "id": "library",
+      "caption": "Library mode — folder tree + track list",
+      "tags": ["library", "prep"]
+    },
+    {
+      "file": "03-audio-setup.png",
+      "id": "audio",
+      "caption": "Audio setup — master / cue routing",
+      "tags": ["audio", "setup"]
+    },
+    {
+      "file": "04-help-panel.png",
+      "id": "help",
+      "caption": "In-app Help — searchable operator guides",
+      "tags": ["help", "support"]
+    },
+    {
+      "file": "05-mixer-column.png",
+      "id": "mixer",
+      "caption": "Mixer column close-up",
+      "tags": ["mixer", "detail"]
+    },
+    {
+      "file": "06-settings-faders-mixer.png",
+      "id": "settings-faders",
+      "caption": "Settings → Faders & mixer (channel curve, pitch, EQ)",
+      "tags": ["settings", "faders"]
+    },
+    {
+      "file": "06-fader-curve-editor.png",
+      "id": "settings-faders-legacy",
+      "caption": "Settings → Faders & mixer (legacy filename)",
+      "tags": ["settings", "faders", "legacy"]
+    },
+    {
+      "file": "07-settings-jog.png",
+      "id": "settings-jog",
+      "caption": "Settings → Jog feel",
+      "tags": ["settings", "jog"]
+    },
+    {
+      "file": "08-settings-library.png",
+      "id": "settings-library",
+      "caption": "Settings → Library",
+      "tags": ["settings", "library"]
+    },
+    {
+      "file": "09-settings-display.png",
+      "id": "settings-display",
+      "caption": "Settings → Display",
+      "tags": ["settings", "display", "a11y"]
+    },
+    {
+      "file": "10-settings-midi.png",
+      "id": "settings-midi",
+      "caption": "Settings → MIDI / controllers",
+      "tags": ["settings", "midi", "controllers"]
+    },
+    {
+      "file": "11-settings-updates.png",
+      "id": "settings-updates",
+      "caption": "Settings → Updates (GitHub Releases)",
+      "tags": ["settings", "updates"]
+    },
+    {
+      "file": "06-settings-faders-mixer-booth.png",
+      "id": "settings-faders-booth",
+      "caption": "Settings → Faders (owner booth crop; not regenerated)",
+      "tags": ["settings", "faders", "booth"]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { mockStentorInitScript } from '../../e2e/fixtures/mockStentor';
 import { docScreenshotMockOptions, docScreenshotSettings } from './docLibraryFixture';
 
@@ -53,6 +53,28 @@ async function shot(page: Page, file: string): Promise<void> {
   expect(fs.existsSync(png)).toBeTruthy();
 }
 
+async function shotLocator(locator: Locator, file: string): Promise<void> {
+  const png = path.join(outDir, file);
+  await expect(locator).toBeVisible();
+  await pageWait(locator);
+  await locator.screenshot({ path: png });
+  expect(fs.existsSync(png)).toBeTruthy();
+}
+
+async function pageWait(locator: Locator): Promise<void> {
+  await locator.page().waitForTimeout(350);
+}
+
+async function openSettingsSection(page: Page, section: RegExp): Promise<Locator> {
+  // Taller viewport so Faders (curve + EQ) fits without scroll for website crops.
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Settings' });
+  await expect(dialog).toBeVisible();
+  await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('button', { name: section }).click();
+  return page.locator('.settings-panel');
+}
+
 test.describe('Live app documentation screenshots', () => {
   test('01 performance mode', async ({ page }) => {
     await bootApp(page);
@@ -76,22 +98,66 @@ test.describe('Live app documentation screenshots', () => {
     await shot(page, '03-audio-setup.png');
   });
 
+  test('04 help panel', async ({ page }) => {
+    await bootApp(page);
+    await page.getByRole('button', { name: 'Help', exact: true }).click();
+    const panel = page.locator('.help-panel');
+    await expect(page.getByRole('dialog', { name: 'Help' })).toBeVisible();
+    await expect(panel.getByRole('heading', { name: 'Help', exact: true })).toBeVisible();
+    await shotLocator(panel, '04-help-panel.png');
+  });
+
   test('05 mixer column', async ({ page }) => {
     await bootApp(page);
     await page.getByRole('button', { name: 'Performance' }).click();
     const mixer = page.locator('.perf-mixer');
-    await expect(mixer).toBeVisible();
-    await page.waitForTimeout(350);
-    await mixer.screenshot({ path: path.join(outDir, '05-mixer-column.png') });
-    expect(fs.existsSync(path.join(outDir, '05-mixer-column.png'))).toBeTruthy();
+    await shotLocator(mixer, '05-mixer-column.png');
   });
 
-  test('06 fader curve editor', async ({ page }) => {
+  test('06 settings faders & mixer', async ({ page }) => {
     await bootApp(page);
-    await page.getByRole('button', { name: 'Settings' }).click();
-    await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
-    await page.getByRole('button', { name: /Faders & mixer/i }).click();
-    await expect(page.getByText(/Channel fader curve|curve|Linear|Smooth/i).first()).toBeVisible();
-    await shot(page, '06-fader-curve-editor.png');
+    const panel = await openSettingsSection(page, /Faders & mixer/i);
+    await expect(panel.getByText(/Channel faders|Curve shape/i).first()).toBeVisible();
+    await shotLocator(panel, '06-fader-curve-editor.png');
+    // Stable website alias (same PNG).
+    fs.copyFileSync(
+      path.join(outDir, '06-fader-curve-editor.png'),
+      path.join(outDir, '06-settings-faders-mixer.png'),
+    );
+  });
+
+  test('07 settings jog feel', async ({ page }) => {
+    await bootApp(page);
+    const panel = await openSettingsSection(page, /Jog feel/i);
+    await expect(panel.getByText(/Vinyl|CDJ|Chunk|preset/i).first()).toBeVisible();
+    await shotLocator(panel, '07-settings-jog.png');
+  });
+
+  test('08 settings library', async ({ page }) => {
+    await bootApp(page);
+    const panel = await openSettingsSection(page, /^Library/i);
+    await expect(panel.getByText(/root|Browse|Rescan|sort/i).first()).toBeVisible();
+    await shotLocator(panel, '08-settings-library.png');
+  });
+
+  test('09 settings display', async ({ page }) => {
+    await bootApp(page);
+    const panel = await openSettingsSection(page, /Display/i);
+    await expect(panel.getByText(/Scale|tick/i).first()).toBeVisible();
+    await shotLocator(panel, '09-settings-display.png');
+  });
+
+  test('10 settings midi', async ({ page }) => {
+    await bootApp(page);
+    const panel = await openSettingsSection(page, /^MIDI/i);
+    await expect(panel.getByText(/RMX2|controller|profile|Learn/i).first()).toBeVisible();
+    await shotLocator(panel, '10-settings-midi.png');
+  });
+
+  test('11 settings updates', async ({ page }) => {
+    await bootApp(page);
+    const panel = await openSettingsSection(page, /Updates/i);
+    await expect(panel.getByText(/Check for updates|GitHub|version/i).first()).toBeVisible();
+    await shotLocator(panel, '11-settings-updates.png');
   });
 });

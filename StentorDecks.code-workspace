@@ -1,0 +1,13 @@
+{
+  "folders": [
+    {
+      "name": "StentorDecks (app)",
+      "path": "."
+    },
+    {
+      "name": "stentordecks.com (site)",
+      "path": "../Stentordecks.com"
+    }
+  ],
+  "settings": {}
+}

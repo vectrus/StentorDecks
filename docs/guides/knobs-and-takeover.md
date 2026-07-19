@@ -1,5 +1,7 @@
 # Knobs, faders & soft takeover
 
+![Settings — Faders & mixer](../screenshots/06-settings-faders-mixer.png)
+
 Hardware knobs and software values can disagree (you moved UI, or loaded a track that reset FX).
 
 **Soft takeover** protects the PA: the physical control stays “dead” until it **crosses** the software value (or lands within a tiny deadband). Then it snaps live.

@@ -6,6 +6,8 @@ Two paths — pick the one that matches how you run the app.
 
 This is the real product path (R1.1 / E7).
 
+![Settings — Updates](../screenshots/11-settings-updates.png)
+
 1. On a build machine: follow the release checklist in [`../DEVELOPMENT.md`](../DEVELOPMENT.md) — bump `version` in `package.json`, then:
 
    ```bash
@@ -21,7 +23,7 @@ This is the real product path (R1.1 / E7).
 
 **Fallback:** copy/run a new `StentorDeck-Setup-*.exe` over the previous install (same upgrade-in-place).
 
-**Note:** Builds are unsigned for now — Windows SmartScreen may warn once. Auto-update still works (`verifyUpdateCodeSignature: false`).
+**SmartScreen (unsigned builds):** if Windows shows **“Windows protected your PC”**, click **More info** → **Run anyway**. Browser download block: Keep → Show more → Keep anyway. Do not disable SmartScreen. Auto-update still works (`verifyUpdateCodeSignature: false`). See also README.
 
 ## Source tree (`npm start` / INSTALL.bat)
 

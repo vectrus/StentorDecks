@@ -28,6 +28,12 @@ describe('operatorBody', () => {
     expect(operatorBody(body)).not.toContain('Secret eng note');
     expect(operatorBody(body)).toContain('30%');
   });
+
+  it('strips markdown image lines (website embeds)', () => {
+    const body = '# Title\n\n![Shot](../screenshots/x.png)\n\nKeep this.\n';
+    expect(operatorBody(body)).not.toContain('screenshots');
+    expect(operatorBody(body)).toContain('Keep this');
+  });
 });
 
 describe('searchHelp', () => {

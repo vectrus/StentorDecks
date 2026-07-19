@@ -98,7 +98,9 @@ verification. Full deny list: [`docs/BACKLOG-multi-controller.md`](docs/BACKLOG-
 ## UI screenshots
 
 Taken from the running app (Vite + mocked IPC) via Playwright — not HTML mockups.
-Regenerate after UI changes: `npm run docs:screenshots` → [`docs/screenshots/`](docs/screenshots/).
+Same pack feeds the StentorDeck website: catalog + `manifest.json` in
+[`docs/screenshots/`](docs/screenshots/README.md).
+Regenerate after UI changes: `npm run docs:screenshots`.
 Layout design contract (HTML): [`docs/mockups/MOCKUPS.md`](docs/mockups/MOCKUPS.md).
 
 ### Performance
@@ -117,13 +119,29 @@ Header MST / CUE / PHN · waveform well · decks with pitch strip & FX · **7-co
 
 ![Audio setup](docs/screenshots/03-audio-setup.png)
 
+### Help
+
+![Help panel](docs/screenshots/04-help-panel.png)
+
 ### Mixer column
 
 ![Mixer column](docs/screenshots/05-mixer-column.png)
 
-### Fader curve editor
+### Settings — Faders & mixer
 
-![Fader curve editor](docs/screenshots/06-fader-curve-editor.png)
+![Settings Faders and mixer](docs/screenshots/06-settings-faders-mixer.png)
+
+Channel curve (Linear / Smooth / Sharp), pitch range, EQ max, auto-gain, crossfader off by default (R2.4).
+
+### Settings — MIDI
+
+![Settings MIDI](docs/screenshots/10-settings-midi.png)
+
+### Settings — Updates
+
+![Settings Updates](docs/screenshots/11-settings-updates.png)
+
+More Settings tabs (Jog, Library, Display): see [`docs/screenshots/README.md`](docs/screenshots/README.md).
 
 ## Stack
 
@@ -182,8 +200,24 @@ Windows packaging embeds `build/icon.ico` via an `afterPack` rcedit hook (avoids
      uses for in-app updates from GitHub Releases.
 
 Builds are intentionally **unsigned** (`CSC_IDENTITY_AUTO_DISCOVERY=false`, no
-cert yet): first run on a new machine may show a SmartScreen prompt, and
-`verifyUpdateCodeSignature` is disabled so auto-update accepts our own builds.
+cert yet). `verifyUpdateCodeSignature` is disabled so auto-update still accepts
+our own builds. A real code-signing cert is the proper fix later.
+
+#### Windows “unsafe app” / SmartScreen (workaround)
+
+On a new machine Windows may show **“Windows protected your PC”** for
+`StentorDeck-Setup-*.exe` (and sometimes the first launch of `StentorDeck.exe`).
+That is expected until we ship a signed installer — not a virus warning from us.
+
+**Bypass (once per download/machine):**
+
+1. Click **More info**.
+2. Click **Run anyway**.
+
+If the **browser** blocked the download instead: keep the file → **Show more** →
+**Keep** / **Keep anyway**.
+
+Do **not** turn off SmartScreen or Windows Defender for this.
 
 The installed app is single-instance: launching a second copy (or the Setup
 shortcut while the app runs — including a dev `npm start` instance) focuses

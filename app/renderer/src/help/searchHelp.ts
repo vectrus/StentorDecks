@@ -17,9 +17,12 @@ export type HelpSearchHit = {
 
 /** Drop engineer-only tails so Help never surfaces Spec links / backlog notes. */
 export function operatorBody(markdown: string): string {
-  const cut = markdown.search(/\n##\s+Spec links\b/i);
-  if (cut === -1) return markdown.trimEnd();
-  return markdown.slice(0, cut).trimEnd();
+  let body = markdown;
+  const cut = body.search(/\n##\s+Spec links\b/i);
+  if (cut !== -1) body = body.slice(0, cut);
+  // Website/README embeds — booth Help has no screenshot asset pipeline.
+  body = body.replace(/^!\[[^\]]*\]\([^)]+\)\s*$/gm, '');
+  return body.replace(/\n{3,}/g, '\n\n').trimEnd();
 }
 
 function tokenize(q: string): string[] {
