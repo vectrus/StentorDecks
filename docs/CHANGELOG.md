@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Plan A: refuse 2-ch sink (PFL folded into 1-2)
+
+After `setSinkId`, Plan A only builds the 4-ch merger when the **live** destination reports ≥4 channels. A 2-ch sink with a 4-ch merger was downmixing cue into outs 1-2 (PFL on the PA). Fallback Plan B + banner explains when cue pair 3-4 is unavailable. R1.4, docs/02.
+
+---
+
 ## 2026-07-19 — Jog Soft: ride (slow) + chunk nudge (fast)
 
 Owner contract: slow outer rim (&lt;~1 cm/s) **rides** — forward speeds up / phase creeps forward, back slows; faster rim **nudges** a sticky chunk (“push the record”). Message-rate EMA is the rim-speed proxy (tune in Settings). Vinyl dual unchanged. R2.2, docs/03, docs/07.

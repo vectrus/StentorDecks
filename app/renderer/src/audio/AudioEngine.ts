@@ -247,13 +247,22 @@ export class AudioEngine {
     this.setMasterGain(DEFAULT_MASTER_GAIN);
     this.setPhonesGain(1);
 
+    // Live sink channel count after setSinkId — enumerate probes can lie.
+    // Plan A with destination.channelCount=2 downmixes merger ch 2/3 into outs 1-2
+    // → PFL appears on the PA (the "phones go to 1/2" booth bug).
+    const liveMasterCh = masterCtx.destination.maxChannelCount || 0;
+    if (this.plan === 'A' && liveMasterCh < 4) {
+      this.plan = 'B';
+      this.planReason =
+        `Plan A needs ≥4 live channels; sink reports ${liveMasterCh || '?'} — falling back to Plan B`;
+      this.sinkWarning =
+        `PFL cannot use outs 3-4: the bound master device only exposes ${liveMasterCh || 2} channel(s). ` +
+        `In Audio setup pick the Hercules / RMX2 entry that shows "(4 ch)" for both Master and Cue, ` +
+        `Master outs 1-2 / Cue outs 3-4. Avoid Windows "Default" endpoints.`;
+    }
+
     if (this.plan === 'A') {
-      // Clamp ≥2 — a device reporting 0/1 max channels would make this
-      // assignment throw and abort the whole build.
-      masterCtx.destination.channelCount = Math.min(
-        4,
-        Math.max(2, masterCtx.destination.maxChannelCount || 2),
-      );
+      masterCtx.destination.channelCount = 4;
       masterCtx.destination.channelCountMode = 'explicit';
       this.merger = masterCtx.createChannelMerger(4);
       const masterSplit = masterCtx.createChannelSplitter(2);
@@ -265,10 +274,15 @@ export class AudioEngine {
       headSplit.connect(this.merger, 0, 2);
       headSplit.connect(this.merger, 1, 3);
       this.merger.connect(masterCtx.destination);
+      this.planReason += ` · live ${liveMasterCh} ch · master 1-2 / cue 3-4`;
     } else {
       const mCh = settings.audio.masterChannels;
       if (connectStereoToChannelPair(masterCtx, this.limiter, mCh)) {
         this.planReason += ` · master → outs ${mCh[0] + 1}-${mCh[1] + 1}`;
+      } else if (mCh[0] !== 0 || mCh[1] !== 1) {
+        this.sinkWarning =
+          (this.sinkWarning ? `${this.sinkWarning} ` : '') +
+          `Master pair ${mCh[0] + 1}-${mCh[1] + 1} unavailable on this sink (max ${liveMasterCh || '?'} ch) — using outs 1-2.`;
       }
       // Cue on second context
       const cueCtx = new AudioContext({ latencyHint });
@@ -280,8 +294,18 @@ export class AudioEngine {
       // Honor cueChannels on multi-channel cue devices — e.g. RMX2 phones
       // (outs 3-4) while master is a different USB interface.
       const cCh = settings.audio.cueChannels;
+      const liveCueCh = cueCtx.destination.maxChannelCount || 0;
       if (connectStereoToChannelPair(cueCtx, this.cueBridgeSrc, cCh)) {
         this.planReason += ` · cue → outs ${cCh[0] + 1}-${cCh[1] + 1}`;
+      } else {
+        // Plain stereo connect — cue lands on 1-2 of the cue device.
+        if (cCh[0] !== 0 || cCh[1] !== 1) {
+          this.sinkWarning =
+            (this.sinkWarning ? `${this.sinkWarning} ` : '') +
+            `Cue pair ${cCh[0] + 1}-${cCh[1] + 1} unavailable (cue sink ${liveCueCh || '?'} ch) — ` +
+            `PFL is on outs 1-2 of the cue device, not headphones 3-4.`;
+        }
+        this.planReason += ` · cue → outs 1-2 (pair ${cCh[0] + 1}-${cCh[1] + 1} unavailable)`;
       }
     }
 

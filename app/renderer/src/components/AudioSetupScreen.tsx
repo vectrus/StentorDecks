@@ -100,9 +100,14 @@ export const AudioSetupScreen = observer(function AudioSetupScreen(props: {
           </button>
         </div>
         <p className="note">
-          Plan A: single 4-channel device (outs 1-2 master / 3-4 cue), sample-locked. Plan B: two
-          devices (cue latency slightly higher); on a 4-channel device you can pick which output
-          pair each side uses. Active: <strong>Plan {audioDeviceStore.activePlan}</strong>
+          Plan A needs one Hercules entry that shows <strong>(4 ch)</strong> for Master and Cue —
+          outs 1-2 = PA, outs 3-4 = headphones. If the list only shows 2 ch, Windows is exposing
+          stereo endpoints and PFL will fold into 1-2. HeadMix should sit near cue (left) when
+          testing PFL. Active:{' '}
+          <strong>Plan {audioDeviceStore.activePlan}</strong>
+          {audioDeviceStore.planReason ? (
+            <span className="mono"> — {audioDeviceStore.planReason}</span>
+          ) : null}
         </p>
       </section>
 
