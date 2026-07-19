@@ -267,10 +267,10 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
         jog: {
           ...defaultSettings.mixer.jog,
           dualZone: false,
-          fineRatePercent: 0.45,
-          fineSeekMs: 3,
-          spinStartsAtTps: 42,
-          spinFullAtTps: 90,
+          fineRatePercent: 0.55,
+          fineSeekMs: 0.85,
+          spinStartsAtTps: 48,
+          spinFullAtTps: 110,
         },
       },
     };
@@ -280,7 +280,6 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     deck.position = 10;
     deck.phaseGluePartner = 'B';
     deck.phaseGlueTargetSec = 0;
-    // lastTickMs must be near performance.now() or EMA spikes on huge/negative dt
     const now = performance.now();
     (deck as unknown as { jogActivity: { lastTickMs: number; ticksPerSec: number } }).jogActivity = {
       lastTickMs: now - 80,
@@ -293,7 +292,7 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     expect(deck.phaseGlueRetarget).toBe(true);
   });
 
-  it('Soft fast rim applies sticky nudge chunk', () => {
+  it('Soft fast rim boosts rate with tiny sticky seasoning', () => {
     const settings: Settings = {
       ...defaultSettings,
       mixer: {
@@ -301,10 +300,10 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
         jog: {
           ...defaultSettings.mixer.jog,
           dualZone: false,
-          fineRatePercent: 0.45,
-          fineSeekMs: 3,
-          spinStartsAtTps: 42,
-          spinFullAtTps: 90,
+          fineRatePercent: 0.55,
+          fineSeekMs: 0.85,
+          spinStartsAtTps: 48,
+          spinFullAtTps: 110,
         },
       },
     };
@@ -315,12 +314,14 @@ describe('DeckStore load interlock & reset (R4.2 / R3.3)', () => {
     const now = performance.now();
     (deck as unknown as { jogActivity: { lastTickMs: number; ticksPerSec: number } }).jogActivity = {
       lastTickMs: now - 8,
-      ticksPerSec: 100,
+      ticksPerSec: 120,
     };
     deck.nudge(1);
     deck.flushJogSeek();
-    expect(deck.position).toBeGreaterThan(10.002);
-    expect(deck.position).toBeLessThan(10.015);
+    expect(deck.nudgeFactor).toBeGreaterThan(1.005);
+    // Tiny sticky park — not multi-ms skip stairs
+    expect(deck.position).toBeGreaterThan(10);
+    expect(deck.position).toBeLessThan(10.002);
   });
 
   it('dual-zone playing nudge micro-seeks phase (Vinyl on)', () => {

@@ -4,7 +4,8 @@
  * Soft / Vinyl OFF — rim-speed regimes (owner contract):
  * - Slow rim (~&lt;1 cm/s outer): **ride** — forward speeds up a bit / phase creeps
  *   forward; back slows / phase creeps back. Temporary rate only.
- * - Faster rim: **nudge chunk** — sticky micro-seek “push the record” a little.
+ * - Faster rim: **nudge** — stronger temp rate throw + tiny sticky seasoning
+ *   (not skippy seek stairs).
  *
  * Vinyl ON / dualZone — fine sticky phase + spinback on sustained whip.
  *
@@ -16,24 +17,24 @@
 export const JOG_FINE_SEEK_SEC = 0.00005;
 export const JOG_SPIN_SEEK_SEC = 0.012;
 export const JOG_FINE_RATE = 0;
-/** Soft ride bend (fraction; matches fineRatePercent 0.45). */
-export const JOG_RIDE_RATE = 0.0045;
-/** Soft nudge chunk at full intensity (matches fineSeekMs 3). */
-export const JOG_NUDGE_CHUNK_SEC = 0.003;
+/** Soft ride bend (fraction; matches fineRatePercent 0.55). */
+export const JOG_RIDE_RATE = 0.0055;
+/** Soft sticky seasoning at full nudge (matches fineSeekMs 0.85) — tiny; rate does the throw. */
+export const JOG_NUDGE_CHUNK_SEC = 0.00085;
 export const JOG_SPIN_RATE = 0.04;
-export const JOG_RATE_DECAY_MS = 140;
+export const JOG_RATE_DECAY_MS = 160;
 export const JOG_PAUSED_FINE_SEEK_SEC = 0.001;
 export const JOG_PAUSED_SPIN_SEEK_SEC = 0.012;
 /** Soft: message-rate proxy for ~1 cm/s outer rim → nudge opens (RMX2, tune in Settings). */
-export const JOG_NUDGE_START_TPS = 42;
-export const JOG_NUDGE_FULL_TPS = 90;
+export const JOG_NUDGE_START_TPS = 48;
+export const JOG_NUDGE_FULL_TPS = 110;
 export const JOG_TPS_FINE = 140;
 export const JOG_TPS_SPIN = 320;
 /** Dual-zone fine impulse cap (~0.22 ms). */
 export const JOG_FINE_IMPULSE_CAP_SEC = 0.00022;
-/** Soft nudge: max sticky phase per impulse window (~12 ms). */
-export const JOG_NUDGE_IMPULSE_CAP_SEC = 0.012;
-export const JOG_IMPULSE_WINDOW_MS = 55;
+/** Soft nudge: max sticky phase per impulse window (~4.5 ms) — avoids skippy seeks. */
+export const JOG_NUDGE_IMPULSE_CAP_SEC = 0.0045;
+export const JOG_IMPULSE_WINDOW_MS = 70;
 
 /** @deprecated use JOG_RIDE_RATE */
 export const JOG_SINGLE_ZONE_FINE_RATE = JOG_RIDE_RATE;
@@ -61,11 +62,11 @@ export type JogSettings = {
  */
 export const defaultJogSettings: JogSettings = {
   dualZone: false,
-  fineSeekMs: 3,
+  fineSeekMs: 0.85,
   spinSeekMs: 10,
-  fineRatePercent: 0.45,
+  fineRatePercent: 0.55,
   spinRatePercent: 4,
-  rateDecayMs: 140,
+  rateDecayMs: 160,
   pausedFineSeekMs: 0.8,
   pausedSpinSeekMs: 10,
   spinStartsAtTps: JOG_NUDGE_START_TPS,
@@ -88,6 +89,19 @@ export const dualZoneSoftJogSettings: JogSettings = {
 
 /** Previous factory defaults — migrate once so saved itchy settings quiet down. */
 export const LEGACY_ITCHY_JOG_DEFAULTS: readonly JogSettings[] = [
+  // Soft ride+chunk first cut — 3 ms seeks felt skippy
+  {
+    dualZone: false,
+    fineSeekMs: 3,
+    spinSeekMs: 10,
+    fineRatePercent: 0.45,
+    spinRatePercent: 4,
+    rateDecayMs: 140,
+    pausedFineSeekMs: 0.8,
+    pausedSpinSeekMs: 10,
+    spinStartsAtTps: 42,
+    spinFullAtTps: 90,
+  },
   // Rate-only Soft (pre ride/chunk)
   {
     dualZone: false,
@@ -225,7 +239,7 @@ export function migrateItchyJogSettings(jog: JogSettings): JogSettings {
 /** Named bundles for Settings UI — values only; stored state is always the numbers. */
 export const JOG_PRESETS = {
   soft: {
-    label: 'Soft (ride + chunk)',
+    label: 'Soft (ride + nudge)',
     jog: { ...defaultJogSettings } satisfies JogSettings,
   },
   balanced: {
@@ -329,7 +343,8 @@ export function updateJogActivity(
   }
   const dt = Math.max(1, nowMs - prev.lastTickMs);
   const inst = 1000 / dt;
-  const alpha = inst > prev.ticksPerSec ? 0.22 : 0.16;
+  // Softer attack — Soft nudge threshold shouldn't slam open on one burst.
+  const alpha = inst > prev.ticksPerSec ? 0.16 : 0.14;
   const ticksPerSec = prev.ticksPerSec + alpha * (inst - prev.ticksPerSec);
   return { lastTickMs: nowMs, ticksPerSec };
 }
@@ -397,14 +412,18 @@ export function scaleJogTick(
   const unit = 1;
 
   if (!params.dualZone) {
-    // Soft: slow rim = ride (rate); faster rim = sticky chunk (+ light ride fade).
+    // Soft: slow = ride (rate). Faster = stronger rate throw + tiny sticky
+    // seasoning (nudge² + flood) so flicks aren't skippy seek stairs.
     const nudge = jogNudgeIntensity(ticksPerSec, params);
-    const ride = 1 - nudge * 0.85;
+    const flood = fineFloodGain(ticksPerSec, nudge);
+    const seekOpen = nudge * nudge; // opens later / softer than linear
+    const rideKeep = 1 - nudge * 0.35;
+    const flickBoost = params.fineRate * 1.35 * nudge;
     return {
       sign,
       intensity: nudge,
-      playingSeekSec: params.fineSeekSec * nudge,
-      playingRateAmount: params.fineRate * ride,
+      playingSeekSec: params.fineSeekSec * seekOpen * flood,
+      playingRateAmount: params.fineRate * rideKeep + flickBoost,
       pausedSeekSec:
         (params.pausedFineSeekSec +
           (params.pausedSpinSeekSec - params.pausedFineSeekSec) * nudge) *

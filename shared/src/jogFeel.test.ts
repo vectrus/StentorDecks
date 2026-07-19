@@ -24,33 +24,36 @@ import {
 const softFeel = jogFeelFromSettings(defaultJogSettings);
 const vinylFeel = jogFeelFromSettings(dualZoneSoftJogSettings);
 
-describe('Soft ride vs nudge chunk', () => {
-  it('slow rim is ride-only (rate, no chunk)', () => {
+describe('Soft ride vs nudge', () => {
+  it('slow rim is ride-only (rate, negligible seek)', () => {
     const s = scaleJogTick(1, 10, softFeel);
     expect(s.playingRateAmount).toBeCloseTo(JOG_RIDE_RATE, 5);
-    expect(s.playingSeekSec).toBeLessThan(0.0002);
+    expect(s.playingSeekSec).toBeLessThan(0.00005);
     expect(s.intensity).toBeLessThan(0.1);
   });
 
-  it('fast rim opens sticky nudge chunk and fades ride', () => {
-    const s = scaleJogTick(1, 100, softFeel);
+  it('fast rim boosts rate and applies tiny sticky seasoning', () => {
+    const s = scaleJogTick(1, 120, softFeel);
     expect(s.intensity).toBeGreaterThan(0.9);
-    expect(s.playingSeekSec).toBeCloseTo(JOG_NUDGE_CHUNK_SEC, 5);
-    expect(s.playingRateAmount).toBeLessThan(JOG_RIDE_RATE * 0.3);
+    // nudge² * flood ≈ 1 at full — seek near chunk size, not multi-ms stairs
+    expect(s.playingSeekSec).toBeLessThanOrEqual(JOG_NUDGE_CHUNK_SEC + 1e-6);
+    expect(s.playingSeekSec).toBeGreaterThan(JOG_NUDGE_CHUNK_SEC * 0.5);
+    // Stronger than ride alone (flick boost)
+    expect(s.playingRateAmount).toBeGreaterThan(JOG_RIDE_RATE);
   });
 
   it('nudge intensity is smooth between thresholds', () => {
-    const mid = jogNudgeIntensity(66, softFeel);
+    const mid = jogNudgeIntensity(75, softFeel);
     expect(mid).toBeGreaterThan(0.2);
     expect(mid).toBeLessThan(0.9);
   });
 
-  it('Soft impulse cap allows a meaningful chunk, not sub-ms dust', () => {
+  it('Soft impulse cap stays small (smooth, not skippy)', () => {
     expect(softFeel.fineImpulseCapSec).toBeCloseTo(JOG_NUDGE_IMPULSE_CAP_SEC, 6);
     let imp = createJogImpulse();
     let total = 0;
-    for (let i = 0; i < 8; i++) {
-      const g = gateJogPlayingSeek(imp, 0.003, 0.5, 1000 + i * 5, softFeel);
+    for (let i = 0; i < 12; i++) {
+      const g = gateJogPlayingSeek(imp, 0.001, 0.5, 1000 + i * 5, softFeel);
       imp = g.impulse;
       total += Math.abs(g.seekSec);
     }

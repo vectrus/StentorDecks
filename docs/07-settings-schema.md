@@ -35,16 +35,16 @@ Stored as `settings.json` in `app.getPath('userData')`, written atomically (temp
       "maxDb": 12                                    // settable; default ±12 dB (R2.12)
     },
     "jog": {                                         // R2.2 jog feel — live in Settings / Vinyl btn
-      "dualZone": false,                             // false = Soft ride+chunk; true = Vinyl dual
-      "fineSeekMs": 3,                               // Soft: nudge chunk ms · Vinyl: fine seek ms
+      "dualZone": false,                             // false = Soft ride+nudge; true = Vinyl dual
+      "fineSeekMs": 0.85,                            // Soft: tiny sticky seasoning ms · Vinyl: fine seek
       "spinSeekMs": 10,                              // Vinyl spin seek ms/tick
-      "fineRatePercent": 0.45,                       // Soft: ride bend % · Vinyl dual forces 0
+      "fineRatePercent": 0.55,                       // Soft: ride / flick rate % · Vinyl dual forces 0
       "spinRatePercent": 4,                          // Vinyl spin rate %
-      "rateDecayMs": 140,                            // ride bend hold after last tick
+      "rateDecayMs": 160,                            // ride bend hold after last tick
       "pausedFineSeekMs": 0.8,                       // stopped scrub (fine)
       "pausedSpinSeekMs": 10,                        // stopped scrub (spin)
-      "spinStartsAtTps": 42,                         // Soft: chunk opens (~1 cm/s rim proxy) · Vinyl: spin
-      "spinFullAtTps": 90                            // Soft: full chunk · Vinyl: full spin
+      "spinStartsAtTps": 48,                         // Soft: nudge opens (~1 cm/s rim proxy) · Vinyl: spin
+      "spinFullAtTps": 110                           // Soft: full nudge · Vinyl: full spin
     }
   },
 

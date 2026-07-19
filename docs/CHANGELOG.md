@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Jog Soft: smoother nudges (rate-led flick)
+
+Skippy Soft nudges came from ~3 ms sticky seeks stacking. Soft flicks are now **rate-led** (stronger temp bend) with tiny flood-compressed sticky seasoning (~0.85 ms, ~4.5 ms impulse cap); seek opens with nudge². Migrate prior Soft 3 ms / 42–90 t/s bundle. R2.2, docs/03, docs/07.
+
+---
+
 ## 2026-07-19 — Plan A: refuse 2-ch sink (PFL folded into 1-2)
 
 After `setSinkId`, Plan A only builds the 4-ch merger when the **live** destination reports ≥4 channels. A 2-ch sink with a 4-ch merger was downmixing cue into outs 1-2 (PFL on the PA). Fallback Plan B + banner explains when cue pair 3-4 is unavailable. R1.4, docs/02.

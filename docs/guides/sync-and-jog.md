@@ -26,7 +26,7 @@ The RMX2 jog is a relative MIDI stream — not a heavy SL-1200. Soft feel is sim
 | Rim speed | Feel |
 |-----------|------|
 | **Slow** (~&lt;1 cm/s on the outer edge) | **Ride** — forward speeds the track up a bit (phase creeps forward); back slows it (phase the other way) |
-| **Faster** (a deliberate push / flick) | **Nudge chunk** — sticky push of the record by a small amount |
+| **Faster** (a deliberate push / flick) | **Nudge** — stronger speed throw through the offset + a tiny sticky park (smooth, not skippy) |
 
 When you stop turning, tempo returns to the pitch fader; the phase offset you rode or nudged **stays**.
 

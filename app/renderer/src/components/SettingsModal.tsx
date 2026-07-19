@@ -633,9 +633,9 @@ const JogFeelSection = observer(function JogFeelSection() {
     <div className="settings-section">
       <h3 className="settings-section-title">Jog feel</h3>
       <p className="settings-section-lead">
-        Soft: slow rim rides (speeds up / slows down); faster rim pushes a sticky chunk. Vinyl ON =
-        dual-zone fine + spinback. Vinyl button toggles dual-zone. Thresholds are message-rate
-        proxies for ~1 cm/s on the RMX2 outer rim — tune if your wheel feels early/late.
+        Soft: slow rim rides (speeds up / slows down); faster rim nudges with a stronger rate throw
+        plus a tiny sticky park (not skippy seeks). Vinyl ON = dual-zone fine + spinback. Thresholds
+        are msg/s proxies for ~1 cm/s on the RMX2 rim — tune if chunks feel early/late.
       </p>
 
       <div className="temp-jog-presets">
