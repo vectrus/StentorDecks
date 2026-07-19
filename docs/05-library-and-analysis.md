@@ -16,6 +16,8 @@
 
 - Folder query default: `ORDER BY filename COLLATE NOCASE ASC` (basename of `path`).
 - Alternate sorts (UI + settings `library.sort`): `artist`, `title`, `bpm`, `key_camelot`, `duration_ms` (each ASC; nulls last).
+- Optional **harmonic soft-rank** (`library.harmonicBoost`): when a deck is **playing** and has a Camelot key, the renderer re-orders the current folder/search list — band 0 (same / ±1 / relative), then band 1 (±2 same letter), then the rest — preserving `library.sort` order within each band. Unknown keys last. No-op when nothing plays. `~` row hints still use playing-else-loaded (`mixReferenceKey`).
+- **V2-B Next up** (`ai.mixmatch = rules`): suggest-only shortlist from the whole live library vs playing reference (Camelot + BPM half/double); see [`V2-B-mixmatch-rules.md`](./V2-B-mixmatch-rules.md).
 - Search query default: `artist COLLATE NOCASE, title COLLATE NOCASE`.
 
 ## SQLite schema

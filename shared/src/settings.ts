@@ -38,6 +38,12 @@ export type Settings = {
     roots: string[];
     purgeMissingAfterDays: number;
     sort: 'filename' | 'artist' | 'title' | 'bpm' | 'key' | 'duration';
+    /** Soft-rank Camelot neighbours first when a deck is playing. */
+    harmonicBoost: boolean;
+  };
+  /** v2 mixmatch — Off | rules-only shortlist (LLM later). */
+  ai: {
+    mixmatch: 'off' | 'rules';
   };
   ui: {
     scale: 100 | 125 | 150;
@@ -92,6 +98,10 @@ export const defaultSettings: Settings = {
     roots: [],
     purgeMissingAfterDays: 30,
     sort: 'filename',
+    harmonicBoost: false,
+  },
+  ai: {
+    mixmatch: 'off',
   },
   ui: {
     scale: 100,
@@ -166,6 +176,10 @@ export const settingsSchema = z.object({
     roots: z.array(z.string()),
     purgeMissingAfterDays: z.number().int().positive(),
     sort: z.enum(['filename', 'artist', 'title', 'bpm', 'key', 'duration']),
+    harmonicBoost: z.boolean(),
+  }),
+  ai: z.object({
+    mixmatch: z.enum(['off', 'rules']),
   }),
   ui: z.object({
     scale: z.union([z.literal(100), z.literal(125), z.literal(150)]),

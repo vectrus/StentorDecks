@@ -55,7 +55,12 @@ Stored as `settings.json` in `app.getPath('userData')`, written atomically (temp
   "library": {
     "roots": [],                                     // absolute paths; ≥1 required after setup
     "purgeMissingAfterDays": 30,
-    "sort": "filename"                               // filename | artist | title | bpm | key | duration (R5.6)
+    "sort": "filename",                              // filename | artist | title | bpm | key | duration (R5.6)
+    "harmonicBoost": false                           // soft-rank Camelot neighbours (±1/rel, then ±2) when a deck plays
+  },
+
+  "ai": {
+    "mixmatch": "off"                                // off | rules — V2-B Next up strip; llm later
   },
 
   "ui": {

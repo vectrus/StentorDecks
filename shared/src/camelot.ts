@@ -95,6 +95,31 @@ export function isCamelotCompatible(a: string, b: string): boolean {
 }
 
 /**
+ * Soft-rank bands for “harmonic neighbours first” (Library).
+ * 0 = same / ±1 / relative · 1 = ±2 same letter · 2 = other known key · null = unknown.
+ */
+export type CamelotHarmonicBand = 0 | 1 | 2;
+
+export function camelotHarmonicBand(ref: string, key: string): CamelotHarmonicBand | null {
+  if (!isCamelotKey(ref) || !isCamelotKey(key)) return null;
+  if (camelotRelation(ref, key) != null) return 0;
+  const pa = parseCamelotParts(ref);
+  const pb = parseCamelotParts(key);
+  if (pa.letter === pb.letter) {
+    const d = Math.min((pa.n - pb.n + 12) % 12, (pb.n - pa.n + 12) % 12);
+    if (d === 2) return 1;
+  }
+  return 2;
+}
+
+/** Sort key: lower band first; unknown keys last (band 3). */
+export function camelotHarmonicSortRank(ref: string, key: string | null | undefined): number {
+  if (key == null || key === '') return 3;
+  const band = camelotHarmonicBand(ref, key);
+  return band == null ? 3 : band;
+}
+
+/**
  * Tap-tempo average (R6.6): need ≥ minTaps timestamps; BPM from mean inter-onset.
  * Returns null until enough taps; clamps to 60–220.
  */

@@ -140,6 +140,23 @@ Mouse, keyboard, and the RMX2 all move the **same** highlight.
 
 ---
 
+## Harmonic neighbours first
+
+**Settings → Library → Harmonic neighbours first** (off by default).
+
+When a deck is **playing**, the track list puts Camelot fits at the top:
+
+1. Same key, ±1, or relative (A↔B)  
+2. Then ±2 on the wheel  
+3. Then everything else  
+
+Your normal Sort (filename, BPM, …) still applies **inside** each group.  
+If nothing is playing, the list is unchanged.
+
+## Next up (mixmatch)
+
+**Settings → Library → Next up** = **Rules** shows a strip of 5–10 suggested tracks (Camelot + BPM vs the playing deck). You still load by hand — A / B buttons. Off by default. No cloud.
+
 ## Quick FAQ
 
 **Why is BPM empty or `…`?**  

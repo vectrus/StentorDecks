@@ -6,6 +6,7 @@ export * from './softTakeover.js';
 export * from './controlIds.js';
 export * from './midiDecode.js';
 export * from './camelot.js';
+export * from './mixmatchRules.js';
 export * from './analysisContract.js';
 export * from './mp3ResilientDecode.js';
 export * from './mp3Fix.js';

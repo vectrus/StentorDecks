@@ -3,6 +3,7 @@ import { deckA, deckB, libraryStore, sessionPlayedStore } from '../../stores/roo
 import { CorrectionStrip } from './CorrectionStrip';
 import { DeckStrip } from './DeckStrip';
 import { FolderTree } from './FolderTree';
+import { NextUpStrip } from './NextUpStrip';
 import { VirtualBrowseList } from './VirtualBrowseList';
 
 /** Prep mode library browser — docs/06 + mockup 02 (E4). */
@@ -13,6 +14,8 @@ export const PrepMode = observer(function PrepMode() {
         <DeckStrip deck={deckA} accent="a" />
         <DeckStrip deck={deckB} accent="b" />
       </div>
+
+      <NextUpStrip />
 
       <div className="prep-main">
         <aside className="prep-tree-panel sd-scroll">

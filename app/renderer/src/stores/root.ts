@@ -12,11 +12,22 @@ import { MidiEngine } from '../midi/MidiEngine';
 import { MidiLeds } from '../midi/MidiLeds';
 import { onIpc } from '../ipc/client';
 import { runFrameDraws } from '../audio/frameClock';
+import { playingReferenceKey } from './mixReferenceKey';
+import { MixmatchStore } from './MixmatchStore';
+import { setPlayingReferenceProvider } from './playingRefProvider';
 
 export const deckA = new DeckStore('A', () => settingsStore.settings);
 export const deckB = new DeckStore('B', () => settingsStore.settings);
 export const mixerStore = new MixerStore(deckA, deckB);
 export { libraryStore, sessionPlayedStore };
+
+setPlayingReferenceProvider(() => playingReferenceKey(deckA, deckB));
+export const mixmatchStore = new MixmatchStore(() => ({
+  deckA,
+  deckB,
+  library: libraryStore,
+  session: sessionPlayedStore,
+}));
 export const midiStore = new MidiStore(
   deckA,
   deckB,
@@ -131,8 +142,10 @@ export async function bootAudio(): Promise<void> {
     if (p.stage === 'commit' || (p.stage === 'idle' && p.trackId > 0)) {
       deckA.refreshOverviewIf(p.trackId);
       deckB.refreshOverviewIf(p.trackId);
+      mixmatchStore.invalidatePool();
     }
   });
+  mixmatchStore.start();
   startAudioClock();
   void midiEngine.start();
 }

@@ -10,7 +10,7 @@ Screenshots: use `![caption](../screenshots/<file>.png)` from the Playwright pac
 |------|--------|
 | [`get-started.md`](./get-started.md) | First boot, two screens, master volume |
 | [`controllers-and-midi.md`](./controllers-and-midi.md) | RMX2, other controllers, Learn |
-| [`prep-library.md`](./prep-library.md) | Library mode, BPM/key, load rules |
+| [`prep-library.md`](./prep-library.md) | Library mode, BPM/key, harmonic boost, Next up |
 | [`performance-and-mixer.md`](./performance-and-mixer.md) | Performance layout & mixer |
 | [`sync-and-jog.md`](./sync-and-jog.md) | SYNC, jog feel |
 | [`knobs-and-takeover.md`](./knobs-and-takeover.md) | Soft takeover after UI/load |

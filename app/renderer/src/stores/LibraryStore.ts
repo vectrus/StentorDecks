@@ -2,6 +2,7 @@ import { makeAutoObservable, runInAction } from 'mobx';
 import {
   averageTapBpm,
   camelotDisplayName,
+  camelotHarmonicSortRank,
   encodeWavPcm16le,
   expectedMpegDurationSec,
   isCamelotKey,
@@ -16,6 +17,7 @@ import {
 } from '@stentordeck/shared';
 import { decodeArrayBufferOffThread } from '../audio/decodeAudio';
 import { invoke, onIpc } from '../ipc/client';
+import { getPlayingReferenceKey } from './playingRefProvider';
 import { settingsStore } from './SettingsStore';
 
 /**
@@ -91,22 +93,28 @@ export class LibraryStore {
   /**
    * File pane rows (Djuced-style / mockup 02): tracks only.
    * Folders live exclusively in the left tree — never as `[dir]` rows here.
+   * Optional harmonic soft-rank when a deck is playing (`library.harmonicBoost`).
    */
   get entries(): LibraryBrowseEntry[] {
-    if (this.search.trim()) {
-      return this.tracks.map((t) => ({
-        kind: 'track' as const,
-        track: t,
-        name: displayName(t),
-      }));
-    }
-    // No folder selected — empty file pane (pick a crate in the tree).
-    if (this.openFolder == null) return [];
-    return this.tracks.map((t) => ({
+    if (!this.search.trim() && this.openFolder == null) return [];
+    const tracks = this.tracksForDisplay;
+    return tracks.map((t) => ({
       kind: 'track' as const,
       track: t,
       name: displayName(t),
     }));
+  }
+
+  /** Tracks in UI order (DB sort, then optional Camelot soft-rank). */
+  get tracksForDisplay(): TrackRow[] {
+    const boost = settingsStore.settings.library.harmonicBoost;
+    const ref = boost ? getPlayingReferenceKey() : null;
+    if (!boost || ref == null) return this.tracks;
+    return [...this.tracks].sort((a, b) => {
+      const ra = camelotHarmonicSortRank(ref, a.keyCamelot);
+      const rb = camelotHarmonicSortRank(ref, b.keyCamelot);
+      return ra - rb;
+    });
   }
 
   /** Visible folder rows in the left tree (respects expand/collapse). */
@@ -518,25 +526,55 @@ export class LibraryStore {
       this.setLoadError('Select a track (not a folder)');
       throw new Error('Select a track (not a folder)');
     }
-    const payload = await invoke('library:read', { id: row.id });
-    if (!payload) throw new Error('Track file missing or unreadable');
-    const name = payload.path.split(/[/\\]/).pop() ?? 'track';
-    const copy = new Uint8Array(payload.bytes.byteLength);
-    copy.set(payload.bytes);
-    const file = new File([copy], name);
-    await deck.load(file, {
-      title: payload.title ?? name,
-      artist: payload.artist ?? '',
-      fileBpm: payload.bpm,
-      keyCamelot: payload.keyCamelot,
-      loudnessLufs: payload.loudnessLufs,
-      beatGridOffsetSec: payload.beatGridOffsetSec,
-      libraryTrackId: payload.id,
-      durationMs: payload.durationMs,
-    });
-    runInAction(() => {
-      this.loadError = null;
-    });
+    await this.loadTrackId(deck, row.id);
+  }
+
+  /** Load a library track by id (Next up / browse). Respects deck playing interlock via deck.load. */
+  async loadTrackId(
+    deck: {
+      load: (
+        file: File,
+        meta?: {
+          title?: string;
+          artist?: string;
+          fileBpm?: number | null;
+          keyCamelot?: string | null;
+          loudnessLufs?: number | null;
+          beatGridOffsetSec?: number | null;
+          libraryTrackId?: number | null;
+          durationMs?: number | null;
+        },
+      ) => Promise<void>;
+    },
+    trackId: number,
+  ): Promise<void> {
+    try {
+      const payload = await invoke('library:read', { id: trackId });
+      if (!payload) throw new Error('Track file missing or unreadable');
+      const name = payload.path.split(/[/\\]/).pop() ?? 'track';
+      const copy = new Uint8Array(payload.bytes.byteLength);
+      copy.set(payload.bytes);
+      const file = new File([copy], name);
+      await deck.load(file, {
+        title: payload.title ?? name,
+        artist: payload.artist ?? '',
+        fileBpm: payload.bpm,
+        keyCamelot: payload.keyCamelot,
+        loudnessLufs: payload.loudnessLufs,
+        beatGridOffsetSec: payload.beatGridOffsetSec,
+        libraryTrackId: payload.id,
+        durationMs: payload.durationMs,
+      });
+      runInAction(() => {
+        this.loadError = null;
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      runInAction(() => {
+        this.setLoadError(msg);
+      });
+      throw err;
+    }
   }
 
   clearTaps(): void {

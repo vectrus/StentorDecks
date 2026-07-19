@@ -1,8 +1,9 @@
 # Backlog v2 — Spotify browse + AI mixmatch / autoplay
 
-**Status:** PARKED — not v1. Do not implement until v1 (E1–E7) ships and Julius opens a v2 epic.  
+**Status:** IN PROGRESS — **V2-B** (rules mixmatch) opened 2026-07-19. Later phases still gated.  
 **Decided by:** agent recommendation (2026-07-18), locked here with rationale so we don’t re-litigate.  
-**Owner genres (taste lanes):** techno · minimal · techy · trance · club · chill · afterparty.
+**Owner genres (taste lanes):** techno · minimal · techy · trance · club · chill · afterparty.  
+**Active epic:** [`V2-B-mixmatch-rules.md`](./V2-B-mixmatch-rules.md).
 
 v1 still excludes streaming services (see root README / docs/README). This doc is the **v2 product decision record** only.
 
@@ -84,7 +85,7 @@ v1 still excludes streaming services (see root README / docs/README). This doc i
 | Phase | Deliverable | Depends on |
 |---|---|---|
 | V2-A | Genre lane tags on tracks (manual + optional AI tagger for the 7 lanes) | E4 library |
-| V2-B | Local mixmatch list (rules from E5 analysis → 5–10) | E5 |
+| V2-B | Local mixmatch list (rules from E5 analysis → 5–10) | E5 · **IN PROGRESS** |
 | V2-C | LLM rerank + explanations; provider settings | V2-B; network optional |
 | V2-D | Spotify OAuth browse + local match + wantlist | V2-A |
 | V2-E | Co-pilot autoplay + STOP AI | V2-B/C; deck load APIs; **V2-Q queue UI spike** |

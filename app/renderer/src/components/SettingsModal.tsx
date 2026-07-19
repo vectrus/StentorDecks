@@ -535,6 +535,38 @@ const LibrarySection = observer(function LibrarySection() {
           ))}
         </select>
       </label>
+      <label className="temp-jog-switch" style={{ marginTop: 10 }}>
+        <input
+          type="checkbox"
+          checked={settingsStore.settings.library.harmonicBoost}
+          onChange={(e) => {
+            void settingsStore.set({ library: { harmonicBoost: e.target.checked } });
+          }}
+        />
+        <span>
+          Harmonic neighbours first
+          <span className="temp-jog-hint">
+            When a deck is playing, put Camelot fits (then ±2) at the top of the list
+          </span>
+        </span>
+      </label>
+      <label style={{ marginTop: 12 }}>
+        Next up (mixmatch)
+        <select
+          value={settingsStore.settings.ai.mixmatch}
+          onChange={(e) => {
+            const mixmatch = e.target.value as Settings['ai']['mixmatch'];
+            void settingsStore.set({ ai: { mixmatch } });
+          }}
+        >
+          <option value="off">Off</option>
+          <option value="rules">Rules — Camelot + BPM shortlist</option>
+        </select>
+      </label>
+      <p className="settings-section-lead" style={{ marginTop: 4 }}>
+        When Rules is on, Library shows a <strong>Next up</strong> strip (5–10 local tracks).
+        No cloud, no auto-load. LLM ranking comes later.
+      </p>
       {prog && (
         <div className="temp-meta mono">
           {prog.phase === 'scan' ? 'Indexing audio' : prog.phase} {prog.scanned}

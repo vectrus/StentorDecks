@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Harmonic soft-rank + V2-B rules mixmatch
+
+Library setting **Harmonic neighbours first** soft-ranks Camelot band 0 then ±2 when a deck is playing (`playingReferenceKey`). Opened v2 with **Next up** rules shortlist (`ai.mixmatch = rules`) — Camelot + BPM, suggest-only, R4.2 intact. Epic [`V2-B-mixmatch-rules.md`](./V2-B-mixmatch-rules.md). R5.6, R6.*, BACKLOG-v2.
+
+---
+
 ## 2026-07-19 — In-app Help shows the same screenshots
 
 Help bundles `docs/screenshots/*.png` (Vite) and renders guide `![…](../screenshots/…)` lines — same pack as the website. Search still ignores image markup. E7 / docs/guides.
