@@ -1,0 +1,20 @@
+StentorDeck 0.2.9
+Installer: StentorDeck-Setup-0.2.9.exe
+Date: 2026-07-19
+
+Install over your current build. Library, settings, and MIDI map stay in %APPDATA%.
+
+What's new
+-----------
+2026-07-19 - Ship 0.2.9: Click & squeak fixer + phones preview / normalize
+Library tools since 0.2.8: right-click Click & squeak fixer…; Preview fix and Preview normalize on headphones only (never booth/master; not both at once); Write fixed WAV (… (Fixed by SD).wav) and separate Write normalized (… (Normalized by SD).wav) toward auto-gain LUFS - originals never overwritten. R5.9, R2.13.
+
+How to update
+-------------
+- Run StentorDeck-Setup-0.2.9.exe, or use Settings > Updates > Check for updates (needs latest.yml on GitHub).
+- Open StentorDeck from the desktop shortcut (not only the source .bat).
+
+Notes
+-----
+- Builds are unsigned - Windows SmartScreen may warn once.
+- Auto-update requires a full GitHub Release with latest.yml (not Setup.exe alone).
