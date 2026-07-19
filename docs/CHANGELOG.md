@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Doc screenshots: harmonic + Next up
+
+Regenerated Playwright pack for Library / Settings → Library; added `12-next-up.png`. Manifest website gallery includes Library settings + Next up. E7 / docs.
+
+---
+
 ## 2026-07-19 — Ship 0.2.8: Harmonic neighbours + rules Next up
 
 Booth polish since 0.2.7: Settings → Library **Harmonic neighbours first** (soft-ranks Camelot fits when a deck is playing); opt-in **Next up** strip (`ai.mixmatch = rules`) — Camelot + BPM suggestions, human load only; Help shows the same screenshot pack as the website; Controllers & MIDI guide; DJ vs developer docs split. Defaults stay off for new Library options. R5.6, R6.*, R8.2, V2-B.

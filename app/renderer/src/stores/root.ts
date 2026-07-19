@@ -148,6 +148,19 @@ export async function bootAudio(): Promise<void> {
   mixmatchStore.start();
   startAudioClock();
   void midiEngine.start();
+
+  // Playwright doc screenshots (`?docShot=1`) — seed a “playing” deck without real audio.
+  if (import.meta.env.DEV && new URLSearchParams(location.search).get('docShot') === '1') {
+    (
+      window as unknown as {
+        __stentorDocShot: {
+          deckA: typeof deckA;
+          deckB: typeof deckB;
+          mixmatchStore: typeof mixmatchStore;
+        };
+      }
+    ).__stentorDocShot = { deckA, deckB, mixmatchStore };
+  }
 }
 
 export { settingsStore, uiStore, audioEngine };

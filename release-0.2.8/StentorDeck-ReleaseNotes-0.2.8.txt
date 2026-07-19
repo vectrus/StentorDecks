@@ -1,0 +1,20 @@
+StentorDeck 0.2.8
+Installer: StentorDeck-Setup-0.2.8.exe
+Date: 2026-07-19
+
+Install over your current build. Library, settings, and MIDI map stay in %APPDATA%.
+
+What's new
+-----------
+2026-07-19 - Ship 0.2.8: Harmonic neighbours + rules Next up
+Booth polish since 0.2.7: Settings -> Library Harmonic neighbours first (soft-ranks Camelot fits when a deck is playing); opt-in Next up strip (ai.mixmatch = rules) - Camelot + BPM suggestions, human load only; Help shows the same screenshot pack as the website; Controllers & MIDI guide; DJ vs developer docs split. Defaults stay off for new Library options. R5.6, R6.*, R8.2, V2-B.
+
+How to update
+-------------
+- Run StentorDeck-Setup-0.2.8.exe, or use Settings > Updates > Check for updates (needs latest.yml on GitHub).
+- Open StentorDeck from the desktop shortcut (not only the source .bat).
+
+Notes
+-----
+- Builds are unsigned - Windows SmartScreen may warn once.
+- Auto-update requires a full GitHub Release with latest.yml (not Setup.exe alone).

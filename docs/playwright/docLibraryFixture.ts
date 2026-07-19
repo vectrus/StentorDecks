@@ -62,10 +62,60 @@ export const DOC_LIBRARY: MockLibraryFixture = {
       lowConfidence: true,
       beatGridOffsetSec: 0.08,
     },
+    // Extra rows so Next up / harmonic soft-rank look populated in screenshots.
+    {
+      id: 5,
+      path: 'C:\\Music\\Booth\\Techno\\Relative Minor.mp3',
+      title: 'Relative Minor',
+      artist: 'Twin Axis',
+      bpm: 131,
+      keyCamelot: '8B',
+      durationMs: 378_000,
+      bpmSource: 'analysis',
+      lowConfidence: false,
+      beatGridOffsetSec: 0.03,
+    },
+    {
+      id: 6,
+      path: 'C:\\Music\\Booth\\Techno\\Wheel Left.mp3',
+      title: 'Wheel Left',
+      artist: 'Spoke',
+      bpm: 130,
+      keyCamelot: '7A',
+      durationMs: 395_000,
+      bpmSource: 'analysis',
+      lowConfidence: false,
+      beatGridOffsetSec: 0.05,
+    },
+    {
+      id: 7,
+      path: 'C:\\Music\\Booth\\Techno\\Two Steps.mp3',
+      title: 'Two Steps',
+      artist: 'Orbit',
+      bpm: 133,
+      keyCamelot: '10A',
+      durationMs: 404_000,
+      bpmSource: 'tag',
+      lowConfidence: false,
+      beatGridOffsetSec: 0.01,
+    },
+    {
+      id: 8,
+      path: 'C:\\Music\\Booth\\House\\Same Key Slow.mp3',
+      title: 'Same Key Slow',
+      artist: 'Hold Pattern',
+      bpm: 128,
+      keyCamelot: '8A',
+      durationMs: 420_000,
+      bpmSource: 'analysis',
+      lowConfidence: false,
+      beatGridOffsetSec: 0.06,
+    },
   ],
-  trackCount: 4,
+  trackCount: 8,
 };
 
+/** Settings used for doc screenshots — new Library options on so they appear in crops. */
 export function docScreenshotSettings(): Settings {
   const settings = structuredClone(defaultSettings);
   settings.audio.masterDevice = 'rmx2-out';
@@ -73,6 +123,8 @@ export function docScreenshotSettings(): Settings {
   settings.audio.masterChannels = [0, 1];
   settings.audio.cueChannels = [2, 3];
   settings.library.roots = ['C:\\Music\\Booth'];
+  settings.library.harmonicBoost = true;
+  settings.ai.mixmatch = 'rules';
   return settings;
 }
 

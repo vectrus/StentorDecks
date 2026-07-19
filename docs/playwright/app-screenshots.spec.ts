@@ -17,9 +17,10 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function bootApp(page: Page): Promise<void> {
-  await page.goto('/');
+  // ?docShot=1 exposes stores for seeding a playing deck (Next up / harmonic shots).
+  await page.goto('/?docShot=1');
   await expect(page.getByRole('button', { name: 'Performance' })).toBeVisible({
-    timeout: 45_000,
+    timeout: 60_000,
   });
   // Settings only auto-opens when roots are empty; dismiss if somehow open.
   const settings = page.getByRole('dialog', { name: 'Settings' });
@@ -34,6 +35,36 @@ async function bootApp(page: Page): Promise<void> {
   });
 }
 
+/** Fake a playing deck A (8A / 132) so Next up + harmonic soft-rank light up. */
+async function seedPlayingDeckA(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const shot = (
+      window as unknown as {
+        __stentorDocShot?: {
+          deckA: {
+            state: string;
+            keyCamelot: string | null;
+            fileBpm: number | null;
+            libraryTrackId: number | null;
+            title: string;
+            artist: string;
+          };
+          mixmatchStore: { recompute: () => Promise<void> };
+        };
+      }
+    ).__stentorDocShot;
+    if (!shot) throw new Error('__stentorDocShot missing — boot with ?docShot=1');
+    const d = shot.deckA;
+    d.state = 'playing';
+    d.keyCamelot = '8A';
+    d.fileBpm = 132;
+    d.libraryTrackId = 1;
+    d.title = 'Night Drive';
+    d.artist = 'Vector Line';
+    return shot.mixmatchStore.recompute();
+  });
+}
+
 async function openFolder(page: Page, name: string): Promise<void> {
   const tree = page.getByRole('navigation', { name: /folder/i });
   // Native DOM click — Perf strip overlays block Playwright's pointer hit-test even with force.
@@ -41,9 +72,12 @@ async function openFolder(page: Page, name: string): Promise<void> {
     .getByRole('button', { name: new RegExp(name, 'i') })
     .first()
     .evaluate((el) => (el as HTMLButtonElement).click());
-  await expect(page.getByText('Night Drive').or(page.getByText('Afterhours'))).toBeVisible({
-    timeout: 10_000,
-  });
+  await expect(
+    page
+      .locator('.prep-col.track, .perf-col.track')
+      .filter({ hasText: /Night Drive|Afterhours|Warehouse/i })
+      .first(),
+  ).toBeVisible({ timeout: 10_000 });
 }
 
 async function shot(page: Page, file: string): Promise<void> {
@@ -87,7 +121,10 @@ test.describe('Live app documentation screenshots', () => {
     await bootApp(page);
     await page.getByRole('button', { name: 'Library', exact: true }).click();
     await expect(page.getByRole('navigation', { name: 'Folder tree' })).toBeVisible();
-    await openFolder(page, 'House');
+    await seedPlayingDeckA(page);
+    await openFolder(page, 'Techno');
+    await expect(page.getByLabel('Next up suggestions')).toBeVisible();
+    await expect(page.locator('.next-up-item').first()).toBeVisible({ timeout: 15_000 });
     await shot(page, '02-prep-mode.png');
   });
 
@@ -136,7 +173,10 @@ test.describe('Live app documentation screenshots', () => {
   test('08 settings library', async ({ page }) => {
     await bootApp(page);
     const panel = await openSettingsSection(page, /^Library/i);
-    await expect(panel.getByText(/root|Browse|Rescan|sort/i).first()).toBeVisible();
+    await expect(panel.getByText(/Harmonic neighbours first/i)).toBeVisible();
+    await expect(panel.getByText(/Next up \(mixmatch\)/i)).toBeVisible();
+    // Scroll new controls into the crop if the panel is tall.
+    await panel.getByText(/Harmonic neighbours first/i).scrollIntoViewIfNeeded();
     await shotLocator(panel, '08-settings-library.png');
   });
 
@@ -159,5 +199,15 @@ test.describe('Live app documentation screenshots', () => {
     const panel = await openSettingsSection(page, /Updates/i);
     await expect(panel.getByText(/Check for updates|GitHub|version/i).first()).toBeVisible();
     await shotLocator(panel, '11-settings-updates.png');
+  });
+
+  test('12 next up strip', async ({ page }) => {
+    await bootApp(page);
+    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    await seedPlayingDeckA(page);
+    await openFolder(page, 'Techno');
+    const strip = page.getByLabel('Next up suggestions');
+    await expect(strip.locator('.next-up-item').first()).toBeVisible({ timeout: 15_000 });
+    await shotLocator(strip, '12-next-up.png');
   });
 });

@@ -155,6 +155,8 @@ If nothing is playing, the list is unchanged.
 
 ## Next up (mixmatch)
 
+![Next up suggestions](../screenshots/12-next-up.png)
+
 **Settings → Library → Next up** = **Rules** shows a strip of 5–10 suggested tracks (Camelot + BPM vs the playing deck). You still load by hand — A / B buttons. Off by default. No cloud.
 
 ## Quick FAQ

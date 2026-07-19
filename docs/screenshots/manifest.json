@@ -16,9 +16,9 @@
     {
       "file": "02-prep-mode.png",
       "id": "library",
-      "caption": "Library mode — dual-pane browsing, BPM & key on every track",
-      "alt": "StentorDecks library mode with dual-pane music library browser showing BPM and key columns",
-      "tags": ["library", "prep"],
+      "caption": "Library mode — browsing, BPM & key, Next up strip when Rules is on",
+      "alt": "StentorDecks library mode with track list and Next up Camelot + BPM suggestions",
+      "tags": ["library", "prep", "mixmatch"],
       "website": true,
       "websiteOrder": 2
     },
@@ -88,10 +88,20 @@
     {
       "file": "08-settings-library.png",
       "id": "settings-library",
-      "caption": "Settings → Library",
-      "alt": "StentorDecks library settings for music roots and sort",
-      "tags": ["settings", "library"],
-      "website": false
+      "caption": "Settings → Library — harmonic neighbours & Next up (rules)",
+      "alt": "StentorDecks library settings with Harmonic neighbours first and Next up mixmatch options",
+      "tags": ["settings", "library", "harmonic", "mixmatch"],
+      "website": true,
+      "websiteOrder": 9
+    },
+    {
+      "file": "12-next-up.png",
+      "id": "next-up",
+      "caption": "Library → Next up — Camelot + BPM suggestions (rules)",
+      "alt": "StentorDecks Next up strip suggesting local tracks by Camelot key and BPM",
+      "tags": ["library", "mixmatch", "next-up"],
+      "website": true,
+      "websiteOrder": 10
     },
     {
       "file": "09-settings-display.png",
