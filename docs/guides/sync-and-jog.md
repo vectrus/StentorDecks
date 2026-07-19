@@ -9,11 +9,11 @@ StentorDeck is built for **manual beatmatching**. SYNC helps, it does not replac
 3. One-shot **beatgrid snap**, then soft phase assist while SYNC stays lit.  
 4. Press SYNC again to turn it off — **phase glue** holds your offset so the mix doesn’t jump.
 
-Needs a **beatgrid** on both tracks. In Prep: select track → **Detect**, then reload the deck.
+Needs a **beatgrid** on both tracks. In Library: select track → **Detect**, then reload the deck.
 
 Loading a **new track on the master** (the deck you are not SYNC’d on) turns SYNC off on the slave and **keeps the slave’s pitch** — it will not jump to the new track’s BPM mid-play. Press SYNC again when you want to match the new master.
 
-Half/double BPM mistakes are common — use **½ / ×2 / Tap** in Prep first.
+Half/double BPM mistakes are common — use **½ / ×2 / Tap** in Library first.
 
 Phase math uses each track’s **file BPM** grid (same ticks you see on the detail waveform). Pitch only changes how fast the playhead moves through that grid.
 

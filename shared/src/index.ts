@@ -49,3 +49,18 @@ export {
   type LearnPhase,
   type LearnState,
 } from './midiLearn.js';
+export {
+  CONTROLLER_PROFILES,
+  ControllerProfileParseError,
+  getControllerProfile,
+  HERCULES_INPULSE_500_PROFILE,
+  listControllerProfiles,
+  parseControllerProfile,
+  PIONEER_DDJ_FLX4_PROFILE,
+  profileMatchesPort,
+  RMX2_CONTROLLER_PROFILE,
+  suggestControllerProfile,
+  type ControllerLedStyle,
+  type ControllerProfile,
+  type ControllerProfileStatus,
+} from './controllerProfiles/index.js';

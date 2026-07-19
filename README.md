@@ -10,7 +10,6 @@
   I spent some time using it and i'm happy. Besides the small jogs and faders it feel a lot more like 2 CDJ's
   Added a proper filter. Decent flanger.<br/> 
   A two-deck DJ application for Windows, purpose-built around the Hercules DJConsole RMX2.<br/> 
-  (Other Hercules and brands may work but need MIDI mapping) <br />
   Not a toy, not a demo — a booth-ready instrument.<br />
   
 </p>
@@ -35,13 +34,24 @@ GitHub Releases, and shuts down cleanly when you close the lid.
 - **The RMX2 feels native.** Factory mapping out of the box, MIDI learn for
   everything, soft takeover so faders never jump, LED feedback, and a
   dual-zone jog wheel with tunable feel — fine vinyl-style nudge on the rim,
-  spinback when you rip it.
+  spinback when you rip it. Other controllers: see **Controllers** below.
 - **A library that looks after itself.** Point it at your folders: SQLite
   index, live file watcher, instant search, and a background analysis
   pipeline (in a sandboxed worker window) that computes waveforms, BPM with a
-  real beatgrid, musical key (Camelot), and LUFS loudness for auto-gain —
-  including resilient decoding of damaged MP3s. Tag and manual values always
-  win over analysis; idle backfill fills in the rest.
+  real beatgrid, musical key (Camelot), and LUFS loudness for auto-gain.
+  Tag and manual values always win over analysis; idle backfill fills in the
+  rest.
+- **MP3 click & squeak remover (Library).** Got an MP3 that pops, ticks, or
+  squeaks when you play it — or looks wrong on the waveform? Open **Library**,
+  select the track → **Check MP3** (tells you if the file is unhealthy) →
+  **Write fixed WAV**. That makes a new clean copy next to the original,
+  named `… (Fixed by SD).wav`. Your original MP3 is never changed. Load the
+  Fixed file on the decks and mix as usual. Still hear clicks even when
+  Check says OK? Write the Fixed WAV anyway — some damaged files sound bad
+  without showing a short length.
+  *(Dev: resilient decode resumes past bad MPEG frames; multi-part concat
+  trims priming ~576 samples and overlap-adds ~6 ms / 256 samples per seam —
+  R2.1 / R5.9; output is PCM16 WAV, no ffmpeg, original never rewritten.)*
 - **SYNC that behaves like a good human, not a robot.** One-shot beat snap on
   the analyzed grid, tempo follow of the partner's pitch fader, then a soft
   PI phase assist: hysteresis so it never hunts, a slow integral that absorbs
@@ -62,37 +72,58 @@ GitHub Releases, and shuts down cleanly when you close the lid.
 
 Brand assets live in [`brand/`](brand/) (mark, wordmark, app icon).
 
-## UI mockups
+## Controllers (RMX2 locked)
 
-Authoritative HTML mockups and PNGs — see [`docs/mockups/MOCKUPS.md`](docs/mockups/MOCKUPS.md). Regenerate with `npm run docs:screenshots`.
+StentorDeck is **built for the Hercules DJConsole RMX2**. Fresh install, empty
+database, and **Reset to RMX2 defaults** always restore the factory RMX2 map
+([`docs/04-midi-map.md`](docs/04-midi-map.md)). That map is owner hardware-verified.
+
+**Other controllers today**
+
+1. **MIDI Learn** (Settings / Dev mode) — bind any ControlId to your hardware.
+2. **Community profiles** (Settings → MIDI) — opt-in packs for popular 2-deck
+   gear (e.g. Pioneer DDJ-FLX4, Hercules Inpulse 500). Partial maps; gaps via Learn.
+   Marked **community / READY FOR HW VERIFICATION** — never claimed booth-ready.
+
+Profiles never auto-apply when you plug a device in (that would silently break an
+RMX2 booth). Applying a non-RMX2 profile turns LED feedback off (Hercules note
+echo is wrong for Pioneer); Reset / RMX2 profile turns LEDs back on.
+
+**Denied on purpose** (would risk RMX2 or v1 scope): auto-switching the factory
+map on hot-plug; replacing the RMX2 factory with a “generic” layout; running
+Mixxx JavaScript inside the app; scratching / 4-deck / stems as first-class;
+softening 14-bit / LSB Learn rules; claiming `[HW] PASS` without physical
+verification. Full deny list: [`docs/BACKLOG-multi-controller.md`](docs/BACKLOG-multi-controller.md).
+
+## UI screenshots
+
+Taken from the running app (Vite + mocked IPC) via Playwright — not HTML mockups.
+Regenerate after UI changes: `npm run docs:screenshots` → [`docs/screenshots/`](docs/screenshots/).
+Layout design contract (HTML): [`docs/mockups/MOCKUPS.md`](docs/mockups/MOCKUPS.md).
 
 ### Performance
 
-![Performance mode](docs/mockups/screenshots/01-performance-mode.png)
+![Performance mode](docs/screenshots/01-performance-mode.png)
 
 Header MST / CUE / PHN · waveform well · decks with pitch strip & FX · **7-column mixer** (GAIN · kill LEDs · EQ/faders · labels) · library fill.
 
-### Prep
+### Library
 
-![Prep mode](docs/mockups/screenshots/02-prep-mode.png)
+![Library mode](docs/screenshots/02-prep-mode.png)
 
-**In-app Help** (topbar **Help** or **F1**) searches the operator guides in [`docs/guides/`](docs/guides/). Prep walkthrough: [`docs/guides/prep-library.md`](docs/guides/prep-library.md).
+**In-app Help** (topbar **Help** or **F1**) searches the operator guides in [`docs/guides/`](docs/guides/). Library walkthrough: [`docs/guides/prep-library.md`](docs/guides/prep-library.md).
 
 ### Audio setup
 
-![Audio setup](docs/mockups/screenshots/03-audio-setup.png)
-
-### Deck panel states
-
-![Deck panel states](docs/mockups/screenshots/04-deck-panel-states.png)
+![Audio setup](docs/screenshots/03-audio-setup.png)
 
 ### Mixer column
 
-![Mixer column](docs/mockups/screenshots/05-mixer-column.png)
+![Mixer column](docs/screenshots/05-mixer-column.png)
 
 ### Fader curve editor
 
-![Fader curve editor](docs/mockups/screenshots/06-fader-curve-editor.png)
+![Fader curve editor](docs/screenshots/06-fader-curve-editor.png)
 
 ## Stack
 
@@ -180,7 +211,7 @@ If you see `NODE_MODULE_VERSION` errors: `npm run rebuild:native` (or just re-ru
 npm test                 # unit + component (Vitest)
 npm run test:coverage
 npm run test:e2e         # Playwright end-user (no RMX2)
-npm run docs:screenshots # mockup PNGs → docs/mockups/screenshots/
+npm run docs:screenshots # live-app PNGs → docs/screenshots/
 npm run lint
 npm run typecheck
 npm run build
@@ -252,3 +283,5 @@ E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW ✓]
 ### Parked (not v1)
 
 v2 Spotify + AI mixmatch — [`docs/BACKLOG-v2-spotify-ai.md`](docs/BACKLOG-v2-spotify-ai.md) (locked 2026-07-18).
+
+Multi-controller Phase 3 (LEDs / shift / FLX10) — [`docs/BACKLOG-multi-controller.md`](docs/BACKLOG-multi-controller.md). RMX2 factory + community FLX4 / Inpulse 500 profiles already shipped (opt-in).

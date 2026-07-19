@@ -2,13 +2,18 @@
 
 Maintains visual documentation for StentorDeck. Ruled by `.cursorrules` §2b.
 
-## Mockup screenshots
+## Live app screenshots
 
 ```bash
 npm run docs:screenshots
 ```
 
-Writes PNGs to [`../mockups/screenshots/`](../mockups/screenshots/) from each authoritative HTML mockup. Commit the PNGs when mockups change.
+Boots the Vite renderer with mocked `window.stentor` / devices (same approach as e2e),
+opens Performance / Library / Audio / Settings, and writes PNGs to [`../screenshots/`](../screenshots/).
+Commit the PNGs when the UI changes in a user-visible way.
+
+HTML design-contract mockups remain under [`../mockups/`](../mockups/) for layout reference;
+they are **not** the screenshot source anymore.
 
 ## End-user e2e (separate suite)
 

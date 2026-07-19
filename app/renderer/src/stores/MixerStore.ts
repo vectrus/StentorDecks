@@ -71,8 +71,9 @@ export class MixerStore {
   }
 
   setPhones(v: number): void {
-    this.phones = v;
-    audioEngine.setPhonesGain(v);
+    this.phones = Math.min(1, Math.max(0, v));
+    audioEngine.setPhonesGain(this.phones);
+    this.takeoverSoftwareChange?.('mixer.phones');
   }
 
   tickMeters(): void {

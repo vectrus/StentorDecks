@@ -27,8 +27,6 @@ function SettingsCogIcon() {
 
 export const AppShell = observer(function AppShell() {
   const [setupOpen, setSetupOpen] = useState(() => audioDeviceStore.needsSetup);
-  const [showHarness, setShowHarness] = useState(false);
-  const [showMidi, setShowMidi] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(
     () => settingsStore.settings.library.roots.length === 0,
@@ -76,7 +74,6 @@ export const AppShell = observer(function AppShell() {
             type="button"
             className={uiStore.mode === 'performance' ? 'mode on' : 'mode'}
             onClick={() => {
-              setShowHarness(false);
               void uiStore.setMode('performance');
             }}
           >
@@ -86,11 +83,10 @@ export const AppShell = observer(function AppShell() {
             type="button"
             className={uiStore.mode === 'prep' ? 'mode on' : 'mode'}
             onClick={() => {
-              setShowHarness(false);
               void uiStore.setMode('prep');
             }}
           >
-            Prep
+            Library
           </button>
         </div>
         <div className="top-actions">
@@ -115,20 +111,6 @@ export const AppShell = observer(function AppShell() {
             onClick={() => setShowHelp(true)}
           >
             Help
-          </button>
-          <button
-            type="button"
-            className={showHarness ? 'mode on' : 'mode'}
-            onClick={() => setShowHarness((v) => !v)}
-          >
-            E2 Harness
-          </button>
-          <button
-            type="button"
-            className={showMidi ? 'mode on' : 'mode'}
-            onClick={() => setShowMidi((v) => !v)}
-          >
-            MIDI {midiStore.connected ? '·' : ''}
           </button>
           <span className="hint mono">
             Plan {audioDeviceStore.activePlan} ·{' '}
@@ -183,14 +165,14 @@ export const AppShell = observer(function AppShell() {
       ) : null}
 
       <main className="stage">
-        {showHarness ? (
+        {uiStore.showDevMode ? (
           <DevHarness />
         ) : uiStore.mode === 'prep' ? (
           <PrepMode />
         ) : (
           <PerformanceMode />
         )}
-        {showMidi ? <MidiMonitor /> : null}
+        {uiStore.showMidiMonitor ? <MidiMonitor /> : null}
       </main>
 
       <SettingsModal

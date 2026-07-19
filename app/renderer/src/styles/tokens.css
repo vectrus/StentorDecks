@@ -40,6 +40,38 @@ body,
   font-family: Bahnschrift, 'Segoe UI', sans-serif;
 }
 
+/* Thin, token-colored scrollbars (library tree / lists). */
+.sd-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.sd-scroll::-webkit-scrollbar {
+  width: 0.45rem;
+  height: 0.45rem;
+}
+
+.sd-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sd-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--border-strong) 85%, var(--bg-raised));
+  border-radius: 0.25rem;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+.sd-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+  background-clip: padding-box;
+}
+
+.sd-scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+}
+
 .mono {
   font-family: Consolas, 'Courier New', monospace;
 }

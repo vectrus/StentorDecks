@@ -144,7 +144,7 @@ export class LibraryStore {
 
   get breadcrumb(): string {
     if (this.search.trim()) return `Search: ${this.search.trim()}`;
-    if (this.openFolder == null) return 'Library';
+    if (this.openFolder == null) return 'All';
     const parts = [this.openFolder];
     // Prefer root-relative labels when possible
     for (const root of this.folders) {

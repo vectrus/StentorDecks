@@ -786,7 +786,7 @@
 /* Djuced-style: narrow folder tree + wide file list */
 .perf-brow-split {
   display: grid;
-  grid-template-columns: 11.5rem minmax(0, 1fr);
+  grid-template-columns: 15.5rem minmax(0, 1fr);
   gap: 0.55rem;
   flex: 1;
   min-height: 0;

@@ -1,13 +1,46 @@
 import { defaultSettings, type Settings } from '../../shared/src/settings';
+import type { FolderNode, TrackRow } from '../../shared/src/ipc';
+
+export type MockLibraryFixture = {
+  folders: FolderNode[];
+  tracks: TrackRow[];
+  trackCount?: number;
+};
+
+export type MockStentorOptions = {
+  /** Extra audiooutput / audioinput descriptors for enumerateDevices. */
+  devices?: Array<{
+    deviceId: string;
+    kind: 'audiooutput' | 'audioinput';
+    label: string;
+    groupId?: string;
+  }>;
+  library?: MockLibraryFixture;
+};
 
 /** Injected before app boot — satisfies preload IPC without Electron. */
 export function mockStentorInitScript(
   settings: Settings = structuredClone(defaultSettings),
+  options: MockStentorOptions = {},
 ): string {
   const json = JSON.stringify(settings);
+  const libraryJson = JSON.stringify(
+    options.library ?? { folders: [], tracks: [], trackCount: 0 },
+  );
+  const devicesJson = JSON.stringify(
+    options.devices ?? [
+      {
+        deviceId: 'fake-out',
+        kind: 'audiooutput',
+        label: 'Fake Out',
+        groupId: 'g1',
+      },
+    ],
+  );
   return `
 (() => {
   let settings = ${json};
+  const library = ${libraryJson};
   const listeners = new Map();
 
   function deepMerge(base, patch) {
@@ -22,6 +55,37 @@ export function mockStentorInitScript(
       }
     }
     return out;
+  }
+
+  function normPath(p) {
+    return String(p || '').replace(/\\//g, '\\\\').replace(/\\\\+$/, '').toLowerCase();
+  }
+
+  function parentDir(p) {
+    const n = String(p || '').replace(/\\//g, '\\\\');
+    const i = n.lastIndexOf('\\\\');
+    return i <= 0 ? null : n.slice(0, i);
+  }
+
+  function queryTracks(req) {
+    let rows = library.tracks.slice();
+    if (req && req.folder) {
+      const f = normPath(req.folder);
+      rows = rows.filter((t) => {
+        const dir = parentDir(t.path);
+        return dir != null && (normPath(dir) === f || normPath(dir).startsWith(f + '\\\\'));
+      });
+    }
+    if (req && req.search) {
+      const q = String(req.search).toLowerCase();
+      rows = rows.filter((t) => {
+        const title = (t.title || '').toLowerCase();
+        const artist = (t.artist || '').toLowerCase();
+        return title.includes(q) || artist.includes(q);
+      });
+    }
+    if (req && req.limit != null) rows = rows.slice(0, req.limit);
+    return rows;
   }
 
   window.stentor = {
@@ -69,9 +133,14 @@ export function mockStentorInitScript(
       if (channel === 'midi:mapping:reset') {
         return { 'deckA.play': { kind: 'button', ch: 0, note: 0x21 } };
       }
-      if (channel === 'library:query') return [];
-      if (channel === 'library:folders') return [];
+      if (channel === 'library:query') return queryTracks(req);
+      if (channel === 'library:folders') return library.folders;
+      if (channel === 'library:stats') {
+        return { trackCount: library.trackCount ?? library.tracks.length };
+      }
       if (channel === 'library:track') return null;
+      if (channel === 'library:waveform') return null;
+      if (channel === 'library:pickRoot') return { path: 'C:\\\\Music\\\\Booth' };
       if (channel === 'library:rescan') return { ok: true };
       if (channel === 'analysis:enqueue') return { ok: true, queueDepth: 0 };
       return {};
@@ -83,9 +152,14 @@ export function mockStentorInitScript(
     },
   };
 
-  const fakeDevices = [
-    { deviceId: 'fake-out', kind: 'audiooutput', label: 'Fake Out', groupId: 'g1', toJSON() { return this; } },
-  ];
+  const deviceList = ${devicesJson};
+  const fakeDevices = deviceList.map((d) => ({
+    deviceId: d.deviceId,
+    kind: d.kind,
+    label: d.label,
+    groupId: d.groupId || 'g1',
+    toJSON() { return this; },
+  }));
 
   if (!navigator.mediaDevices) {
     Object.defineProperty(navigator, 'mediaDevices', {
@@ -103,7 +177,6 @@ export function mockStentorInitScript(
     }
   }
 
-  // requestMIDIAccess optional — app tolerates absence
   if (!navigator.requestMIDIAccess) {
     navigator.requestMIDIAccess = async () => {
       throw new Error('MIDI unavailable in e2e');

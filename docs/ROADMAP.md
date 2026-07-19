@@ -20,7 +20,7 @@ Living tracker for spec work and build order. **Agents must keep this file, root
 | S8 | USB selective-suspend / RMX2 sleep note in MANUAL or E7 | TODO | Mentioned in review |
 | S9 | Library sort default + duplicate-hash policy | DONE | Owner agreed; R5.6 / R5.7 |
 | S10 | Mockups: pad activates, knob = amount | DONE | `01`/`04` + MOCKUPS.md; R3.1 clarified |
-| S11 | Playwright doc screenshots | DONE | `npm run docs:screenshots`; cursorrules §2b |
+| S11 | Playwright doc screenshots | DONE | Live app → `docs/screenshots/` via `npm run docs:screenshots`; HTML mockups = design contract only |
 
 ---
 
@@ -68,6 +68,7 @@ E1 skeleton → E2 audio [HW ✓] → E3 MIDI [HW ✓]
 - Drive-letter remount identity hardening
 - Windows USB selective suspend guidance / mitigation
 - **v2 Spotify + AI mixmatch/autoplay** — decisions locked in [`BACKLOG-v2-spotify-ai.md`](./BACKLOG-v2-spotify-ai.md) (2026-07-18). Not v1. Includes parked spike: **reuse Prep library chrome as Co-pilot queue / playlist surface** (examine at V2-E; no v1 playlists).
+- **Multi-controller MIDI** — RMX2 locked factory; community FLX4 / Inpulse 500 profiles shipped (unverified). Phase 3 LEDs/shift/FLX10 in [`BACKLOG-multi-controller.md`](./BACKLOG-multi-controller.md). Does **not** reopen E3.
 
 ---
 

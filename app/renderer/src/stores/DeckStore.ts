@@ -624,7 +624,7 @@ export class DeckStore {
         return `SYNC: BPM (~${bpm}) — target outside ±pitch range (clamped)`;
       }
       if (!this.syncHasGrid) {
-        return `SYNC: BPM (~${bpm}) — tempo follow; no beatgrid (Detect in Prep)`;
+        return `SYNC: BPM (~${bpm}) — tempo follow; no beatgrid (Detect in Library)`;
       }
       return `SYNC: BPM + grid snap + soft phase (~${bpm})`;
     }

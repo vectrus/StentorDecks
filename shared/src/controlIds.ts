@@ -49,6 +49,8 @@ export const CONTROL_IDS = [
   'mixer.faderB',
   'mixer.master',
   'mixer.headMix',
+  /** Software cue-bus level (after HeadMix). RMX2 physical phones vol is analog — no MIDI. */
+  'mixer.phones',
   'mixer.crossfader',
   /** Vinyl — toggles jog dual-zone (on) vs single-zone rate nudge (off). */
   'mixer.vinyl',

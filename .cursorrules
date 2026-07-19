@@ -53,10 +53,10 @@ See `docs/TESTING.md`. Agents add/extend tests with every non-trivial behavior c
 - **Unit (Vitest/node):** pure logic — curves, CDJ, MIDI decode, takeover, stores. `npm test`.
 - **Component (Vitest/jsdom + Testing Library):** `*.component.test.tsx`. Mock `stores/root` singletons when needed.
 - **End-user (Playwright):** `npm run test:e2e` — mockup journeys + app smoke with mocked `window.stentor` / devices. **No RMX2 in CI.**
-- **Doc screenshots:** `docs/mockups/*.html` → `docs/mockups/screenshots/` via `npm run docs:screenshots` (separate Playwright config).
-- **When implementing UI (E6 etc.):** compare HTML mockup + screenshot; regenerate screenshots in the same change.
+- **Doc screenshots:** live Vite renderer (+ mocked IPC) → `docs/screenshots/` via `npm run docs:screenshots` (separate Playwright config). HTML under `docs/mockups/` is design-contract only, not the screenshot source.
+- **When implementing UI (E6 etc.):** compare HTML mockup + live screenshot; regenerate screenshots in the same change.
 - **`[HW]` criteria:** never auto-pass; owner checklist only.
-- Agents: after mockup edits run `docs:screenshots`; after behavior changes run `npm test` and extend `test:e2e` when a user-visible path is added.
+- Agents: after user-visible UI changes run `docs:screenshots`; after behavior changes run `npm test` and extend `test:e2e` when a user-visible path is added.
 
 ## 3. Expertise personas — adopt the right hat per file area
 

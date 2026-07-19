@@ -46,7 +46,7 @@ export const VirtualBrowseList = observer(function VirtualBrowseList() {
 
   return (
     <div
-      className={`prep-virt${libraryStore.browsePane === 'files' ? ' pane-focused' : ''}`}
+      className={`prep-virt sd-scroll${libraryStore.browsePane === 'files' ? ' pane-focused' : ''}`}
       ref={scrollerRef}
       onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
       role="listbox"

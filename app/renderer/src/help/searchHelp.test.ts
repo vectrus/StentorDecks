@@ -16,7 +16,7 @@ const TOPICS: HelpTopic[] = [
   },
   {
     id: 'c',
-    title: 'Prep library',
+    title: 'Library mode',
     tags: ['prep', 'bpm', 'key'],
     body: 'Use Tap and Detect to fix BPM.',
   },

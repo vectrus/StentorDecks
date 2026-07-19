@@ -5,9 +5,21 @@ import { invoke, onIpc } from '../ipc/client';
 export class UiStore {
   mode: AppModeState['mode'] = 'performance';
   fullscreen = true;
+  /** Settings → Developer: E2–E4 harness overlay (not a booth mode). */
+  showDevMode = false;
+  /** Settings → Developer: live MIDI decode strip. */
+  showMidiMonitor = false;
 
   constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
+  }
+
+  setDevMode(on: boolean): void {
+    this.showDevMode = on;
+  }
+
+  setMidiMonitor(on: boolean): void {
+    this.showMidiMonitor = on;
   }
 
   async hydrate(): Promise<void> {
@@ -35,6 +47,8 @@ export class UiStore {
     runInAction(() => {
       this.mode = next.mode;
       this.fullscreen = next.fullscreen;
+      // Leaving Dev mode when switching Performance / Library.
+      this.showDevMode = false;
     });
   }
 

@@ -23,5 +23,6 @@ If the PA is hot, turn **MST** down first — don’t bury everything in EQ kill
 - Per-deck **PFL** (headphone icon) sends that deck to the cue bus.  
 - With PFL on, that deck’s **VU** shows pre-fader level (gain/EQ) even if the channel fader is down — use it to match volumes before you open the fader.  
 - VU **red / peak tip** means you’re peaking (above about −3 dBFS).  
-- **CUE / PHN** knobs blend cue vs master and set phone volume.  
+- **CUE** — RMX2 **Cue to Mix** (MIDI). Blends PFL cue vs master in the phones bus.  
+- **PHN** — software cue-bus level after that blend. The RMX2’s physical **phones volume** knob is analog (no MIDI), so it will not move the on-screen PHN; use PHN in the top bar, or Learn a spare knob.  
 - Default head-mix leans **cue-only** so PFL isn’t drowned by the master bus.

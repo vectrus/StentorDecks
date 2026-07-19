@@ -17,7 +17,7 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
   },
   {
     id: 'prep-library',
-    title: 'Prep library',
+    title: 'Library mode',
     tags: ['prep', 'library', 'bpm', 'key', 'camelot', 'detect', 'tap', 'load', 'folder', 'search'],
     body: prepLibrary,
   },

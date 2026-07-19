@@ -19,10 +19,12 @@ Icons load from the Tabler webfont CDN; offline they degrade to blank squares �
 
 ## Screenshots
 
-Canonical PNGs live in [`screenshots/`](./screenshots/). Regenerate after mockup edits:
+README / marketing PNGs are taken from the **live app** (not these HTML files):
 
 ```bash
 npm run docs:screenshots
 ```
 
-See [`../playwright/README.md`](../playwright/README.md) and `.cursorrules` §2b.
+→ [`../screenshots/`](../screenshots/). See [`../playwright/README.md`](../playwright/README.md) and `.cursorrules` §2b.
+
+These HTML files remain the layout design contract for E6 / docs/06.

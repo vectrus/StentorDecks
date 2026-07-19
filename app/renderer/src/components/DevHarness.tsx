@@ -37,7 +37,7 @@ export const DevHarness = observer(function DevHarness() {
   return (
     <div className="harness">
       <header className="harness-hd">
-        <h1>E2–E4 Dev harness</h1>
+        <h1>Dev mode</h1>
         <span className="mono">
           Plan {audioDeviceStore.activePlan} · {audioDeviceStore.planReason}
         </span>
@@ -98,7 +98,7 @@ export const DevHarness = observer(function DevHarness() {
             <li className="hint">Add a library root in Settings → Rescan (then Enter the root)</li>
           )}
           {entries.length > 120 && (
-            <li className="hint">… {entries.length - 120} more (Prep UI virtualizes)</li>
+            <li className="hint">… {entries.length - 120} more (Library UI virtualizes)</li>
           )}
         </ul>
         <div className="row" style={{ marginTop: 8, gap: 8 }}>
@@ -270,6 +270,7 @@ export const DevHarness = observer(function DevHarness() {
                 'mixer.faderB',
                 'mixer.master',
                 'mixer.headMix',
+                'mixer.phones',
               ] as const
             ).map((id) => {
               const t = midiStore.takeoverView(id);

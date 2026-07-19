@@ -36,8 +36,9 @@ Browse cluster (shared): up `45` prev row, down `46` next row, left `44` parent 
 | Ch fader B | 4A / 4B | curve-mapped, soft takeover |
 | Pitch fader A | 36 / 37 | dead-zone, soft takeover; **MIDI inverted** → logical 0=slow / 1=fast |
 | Pitch fader B | 38 / 39 | dead-zone, soft takeover; **MIDI inverted** → logical 0=slow / 1=fast |
-| Master volume | 44 / 45 | soft takeover |
-| HeadMix (cue/mix) | 46 / 47 | soft takeover |
+| Master volume | 44 / 45 | soft takeover → `mixer.master` (UI **MST**) |
+| HeadMix (cue/mix) | 46 / 47 | soft takeover → `mixer.headMix` (UI **CUE**) |
+| Phones volume (software) | — / learn | `mixer.phones` (UI **PHN**). The RMX2 **physical** headphones volume knob is **analog** — it does not send MIDI (Hercules / Mixxx). Use the on-screen PHN knob, or Learn a spare absolute knob. |
 | Crossfader | 48 / 49 | **ignored by default** (R2.4) |
 | Gain A / B | 42 / 52 | 7-bit, soft takeover |
 | EQ A high/mid/low | 3C / 3E / 40 | 7-bit, soft takeover |
@@ -69,6 +70,18 @@ type Mapping = Record<ControlId, Binding>;
 ```
 
 Stored in SQLite (`midi_map`), exported/imported as JSON. Factory map ships as a constant; "Reset to RMX2 defaults" always available.
+
+## Controller profiles (multi-controller)
+
+Optional **static** ControlId→Binding packs in `shared/src/controllerProfiles/`. Apply from Settings → MIDI. Empty DB and Reset still seed **only** `RMX2_FACTORY_MAP`.
+
+| Profile | Status | Notes |
+|---|---|---|
+| `rmx2` | factory / HW-verified | This document’s tables |
+| `pioneer-ddj-flx4` | community | Partial; no Mixxx JS / pad banks / stems |
+| `hercules-inpulse-500` | community | Partial; browse encoder → Learn (no button cluster) |
+
+**Never auto-apply** on port connect. Community profiles set `ledStyle: none` (disable Hercules note LEDs). Deny list + backlog: [`BACKLOG-multi-controller.md`](./BACKLOG-multi-controller.md).
 
 Learn flow: enable Learn → UI controls get a target overlay → click one → next qualifying message binds it. Qualifying: for buttons, any note-on; for continuous, **relative** if the CC stream looks incremental (e.g. only 1/127 — RMX2 FX Mode), else the **first CC with ≥3 distinct values within 500 ms** (rejects one-shot LSB noise); if a second interleaved CC tracks it consistently at +1, record as cc14. Esc cancels; captured binding shown for confirm/undo. Conflict (binding already used) → highlight the other control, require explicit steal.
 

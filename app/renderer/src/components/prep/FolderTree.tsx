@@ -8,7 +8,7 @@ function norm(p: string): string {
 }
 
 function folderLeafName(path: string | null): string {
-  if (path == null) return 'Library';
+  if (path == null) return 'All';
   const leaf = path.replace(/[/\\]+$/, '').split(/[/\\]/).pop();
   return leaf && leaf.length > 0 ? leaf : path;
 }
@@ -55,9 +55,10 @@ export const FolderTree = observer(function FolderTree() {
           className={`prep-node${open == null && !libraryStore.search ? ' open' : ''}`}
           onClick={() => libraryStore.setOpenFolder(null)}
           title="Clear folder selection"
+          aria-label="All folders"
         >
           <span className="prep-folder-icon">⌂</span>
-          Library
+          All
         </button>
         {roots.map((node) => (
           <TreeNode

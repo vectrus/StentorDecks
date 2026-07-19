@@ -45,7 +45,7 @@ UI scale (R7.2) multiplies a root `rem`; everything is rem-based. Minimum post-s
 
 ## Layout
 
-**App topbar** — brand, Performance / Prep, **MST / CUE / PHN**, Audio, **Help** (searchable operator guides from `docs/guides/`; **F1** toggles), optional harness/MIDI, fullscreen. Settings remains the floating FAB.
+**App topbar** — brand, Performance / **Library** (prep mode, R7.4), **MST / CUE / PHN**, Audio, Settings cog, **Help** (**F1**). Dev mode + MIDI monitor live under **Settings → Developer** (not in the topbar). Fullscreen corner control.
 
 **Performance mode** (mockup `01` v2) — **MST / CUE / PHN** knobs in the app topbar (left of Audio). Rows: waveform well / deck A · slim mixer · deck B / library that **fills remaining height** (≥3 × 42 px rows). Library is **two panes** (Djuced-style): narrow **folder tree** left, wide **track list** right (files only — no `[dir]` rows in the list).
 

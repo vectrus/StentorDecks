@@ -21,7 +21,7 @@ AudioBufferSourceNode (playbackRate = pitch × nudge)
 
 Master bus → masterGain (hardware master volume CC; **software default 0.3 / 30%** so cold-start is booth-safe) → DynamicsCompressor as **safety limiter** (threshold −3 dB, ratio 20, knee 0, attack 1 ms, release 250 ms) → merger ch 0/1. Limiter is a last-resort clip guard, not a loudness maximizer; gain staging is trim + channel faders + MST.
 
-Cue bus: per-deck pflTap gains (0/1, 15 ms ramp) → cueSum; headphone output = blend(cueSum, master bus) via equal-power cue/mix crossfade (hardware HeadMix CC) → headphoneGain (hardware phones volume) → merger ch 2/3.
+Cue bus: per-deck pflTap gains (0/1, 15 ms ramp) → cueSum; headphone output = blend(cueSum, master bus) via equal-power cue/mix crossfade (hardware HeadMix / UI **CUE**) → headphoneGain (software `mixer.phones` / UI **PHN**) → merger ch 2/3. The RMX2’s physical phones volume knob is analog (no MIDI) and sits after the DAC — it does not move PHN.
 
 ## Transport
 

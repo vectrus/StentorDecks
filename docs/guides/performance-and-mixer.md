@@ -2,10 +2,10 @@
 
 ## Layout (top → bottom)
 
-1. **Top bar** — brand, Performance / Prep, **MST · CUE · PHN**, Audio, Help, Settings  
+1. **Top bar** — brand, Performance / Library, **MST · CUE · PHN**, Audio, Help, Settings  
 2. **Waveform well** — scrolling detail for both decks  
 3. **Deck A · Mixer · Deck B**  
-4. **Library strip** — same library as Prep (smaller)
+4. **Library strip** — same tracks as Library mode (smaller)
 
 ## Mixer (center)
 

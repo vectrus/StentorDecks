@@ -67,7 +67,7 @@ export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
       </div>
 
       <div className="perf-brow-split">
-        <aside className="perf-tree-panel" aria-label="Folders">
+        <aside className="perf-tree-panel sd-scroll" aria-label="Folders">
           <FolderTree />
         </aside>
 
@@ -81,7 +81,7 @@ export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
 
           <ul
             ref={listRef}
-            className={`perf-rows${libraryStore.browsePane === 'files' ? ' pane-focused' : ''}`}
+            className={`perf-rows sd-scroll${libraryStore.browsePane === 'files' ? ' pane-focused' : ''}`}
             role="listbox"
             tabIndex={0}
             onMouseDown={() => libraryStore.focusBrowsePane('files')}

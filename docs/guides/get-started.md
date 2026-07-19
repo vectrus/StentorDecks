@@ -7,14 +7,14 @@ Welcome to **StentorDeck** — a two-deck DJ app built for the **Hercules DJCons
 | Button | Use it for |
 |--------|------------|
 | **Performance** | Live mixing: waveforms, mixer, play / cue / sync |
-| **Prep** | Finding tracks, fixing BPM & key, loading decks |
+| **Library** | Finding tracks, fixing BPM & key, loading decks |
 
 ## First boot checklist
 
 1. **Audio** — pick your RMX2 (or soundcard) for master (PA) and cue (headphones). Prefer **Plan A** (4-channel: outs 1–2 booth, 3–4 phones).
 2. **Music folder** — Settings → **Browse…** → choose where your tracks live → **Rescan**.
 3. Plug in the RMX2 — MIDI should show connected in the top bar.
-4. Open **Prep**, load a track to deck A (paused), switch to **Performance**, press play.
+4. Open **Library**, load a track to deck A (paused), switch to **Performance**, press play.
 
 ## Master volume (important)
 

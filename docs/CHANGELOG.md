@@ -5,6 +5,30 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Multi-controller profiles (RMX2 locked)
+
+Opt-in controller profile packs (Settings → MIDI): factory `rmx2` unchanged; community `pioneer-ddj-flx4` + `hercules-inpulse-500` (unverified, partial). Never auto-apply on hot-plug; Reset always restores RMX2. Deny list in README + [`BACKLOG-multi-controller.md`](./BACKLOG-multi-controller.md). R8.2, docs/04.
+
+---
+
+## 2026-07-19 — Topbar: Library label; Dev/MIDI → Settings
+
+Owner: topbar mode **Prep** renamed **Library** (IPC mode id stays `prep`, R7.4). **E2 Harness** → **Dev mode** and **MIDI monitor** move to Settings → Developer (off the booth topbar). docs/06.
+
+---
+
+## 2026-07-19 — README screenshots from live app (Playwright)
+
+`npm run docs:screenshots` now boots the Vite renderer with mocked IPC (same family as e2e) and writes PNGs to `docs/screenshots/`. HTML under `docs/mockups/` stays as design contract only. README UI section updated. E6 / docs/06.
+
+---
+
+## 2026-07-19 — PHN wiring clarified + wider folder pane
+
+`mixer.phones` is a first-class ControlId (soft takeover / Learn). The RMX2 **physical** phones volume knob is analog and does not send MIDI — it cannot move on-screen PHN; use PHN / Learn, or the Cue-to-Mix knob for **CUE**. Library folder pane widened; thin token scrollbars on tree/lists. R2.8, docs/04, docs/06.
+
+---
+
 ## 2026-07-19 — Ship 0.2.6: VU / folder scroll / shared FX AMT
 
 Booth polish since 0.2.5: channel VU peaking tip + red when hot, PFL shows pre-fader levels for gain match; left folder tree scrolls selection into view + sticky folder name; while FLANGER is on, AMT also drives wet (both pads → shared amount). R7.6, R2.8, R5.3, R3.1.

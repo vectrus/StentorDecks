@@ -4,7 +4,10 @@ import {
   CHANNEL_FADER_SHAPE_PRESETS,
   defaultJogSettings,
   JOG_PRESETS,
+  listControllerProfiles,
+  suggestControllerProfile,
   type AppUpdateStatus,
+  type ControllerProfile,
   type JogPresetId,
   type JogSettings,
   type Settings,
@@ -14,10 +17,12 @@ import {
   deckA,
   deckB,
   libraryStore,
+  midiStore,
   mixerStore,
   sessionPlayedStore,
   settingsStore,
 } from '../stores/root';
+import { uiStore } from '../stores/UiStore';
 import { FaderCurveEditor } from './settings/FaderCurveEditor';
 
 const SCALES: Settings['ui']['scale'][] = [100, 125, 150];
@@ -32,14 +37,23 @@ const SORTS: Settings['library']['sort'][] = [
 
 const JOG_PRESET_IDS = Object.keys(JOG_PRESETS) as JogPresetId[];
 
-type SectionId = 'faders' | 'jog' | 'library' | 'display' | 'updates';
+type SectionId =
+  | 'faders'
+  | 'jog'
+  | 'library'
+  | 'display'
+  | 'midi'
+  | 'updates'
+  | 'developer';
 
 const SECTIONS: { id: SectionId; label: string; hint: string }[] = [
   { id: 'faders', label: 'Faders & mixer', hint: 'Channel curve, pitch, EQ' },
   { id: 'jog', label: 'Jog feel', hint: 'Vinyl / CDJ nudge' },
   { id: 'library', label: 'Library', hint: 'Roots, sort, session played' },
   { id: 'display', label: 'Display', hint: 'Scale & ticks' },
+  { id: 'midi', label: 'MIDI', hint: 'Controller profiles, Learn' },
   { id: 'updates', label: 'Updates', hint: 'GitHub Releases' },
+  { id: 'developer', label: 'Developer', hint: 'Dev mode, MIDI monitor' },
 ];
 
 type Props = {
@@ -114,7 +128,9 @@ export const SettingsModal = observer(function SettingsModal(props: Props) {
             {section === 'jog' ? <JogFeelSection /> : null}
             {section === 'library' ? <LibrarySection /> : null}
             {section === 'display' ? <DisplaySection /> : null}
+            {section === 'midi' ? <MidiSection /> : null}
             {section === 'updates' ? <UpdateSection /> : null}
+            {section === 'developer' ? <DeveloperSection onClose={onClose} /> : null}
           </div>
         </div>
       </div>
@@ -534,9 +550,9 @@ const LibrarySection = observer(function LibrarySection() {
           : ` · browse rows: ${libraryStore.entries.length}`}
       </div>
       <p className="settings-section-lead" style={{ marginTop: 6 }}>
-        Waveforms appear after analysis (auto backfill, or Prep → Detect). Only .mp3 / .flac /
-        .wav are indexed. If a huge folder shows only a handful of tracks, check OneDrive
-        “online-only” files (make available offline) and Rescan.
+        Waveforms appear after analysis (auto backfill, or Library → Detect). Only .mp3 /
+        .flac / .wav are indexed. If a huge folder shows only a handful of tracks, check
+        OneDrive “online-only” files (make available offline) and Rescan.
       </p>
 
       <h3 className="settings-section-title" style={{ marginTop: '1.25rem' }}>
@@ -647,6 +663,187 @@ const UpdateSection = observer(function UpdateSection() {
       </div>
       <div className="temp-meta" style={{ marginTop: 6 }}>
         Booth: GitHub Releases auto-update. Source tree: UPDATE.bat (not GitHub Desktop).
+      </div>
+    </div>
+  );
+});
+
+const MidiSection = observer(function MidiSection() {
+  const profiles = listControllerProfiles();
+  const suggested = suggestControllerProfile(midiStore.portName);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+
+  async function applyProfile(profile: ControllerProfile): Promise<void> {
+    const warn =
+      profile.id === 'rmx2'
+        ? 'Replace the current MIDI map with Hercules RMX2 factory defaults?'
+        : `Apply community profile “${profile.name}”? This replaces your current MIDI map. LEDs will turn off (Hercules LED echo is wrong for other gear). Reset to RMX2 anytime.`;
+    if (!window.confirm(warn)) return;
+    setBusy(true);
+    setStatus(null);
+    try {
+      const plain = JSON.parse(JSON.stringify(profile.mapping)) as typeof profile.mapping;
+      await midiStore.persistMapping(plain);
+      await settingsStore.set({
+        midi: { sendLeds: profile.ledStyle === 'hercules-note' },
+      });
+      setStatus(
+        profile.id === 'rmx2'
+          ? 'RMX2 factory map applied · LEDs on'
+          : `Applied ${profile.name} · LEDs off · not HW-verified`,
+      );
+    } catch (err) {
+      setStatus(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="settings-section">
+      <h3 className="settings-section-title">MIDI / controllers</h3>
+      <p className="settings-section-lead">
+        StentorDeck defaults to the <strong>Hercules DJConsole RMX2</strong> factory map.
+        Other gear: MIDI Learn, or apply a community profile below. Profiles never auto-apply
+        when you plug a controller in.
+      </p>
+
+      <div className="temp-meta mono" style={{ marginBottom: 10 }}>
+        Port:{' '}
+        {midiStore.connected
+          ? midiStore.portName ?? 'connected'
+          : 'none'}
+        {suggested
+          ? ` · looks like ${suggested.name} (opt-in Apply only)`
+          : ''}
+      </div>
+
+      <ul className="temp-roots" style={{ marginBottom: 12 }}>
+        {profiles.map((p) => (
+          <li key={p.id}>
+            <span title={p.notes}>
+              {p.name}
+              {p.status === 'factory' ? ' · factory' : ' · community'}
+            </span>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void applyProfile(p)}
+            >
+              {p.id === 'rmx2' ? 'Reset / Apply' : 'Apply'}
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      <p className="settings-section-lead" style={{ marginTop: 0 }}>
+        Community maps are partial and <strong>READY FOR HW VERIFICATION</strong> — not booth
+        claims. Gaps: Learn in Dev mode. Full deny list:{' '}
+        <span className="mono">docs/BACKLOG-multi-controller.md</span>.
+      </p>
+
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true);
+            void midiStore
+              .resetMapping()
+              .then(() => settingsStore.set({ midi: { sendLeds: true } }))
+              .then(() => setStatus('Reset to RMX2 defaults · LEDs on'))
+              .catch((err: unknown) =>
+                setStatus(err instanceof Error ? err.message : String(err)),
+              )
+              .finally(() => setBusy(false));
+          }}
+        >
+          Reset to RMX2 defaults
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            void midiStore.exportMappingJson().then((json) => {
+              void navigator.clipboard?.writeText(json);
+              setStatus('Mapping JSON copied to clipboard');
+            });
+          }}
+        >
+          Export map
+        </button>
+        <label className="temp-jog-switch" style={{ marginLeft: 4 }}>
+          <input
+            type="checkbox"
+            checked={settingsStore.settings.midi.sendLeds}
+            onChange={(e) =>
+              void settingsStore.set({ midi: { sendLeds: e.target.checked } })
+            }
+          />
+          <span>
+            Send LED feedback
+            <span className="temp-jog-hint">Hercules note-echo — keep on for RMX2</span>
+          </span>
+        </label>
+      </div>
+      {status ? <div className="temp-meta" style={{ marginTop: 8 }}>{status}</div> : null}
+    </div>
+  );
+});
+
+const DeveloperSection = observer(function DeveloperSection(props: { onClose: () => void }) {
+  const { onClose } = props;
+  return (
+    <div className="settings-section">
+      <h3 className="settings-section-title">Developer</h3>
+      <p className="settings-section-lead">
+        Tools for wiring audio/MIDI and browsing the library without leaving the booth chrome.
+        Not needed for a normal set.
+      </p>
+
+      <label className="temp-jog-switch">
+        <input
+          type="checkbox"
+          checked={uiStore.showDevMode}
+          onChange={(e) => {
+            const on = e.target.checked;
+            uiStore.setDevMode(on);
+            if (on) onClose();
+          }}
+        />
+        <span>
+          Dev mode
+          <span className="temp-jog-hint">
+            Temporary harness (decks, MIDI learn, library probe). Turn off from here or switch
+            Performance / Library.
+          </span>
+        </span>
+      </label>
+
+      <label className="temp-jog-switch" style={{ marginTop: 12 }}>
+        <input
+          type="checkbox"
+          checked={uiStore.showMidiMonitor}
+          onChange={(e) => {
+            const on = e.target.checked;
+            uiStore.setMidiMonitor(on);
+            if (on) onClose();
+          }}
+        />
+        <span>
+          MIDI monitor
+          <span className="temp-jog-hint">
+            Live decode strip while you move RMX2 controls
+            {midiStore.connected
+              ? ` · ${midiStore.portName ?? 'connected'}`
+              : ' · no port yet'}
+          </span>
+        </span>
+      </label>
+
+      <div className="temp-meta mono" style={{ marginTop: 12 }}>
+        MIDI {midiStore.connected ? 'connected' : 'idle'} · unknown {midiStore.unknownCount}
       </div>
     </div>
   );

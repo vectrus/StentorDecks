@@ -7,7 +7,7 @@ StentorDeck uses three automated layers. **Never require the physical RMX2 in CI
 | Unit | Vitest (node) | `npm test` | Curves, CDJ cue, MIDI decode, takeover, stores |
 | Component | Vitest + Testing Library (jsdom) | `npm test` (`*.component.test.tsx`) | React chrome (brand, MIDI monitor, …) |
 | End-user | Playwright | `npm run test:e2e` | Mockup journeys + app smoke with mocked IPC |
-| Doc screenshots | Playwright | `npm run docs:screenshots` | PNG contract shots for `docs/mockups/` |
+| Doc screenshots | Playwright | `npm run docs:screenshots` | Live-app PNGs → `docs/screenshots/` |
 
 ## Quick commands
 
@@ -17,7 +17,7 @@ npm run test:watch       # vitest watch
 npm run test:coverage    # unit/component + coverage report
 npm run test:e2e         # Playwright end-user suite
 npm run test:e2e:ui      # Playwright UI mode
-npm run docs:screenshots # mockup PNGs
+npm run docs:screenshots # live-app PNGs → docs/screenshots/
 ```
 
 ## Conventions

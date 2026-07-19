@@ -15,7 +15,7 @@ export const PrepMode = observer(function PrepMode() {
       </div>
 
       <div className="prep-main">
-        <aside className="prep-tree-panel">
+        <aside className="prep-tree-panel sd-scroll">
           <FolderTree />
         </aside>
 

@@ -5,10 +5,19 @@ import { mockStentorInitScript } from './fixtures/mockStentor';
 test.describe('App smoke (Vite + mocked IPC)', () => {
   test.beforeEach(async ({ page }) => {
     const settings = structuredClone(defaultSettings);
-    // Skip first-run gate so harness is reachable
+    // Skip first-run gate so Performance/Prep are reachable
     settings.audio.masterDevice = 'fake-out';
     settings.audio.cueDevice = 'fake-out';
-    await page.addInitScript(mockStentorInitScript(settings));
+    settings.library.roots = ['C:\\Music'];
+    await page.addInitScript(
+      mockStentorInitScript(settings, {
+        library: {
+          folders: [{ path: 'C:\\Music', name: 'Music', children: [] }],
+          tracks: [],
+          trackCount: 0,
+        },
+      }),
+    );
   });
 
   test('boots shell with brand and mode controls', async ({ page }) => {
@@ -16,24 +25,26 @@ test.describe('App smoke (Vite + mocked IPC)', () => {
     await expect(page.getByText('StentorDeck')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText('for julius')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Performance' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Prep' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Library', exact: true })).toBeVisible();
   });
 
-  test('E2 harness browse fixture is visible', async ({ page }) => {
+  test('Performance and Library modes switch', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('StentorDeck')).toBeVisible({ timeout: 30_000 });
-    // Harness is default-on in AppShell
-    await expect(page.getByText(/Browse/i)).toBeVisible();
-    await expect(page.getByText('Techno')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Performance' })).toBeVisible({
+      timeout: 30_000,
+    });
+    await page.getByRole('button', { name: 'Library', exact: true }).click();
+    await expect(page.getByRole('navigation', { name: 'Folder tree' })).toBeVisible();
+    await page.getByRole('button', { name: 'Performance' }).click();
+    await expect(page.getByRole('button', { name: 'Load A' })).toBeVisible();
   });
 
-  test('SYNC button toggles ON label', async ({ page }) => {
+  test('SYNC control is present on decks', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByText('StentorDeck')).toBeVisible({ timeout: 30_000 });
     const syncButtons = page.getByRole('button', { name: /^SYNC/ });
     await expect(syncButtons.first()).toBeVisible();
-    // Without a loaded partner, toggle may no-op — still must remain clickable
-    await syncButtons.first().click();
-    await expect(syncButtons.first()).toBeEnabled();
+    // Empty decks keep SYNC disabled (needs a loaded partner) — still must render.
+    await expect(syncButtons.first()).toBeDisabled();
   });
 });

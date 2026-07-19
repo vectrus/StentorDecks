@@ -192,6 +192,7 @@ export class MidiStore {
       'mixer.faderB',
       'mixer.master',
       'mixer.headMix',
+      'mixer.phones',
       'deckA.pitch',
       'deckB.pitch',
       'deckA.gain',
@@ -505,6 +506,9 @@ export class MidiStore {
         case 'mixer.headMix':
           this.mixer.setHeadMix(result.value);
           break;
+        case 'mixer.phones':
+          this.mixer.setPhones(result.value);
+          break;
         case 'deckA.pitch':
           this.deckA.setPitchPos(result.value);
           break;
@@ -731,6 +735,8 @@ export class MidiStore {
         return this.mixer.master;
       case 'mixer.headMix':
         return this.mixer.headMix;
+      case 'mixer.phones':
+        return this.mixer.phones;
       case 'deckA.pitch':
         return this.deckA.pitchPos;
       case 'deckB.pitch':
