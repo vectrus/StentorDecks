@@ -1,0 +1,20 @@
+StentorDeck 0.2.11
+Installer: StentorDeck-Setup-0.2.11.exe
+Date: 2026-07-19
+
+Install over your current build. Library, settings, and MIDI map stay in %APPDATA%.
+
+What's new
+-----------
+2026-07-20 - Ship 0.2.11: Rewrite SD siblings + stronger de-click
+Booth polish since 0.2.10: Rewrite fixed / Rewrite normalized overwrite existing SD sibling WAVs with current knobs (no  2.wav litter); selecting a sibling resolves to the source MP3 for Preview/Write/Rewrite. Stronger de-click (RMS-adaptive + spike/accel heal; Aggressive = multi-pass). Source music never touched. R5.9, docs/07.
+
+How to update
+-------------
+- Run StentorDeck-Setup-0.2.11.exe, or use Settings > Updates > Check for updates (needs latest.yml on GitHub).
+- Open StentorDeck from the desktop shortcut (not only the source .bat).
+
+Notes
+-----
+- Builds are unsigned - Windows SmartScreen may warn once.
+- Auto-update requires a full GitHub Release with latest.yml (not Setup.exe alone).
