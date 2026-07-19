@@ -39,10 +39,11 @@ Packaged updates use **GitHub Releases** + `electron-updater` (E7 / R1.1).
 
 5. On GitHub → Releases: verify the release is a **full release** (not Pre-release) tagged `v<version>`, and assets include:
    - `StentorDeck-Setup-<version>.exe`
+   - `StentorDeck-ReleaseNotes-<version>.txt` (**required** — booth-facing notes; also used as the GitHub release body)
    - `latest.yml` (**required** — without it Settings → Check for updates finds nothing)
    - `*.blockmap` if present
 
-   Do **not** hand-upload only the Setup.exe as a prerelease/tag like `mp3` — that breaks auto-update.
+   `npm run dist` writes the notes `.txt` from the CHANGELOG “Ship VERSION” entry. Prefer `npm run release` (dist + `publish:github`) so exe, notes, and `latest.yml` ship together. Do **not** hand-upload only the Setup.exe as a prerelease/tag like `mp3` — that breaks auto-update.
 6. On a booth machine with the **previous** installed build:
    - Settings → **Check for updates** (or wait for quiet startup check)
    - Status → download → **Restart & update** (confirm if a deck is playing)

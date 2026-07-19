@@ -1,16 +1,20 @@
 /**
  * Publish release/ artifacts to a full (non-prerelease) GitHub Release.
  * electron-updater needs latest.yml on a discoverable release — Setup.exe alone is not enough.
+ * Always uploads StentorDeck-ReleaseNotes-<version>.txt with the installer.
  *
  * Usage: GH_TOKEN=… node scripts/publish-github-release.mjs
  * Or:    GITHUB_TOKEN=… npm run publish:github
  */
-import { createReadStream, existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 
 const root = join(fileURLToPath(new URL('.', import.meta.url)), '..');
-const releaseDir = join(root, 'release');
+const releaseDir = process.env.RELEASE_DIR
+  ? join(root, process.env.RELEASE_DIR)
+  : join(root, 'release');
 const owner = 'vectrus';
 const repo = 'StentorDecks';
 
@@ -20,19 +24,38 @@ if (!token) {
   process.exit(1);
 }
 
-const pkg = JSON.parse(
-  await import('node:fs/promises').then((fs) => fs.readFile(join(root, 'package.json'), 'utf8')),
-);
+const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const version = pkg.version;
 const tag = `v${version}`;
 const setupName = `StentorDeck-Setup-${version}.exe`;
+const notesName = `StentorDeck-ReleaseNotes-${version}.txt`;
 const setupPath = join(releaseDir, setupName);
 const latestYml = join(releaseDir, 'latest.yml');
+const notesPath = join(releaseDir, notesName);
 
-if (!existsSync(setupPath) || !existsSync(latestYml)) {
-  console.error(`Missing ${setupName} and/or latest.yml in release/. Run: npm run dist`);
+// Ensure release notes txt exists next to the exe.
+const writeNotes = spawnSync(process.execPath, [join(root, 'scripts', 'write-release-notes.mjs')], {
+  cwd: root,
+  env: { ...process.env, RELEASE_DIR: process.env.RELEASE_DIR || 'release' },
+  encoding: 'utf8',
+});
+if (writeNotes.status !== 0) {
+  console.error(writeNotes.stderr || writeNotes.stdout);
+  process.exit(writeNotes.status ?? 1);
+}
+
+if (!existsSync(setupPath) || !existsSync(latestYml) || !existsSync(notesPath)) {
+  console.error(
+    `Missing required assets in ${releaseDir}:\n` +
+      `  - ${setupName}\n` +
+      `  - latest.yml\n` +
+      `  - ${notesName}\n` +
+      `Run: npm run dist  (then npm run publish:github)`,
+  );
   process.exit(1);
 }
+
+const notesBody = readFileSync(notesPath, 'utf8');
 
 const headers = {
   Authorization: `Bearer ${token}`,
@@ -69,11 +92,7 @@ if (!release) {
     body: JSON.stringify({
       tag_name: tag,
       name: `StentorDeck ${version}`,
-      body:
-        `StentorDeck ${version}\n\n` +
-        `Installer: ${setupName}\n` +
-        `Auto-update feed: latest.yml (required for Settings → Check for updates).\n\n` +
-        `Install over your current build. Library / settings / MIDI map stay in %APPDATA%.`,
+      body: notesBody,
       draft: false,
       prerelease: false,
       make_latest: 'true',
@@ -81,30 +100,33 @@ if (!release) {
     }),
   });
 } else {
-  console.log(`Release ${tag} already exists (id ${release.id}); uploading/replacing assets…`);
-  if (release.prerelease || release.draft) {
-    await gh(`/repos/${owner}/${repo}/releases/${release.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prerelease: false, draft: false, make_latest: 'true' }),
-    });
-  }
+  console.log(`Release ${tag} already exists (id ${release.id}); updating notes + assets…`);
+  await gh(`/repos/${owner}/${repo}/releases/${release.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      body: notesBody,
+      prerelease: false,
+      draft: false,
+      make_latest: 'true',
+    }),
+  });
+  // Refresh asset list after PATCH
+  release = await gh(`/repos/${owner}/${repo}/releases/${release.id}`);
 }
 
 const assetNames = new Set([
   setupName,
+  notesName,
   'latest.yml',
   `${setupName}.blockmap`,
-  `StentorDeck-Setup-${version}.exe.blockmap`,
 ]);
 
 const toUpload = readdirSync(releaseDir)
-  .filter((name) => assetNames.has(name) || name === `${setupName}.blockmap`)
+  .filter((name) => assetNames.has(name))
   .map((name) => join(releaseDir, name));
 
-// Always include setup + latest.yml; blockmap optional.
-const required = [setupPath, latestYml];
-for (const p of required) {
+for (const p of [setupPath, latestYml, notesPath]) {
   if (!toUpload.includes(p)) toUpload.push(p);
 }
 
@@ -118,18 +140,17 @@ for (const filePath of [...new Set(toUpload)]) {
       method: 'DELETE',
     });
   }
-  const size = statSync(filePath).size;
-  console.log(`Uploading ${name} (${(size / 1e6).toFixed(1)} MB)…`);
+  const bytes = readFileSync(filePath);
+  console.log(`Uploading ${name} (${(bytes.length / 1e6).toFixed(1)} MB)…`);
   const uploadUrl = release.upload_url.replace(/\{.*\}$/, `?name=${encodeURIComponent(name)}`);
   const res = await fetch(uploadUrl, {
     method: 'POST',
     headers: {
       ...headers,
       'Content-Type': 'application/octet-stream',
-      'Content-Length': String(size),
+      'Content-Length': String(bytes.length),
     },
-    body: createReadStream(filePath),
-    duplex: 'half',
+    body: bytes,
   });
   if (!res.ok) {
     const t = await res.text();
@@ -139,5 +160,5 @@ for (const filePath of [...new Set(toUpload)]) {
 }
 
 console.log(`\nPublished https://github.com/${owner}/${repo}/releases/tag/${tag}`);
-console.log('Verify latest.yml:');
-console.log(`  https://github.com/${owner}/${repo}/releases/download/${tag}/latest.yml`);
+console.log(`Notes: https://github.com/${owner}/${repo}/releases/download/${tag}/${notesName}`);
+console.log(`Feed:  https://github.com/${owner}/${repo}/releases/download/${tag}/latest.yml`);

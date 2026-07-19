@@ -7,7 +7,7 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ## 2026-07-19 — Ship 0.2.5: auto-update feed + dual-pane browse
 
-In-app Check for updates found nothing because GitHub only had **prerelease** Setup.exe uploads **without** `latest.yml` (electron-updater’s feed). Publish config now forces a full `release` (tag `v*`); updater accepts prereleases that ship `latest.yml`; clearer Settings error when the feed is missing. Includes dual-pane browse focus (R5.3). E7 / R1.1.
+In-app Check for updates found nothing because GitHub only had **prerelease** Setup.exe uploads **without** `latest.yml` (electron-updater’s feed). Publish config now forces a full `release` (tag `v*`); updater accepts prereleases that ship `latest.yml`; clearer Settings error when the feed is missing. Every release publishes `StentorDeck-ReleaseNotes-<version>.txt` next to the Setup.exe (from CHANGELOG). Includes dual-pane browse focus (R5.3). E7 / R1.1.
 
 ---
 
