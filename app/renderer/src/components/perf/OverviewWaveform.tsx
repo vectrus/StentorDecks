@@ -1,12 +1,22 @@
 import { observer } from 'mobx-react-lite';
-import { useEffect, useRef, type MouseEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import type { DeckStore } from '../../stores/DeckStore';
 import { registerFrameDraw } from '../../audio/frameClock';
 import { drawOverviewWaveform } from '../../waveform/drawOverview';
+import { overviewNormAtX } from '../../waveform/waveformScrub';
 
 type Props = {
   deck: DeckStore;
   accent: 'a' | 'b';
+};
+
+type ScrubSession = {
+  pointerId: number;
 };
 
 function token(name: string, fallback: string): string {
@@ -17,12 +27,14 @@ function token(name: string, fallback: string): string {
 
 /**
  * Overview strip — canvas from typed array (docs/05 / E6).
- * Drawn on the shared frame clock (same rAF as transport). Click seeks.
+ * Click / drag seeks (mouse jog substitute, R1.5). Double-click sets cue when paused.
  */
 export const OverviewWaveform = observer(function OverviewWaveform({ deck, accent }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scrubRef = useRef<ScrubSession | null>(null);
   const overview = deck.overviewWaveform;
   const empty = deck.state === 'empty';
+  const [scrubbing, setScrubbing] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -67,26 +79,65 @@ export const OverviewWaveform = observer(function OverviewWaveform({ deck, accen
     return registerFrameDraw(draw);
   }, [deck, accent, overview, empty]);
 
-  const onClick = (e: MouseEvent<HTMLCanvasElement>): void => {
-    if (deck.state === 'empty' || deck.duration <= 0) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / Math.max(1, rect.width);
-    deck.seek(x * deck.duration);
-  };
+  function seekAtClientX(clientX: number, micro: boolean): void {
+    const canvas = canvasRef.current;
+    if (!canvas || deck.state === 'empty' || deck.duration <= 0) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = overviewNormAtX(clientX, rect);
+    deck.seek(x * deck.duration, { micro });
+  }
+
+  function onPointerDown(e: ReactPointerEvent<HTMLCanvasElement>): void {
+    if (empty || deck.duration <= 0 || e.button !== 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    scrubRef.current = { pointerId: e.pointerId };
+    setScrubbing(true);
+    seekAtClientX(e.clientX, deck.state === 'playing');
+  }
+
+  function onPointerMove(e: ReactPointerEvent<HTMLCanvasElement>): void {
+    const s = scrubRef.current;
+    if (!s || s.pointerId !== e.pointerId) return;
+    seekAtClientX(e.clientX, true);
+  }
+
+  function endScrub(e: ReactPointerEvent<HTMLCanvasElement>): void {
+    const s = scrubRef.current;
+    if (!s || s.pointerId !== e.pointerId) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    scrubRef.current = null;
+    setScrubbing(false);
+  }
+
+  function onDoubleClick(e: React.MouseEvent<HTMLCanvasElement>): void {
+    if (empty || deck.duration <= 0) return;
+    seekAtClientX(e.clientX, false);
+    if (deck.state !== 'playing') {
+      deck.setCueAtPlayhead();
+    }
+  }
 
   return (
     <canvas
-      className={`perf-wave overview accent-${accent}${empty ? ' empty' : ''}${overview ? '' : ' pending'}`}
+      className={`perf-wave overview accent-${accent}${empty ? ' empty' : ''}${
+        overview ? '' : ' pending'
+      }${scrubbing ? ' scrubbing' : ''}${!empty ? ' scrubbable' : ''}`}
       ref={canvasRef}
       role="img"
       aria-label={
         empty
           ? `Deck ${deck.id} empty`
-          : overview
-            ? `Deck ${deck.id} overview waveform`
-            : `Deck ${deck.id} analyzing waveform`
+          : `Deck ${deck.id} overview — drag to seek, double-click sets cue when paused`
       }
-      onClick={onClick}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endScrub}
+      onPointerCancel={endScrub}
+      onDoubleClick={onDoubleClick}
     />
   );
 });

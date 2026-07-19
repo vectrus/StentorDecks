@@ -8,6 +8,7 @@ import {
   type TrackContextTarget,
 } from '../browse/TrackContextMenu';
 import { FolderTree } from '../prep/FolderTree';
+import { setLibraryTrackDragData } from '../../library/libraryTrackDrag';
 import { fmtBpm, fmtDur } from '../prep/fmt';
 
 /** Row height matches R7.1 (≥42 px) — keep in sync with `.perf-row` in perf.css. */
@@ -123,6 +124,12 @@ export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
                   }${played ? ' played' : ''}`}
                   role="option"
                   aria-selected={selected}
+                  draggable
+                  title="Double-click → Load A · drag onto a waveform to load"
+                  onDragStart={(e) => {
+                    libraryStore.selectIndex(index);
+                    setLibraryTrackDragData(e.dataTransfer, entry.track.id);
+                  }}
                   onClick={() => libraryStore.selectIndex(index)}
                   onDoubleClick={() => {
                     libraryStore.selectIndex(index);

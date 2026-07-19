@@ -44,6 +44,55 @@
   flex-shrink: 0;
 }
 
+.perf-wave-drop {
+  position: relative;
+  border-radius: 0.35rem;
+  border: 1.5px solid transparent;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.perf-wave-drop.accent-b {
+  margin-top: 0.3rem;
+}
+
+.perf-wave-drop.over:not(.locked) {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.perf-wave-drop.over.locked {
+  border-color: var(--vu-clip, #ff5d5d);
+}
+
+.perf-wave-drop.accent-a {
+  color: var(--deck-a);
+}
+
+.perf-wave-drop.accent-b {
+  color: var(--deck-b);
+}
+
+.perf-wave-drop-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-size: 0.875rem;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, currentColor 70%, var(--text-faint));
+}
+
+.perf-wave-drop-hint.active {
+  color: currentColor;
+  font-weight: 600;
+}
+
+.perf-wave-drop.locked .perf-wave-drop-hint.active {
+  color: var(--vu-clip, #ff5d5d);
+}
+
 .perf-wave {
   display: block;
   width: 100%;
@@ -56,14 +105,21 @@
   cursor: default;
 }
 
-.perf-wave.detail.accent-b {
-  margin-top: 0.3rem;
-}
-
 .perf-wave.overview {
   height: 2.125rem; /* handoff ~34px */
   margin: 0;
   cursor: pointer;
+}
+
+.perf-wave-drop.scrubbable,
+.perf-wave.overview.scrubbable {
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.perf-wave-drop.scrubbing,
+.perf-wave.overview.scrubbing {
+  cursor: grabbing;
 }
 
 .perf-wave.empty,
@@ -905,6 +961,14 @@
 .perf-row.played.sel {
   color: var(--text-dim);
   opacity: 0.92;
+}
+
+.perf-row[draggable='true'] {
+  cursor: grab;
+}
+
+.perf-row[draggable='true']:active {
+  cursor: grabbing;
 }
 
 .perf-row.empty {

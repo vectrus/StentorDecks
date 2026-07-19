@@ -25,6 +25,7 @@ import { audioEngine } from '../audio/AudioEngine';
 import { decodeArrayBufferOffThread, type DecodeAudioOpts } from '../audio/decodeAudio';
 import { phonesPreviewPlayer } from '../audio/PhonesPreviewPlayer';
 import { invoke, onIpc } from '../ipc/client';
+import { DeckPlayingError } from './DeckStore';
 import { getPlayingReferenceKey } from './playingRefProvider';
 import { settingsStore } from './SettingsStore';
 
@@ -85,6 +86,8 @@ export class LibraryStore {
   mp3FixerFocusSeq = 0;
   /** Phones-only Prep preview — fixer XOR normalize (never both). */
   phonesPreviewKind: 'fixer' | 'normalize' | null = null;
+  /** A/B while phones preview is running: stock vs fixed/normalized. */
+  phonesPreviewLeg: 'original' | 'processed' | null = null;
   phonesPreviewBusy = false;
   /** Live library size for Perf strip summary. */
   trackCount = 0;
@@ -107,6 +110,7 @@ export class LibraryStore {
     phonesPreviewPlayer.onIdle = () => {
       runInAction(() => {
         this.phonesPreviewKind = null;
+        this.phonesPreviewLeg = null;
         this.phonesPreviewBusy = false;
       });
     };
@@ -551,9 +555,14 @@ export class LibraryStore {
     await this.loadTrackId(deck, row.id);
   }
 
-  /** Load a library track by id (Next up / browse). Respects deck playing interlock via deck.load. */
+  /**
+   * Load a library track by id (Next up / browse / drag-drop).
+   * R4.2: refuse before reading the file if the deck is playing.
+   */
   async loadTrackId(
     deck: {
+      id?: 'A' | 'B';
+      state?: 'empty' | 'stopped' | 'playing';
       load: (
         file: File,
         meta?: {
@@ -570,6 +579,12 @@ export class LibraryStore {
     },
     trackId: number,
   ): Promise<void> {
+    if (deck.state === 'playing') {
+      const deckId = deck.id ?? 'A';
+      const err = new DeckPlayingError(deckId);
+      this.rejectLoad(`Deck ${deckId} is playing — pause first`);
+      throw err;
+    }
     try {
       const payload = await invoke('library:read', { id: trackId });
       if (!payload) throw new Error('Track file missing or unreadable');
@@ -591,6 +606,10 @@ export class LibraryStore {
         this.loadError = null;
       });
     } catch (err) {
+      if (err instanceof DeckPlayingError) {
+        this.rejectLoad(`Deck ${err.deckId} is playing — pause first`);
+        throw err;
+      }
       const msg = err instanceof Error ? err.message : String(err);
       runInAction(() => {
         this.setLoadError(msg);
@@ -796,13 +815,49 @@ export class LibraryStore {
     await phonesPreviewPlayer.stop();
     runInAction(() => {
       this.phonesPreviewKind = null;
+      this.phonesPreviewLeg = null;
       this.phonesPreviewBusy = false;
     });
+  }
+
+  /** A/B while phones preview is active — keep playhead, swap stock ↔ processed. */
+  async setPhonesPreviewLeg(leg: 'original' | 'processed'): Promise<void> {
+    if (this.phonesPreviewKind == null || !phonesPreviewPlayer.playing) return;
+    await phonesPreviewPlayer.setLeg(leg);
+    runInAction(() => {
+      this.phonesPreviewLeg = phonesPreviewPlayer.leg;
+      this.refreshPhonesPreviewStatus();
+    });
+  }
+
+  async togglePhonesPreviewLeg(): Promise<void> {
+    if (this.phonesPreviewKind == null || !phonesPreviewPlayer.playing) return;
+    await phonesPreviewPlayer.toggleLeg();
+    runInAction(() => {
+      this.phonesPreviewLeg = phonesPreviewPlayer.leg;
+      this.refreshPhonesPreviewStatus();
+    });
+  }
+
+  private refreshPhonesPreviewStatus(): void {
+    const leg = this.phonesPreviewLeg;
+    if (this.phonesPreviewKind === 'fixer') {
+      const fx = settingsStore.settings.library.fixer;
+      const which = leg === 'original' ? 'ORIGINAL' : 'FIXED';
+      this.mp3FixStatus = `Phones A/B (${which} · ${fx.preset}) — toggle Original/Fixed · Stop to end`;
+      return;
+    }
+    if (this.phonesPreviewKind === 'normalize') {
+      const target = settingsStore.settings.audio.autoGainTargetLufs;
+      const which = leg === 'original' ? 'ORIGINAL' : 'NORMALIZED';
+      this.mp3FixStatus = `Phones A/B (${which} → ${target} LUFS) — toggle Original/Normalized · Stop to end`;
+    }
   }
 
   /**
    * Phones-only preview of resilient decode (click/squeak fixer).
    * Stops normalize preview if that was playing. Does not write a file.
+   * Decodes stock + fixed so Original/Fixed can be toggled mid-preview.
    */
   async toggleFixerPhonesPreview(): Promise<void> {
     if (this.phonesPreviewKind === 'fixer' && phonesPreviewPlayer.playing) {
@@ -822,12 +877,12 @@ export class LibraryStore {
     }
     runInAction(() => {
       this.phonesPreviewBusy = true;
-      this.mp3FixStatus = 'Previewing fix on phones…';
+      this.mp3FixStatus = 'Decoding original + fixed for phones A/B…';
     });
     try {
       await phonesPreviewPlayer.stop();
-      const { buf, declickHits, sourcePath } = await this.decodeSelectedForFixer();
-      if (!buf) {
+      const pair = await this.decodeFixerAbPair();
+      if (!pair) {
         runInAction(() => {
           this.phonesPreviewBusy = false;
           if (!this.mp3FixStatus) {
@@ -836,21 +891,30 @@ export class LibraryStore {
         });
         return;
       }
-      await phonesPreviewPlayer.start(buf, { kind: 'fixer', gainLinear: 0.85 });
+      await phonesPreviewPlayer.startAb({
+        kind: 'fixer',
+        original: pair.original,
+        processed: pair.processed,
+        originalGain: 0.85,
+        processedGain: 0.85,
+        startLeg: 'processed',
+      });
       const fx = settingsStore.settings.library.fixer;
-      const srcName = sourcePath?.split(/[/\\]/).pop() ?? 'source';
+      const srcName = pair.sourcePath.split(/[/\\]/).pop() ?? 'source';
       runInAction(() => {
         this.phonesPreviewKind = 'fixer';
+        this.phonesPreviewLeg = 'processed';
         this.phonesPreviewBusy = false;
         this.mp3FixStatus =
-          `Phones preview (fix · ${fx.preset}` +
-          (declickHits > 0 ? ` · de-click ${declickHits}` : '') +
-          ` · ${srcName}) — Stop preview to end`;
+          `Phones A/B (FIXED · ${fx.preset}` +
+          (pair.declickHits > 0 ? ` · de-click ${pair.declickHits}` : '') +
+          ` · ${srcName}) — toggle Original/Fixed · Stop to end`;
       });
     } catch (err) {
       runInAction(() => {
         this.phonesPreviewBusy = false;
         this.phonesPreviewKind = null;
+        this.phonesPreviewLeg = null;
         this.mp3FixStatus = err instanceof Error ? err.message : String(err);
       });
     }
@@ -858,7 +922,7 @@ export class LibraryStore {
 
   /**
    * Phones-only preview with LUFS normalize gain (separate from fixer).
-   * Does not write a file.
+   * Same PCM; A/B switches gain (stock vs target LUFS).
    */
   async toggleNormalizePhonesPreview(): Promise<void> {
     if (this.phonesPreviewKind === 'normalize' && phonesPreviewPlayer.playing) {
@@ -875,29 +939,43 @@ export class LibraryStore {
     }
     runInAction(() => {
       this.phonesPreviewBusy = true;
-      this.mp3FixStatus = 'Previewing normalize on phones…';
+      this.mp3FixStatus = 'Decoding for normalize phones A/B…';
     });
     try {
       await phonesPreviewPlayer.stop();
       const buf = await this.decodeSelectedLive({
         resilient: /\.mp3$/i.test(row.path),
       });
-      if (!buf) return;
+      if (!buf) {
+        runInAction(() => {
+          this.phonesPreviewBusy = false;
+        });
+        return;
+      }
       const target = settingsStore.settings.audio.autoGainTargetLufs;
-      const gainLinear = trimDbToGain(autoGainTrimDb(row.loudnessLufs, target));
-      await phonesPreviewPlayer.start(buf, {
+      const gainLinear = Math.min(
+        trimDbToGain(autoGainTrimDb(row.loudnessLufs, target)),
+        2,
+      );
+      await phonesPreviewPlayer.startAb({
         kind: 'normalize',
-        gainLinear: Math.min(gainLinear, 2),
+        original: buf,
+        processed: buf,
+        originalGain: 0.85,
+        processedGain: gainLinear,
+        startLeg: 'processed',
       });
       runInAction(() => {
         this.phonesPreviewKind = 'normalize';
+        this.phonesPreviewLeg = 'processed';
         this.phonesPreviewBusy = false;
-        this.mp3FixStatus = `Phones preview (normalize → ${target} LUFS) — Stop preview to end`;
+        this.mp3FixStatus = `Phones A/B (NORMALIZED → ${target} LUFS) — toggle Original/Normalized · Stop to end`;
       });
     } catch (err) {
       runInAction(() => {
         this.phonesPreviewBusy = false;
         this.phonesPreviewKind = null;
+        this.phonesPreviewLeg = null;
         this.mp3FixStatus = err instanceof Error ? err.message : String(err);
       });
     }
@@ -1066,8 +1144,29 @@ export class LibraryStore {
     sourceTrackId: number | null;
     sourcePath: string | null;
   }> {
+    const pair = await this.decodeFixerAbPair();
+    if (!pair) return { buf: null, declickHits: 0, sourceTrackId: null, sourcePath: null };
+    return {
+      buf: pair.processed,
+      declickHits: pair.declickHits,
+      sourceTrackId: pair.sourceTrackId,
+      sourcePath: pair.sourcePath,
+    };
+  }
+
+  /**
+   * Stock Chromium decode + resilient/fixed pair for phones A/B (R5.9).
+   * One acquireDecode; same file bytes for both legs.
+   */
+  private async decodeFixerAbPair(): Promise<{
+    original: AudioBuffer;
+    processed: AudioBuffer;
+    declickHits: number;
+    sourceTrackId: number;
+    sourcePath: string;
+  } | null> {
     const src = await this.resolveFixerSource();
-    if (!src) return { buf: null, declickHits: 0, sourceTrackId: null, sourcePath: null };
+    if (!src) return null;
     if (!/\.mp3$/i.test(src.path)) {
       throw new Error('Fixer needs an MP3 source');
     }
@@ -1081,14 +1180,18 @@ export class LibraryStore {
     try {
       const ctx = audioEngine.masterCtx;
       if (!ctx) throw new Error('Audio engine not ready');
-      const buf = await decodeArrayBufferOffThread(
+      const original = await decodeArrayBufferOffThread(ctx, ab.slice(0), {
+        expectedDurationSec: null,
+      });
+      const processed = await decodeArrayBufferOffThread(
         ctx,
         ab.slice(0),
         this.fixerDecodeOpts(expected),
       );
-      const declickHits = this.applyFixerDeclick(buf);
+      const declickHits = this.applyFixerDeclick(processed);
       return {
-        buf,
+        original,
+        processed,
         declickHits,
         sourceTrackId: src.sourceTrackId,
         sourcePath: src.path,

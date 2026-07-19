@@ -511,6 +511,15 @@ export class DeckStore {
     }
   }
 
+  /**
+   * Mouse path (R1.5): set cue at current playhead while stopped/paused.
+   * Same result as Cue when playhead ≠ cue (R2.10). No-op while playing/empty.
+   */
+  setCueAtPlayhead(): void {
+    if (this.state === 'empty' || this.state === 'playing') return;
+    this.cueOffset = this.position;
+  }
+
   setPitchPos(pos: number): void {
     this.pitchPos = Math.min(1, Math.max(0, pos));
     // Moving pitch releases SYNC + phase glue (docs/03).

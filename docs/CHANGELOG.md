@@ -5,6 +5,30 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-20 — Waveform mouse scrub + cue (R2.2 / R1.5)
+
+Drag or click the detail/overview waveform to move the playhead (jog substitute when no controller). Double-click while paused sets the cue at that position. R2.2, R2.10, R1.5.
+
+---
+
+## 2026-07-20 — Load: drag library track onto waveform (R4.1 / R1.5)
+
+Drag a track from the browser onto a Performance waveform (or Library deck strip) to load that deck. Playing decks still reject (R4.2). Mouse-first path when no MIDI controller.
+
+---
+
+## 2026-07-20 — Library: correction panel redesign (R6.6 / R5.9)
+
+Bottom strip is no longer a wrapping button farm. Always-visible title/artist + BPM/key; segmented **Fix | Loudness** tool rail; Fade/Trim/De-click behind **Tune**; phones A/B bar only while preview runs. Same capabilities, glanceable chrome. docs/06, prep-library guide.
+
+---
+
+## 2026-07-20 — Prep: phones preview Original / Fixed A/B (R5.9)
+
+While **Preview fix** or **Preview normalize** is running on headphones, operator can switch **Original** ↔ **Fixed** (or **Normalized**) at the same playhead — otherwise the preview cannot be judged. R5.9.
+
+---
+
 ## 2026-07-20 — Ship 0.2.11: Rewrite SD siblings + stronger de-click
 
 Booth polish since 0.2.10: **Rewrite fixed** / **Rewrite normalized** overwrite existing SD sibling WAVs with current knobs (no ` 2.wav` litter); selecting a sibling resolves to the source MP3 for Preview/Write/Rewrite. Stronger de-click (RMS-adaptive + spike/accel heal; Aggressive = multi-pass). Source music never touched. R5.9, docs/07.

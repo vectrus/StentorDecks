@@ -8,6 +8,7 @@ import {
   TrackContextMenu,
   type TrackContextTarget,
 } from '../browse/TrackContextMenu';
+import { setLibraryTrackDragData } from '../../library/libraryTrackDrag';
 import { fmtBpm, fmtDur } from './fmt';
 
 /** docs/06 — browser row 42 px at 16 px type */
@@ -127,6 +128,17 @@ const BrowseRow = observer(function BrowseRow(props: {
       style={{ top: offsetY, height: ROW_H }}
       role="option"
       aria-selected={selected}
+      draggable={entry.kind === 'track'}
+      title={
+        entry.kind === 'track'
+          ? 'Double-click → Load A · drag onto a waveform to load'
+          : undefined
+      }
+      onDragStart={(e) => {
+        if (entry.kind !== 'track') return;
+        libraryStore.selectIndex(index);
+        setLibraryTrackDragData(e.dataTransfer, entry.track.id);
+      }}
       onClick={() => libraryStore.selectIndex(index)}
       onDoubleClick={() => {
         libraryStore.selectIndex(index);

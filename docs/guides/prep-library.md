@@ -78,32 +78,39 @@ What’s loaded on each deck (name, BPM, time, playing or not) while you dig thr
 
 Type an artist or title. Searches the **whole** library. Clear search to go back to folders.
 
-### Bottom — fix BPM and key
+### Bottom — correction panel
 
-Select a **track**, then:
+Select a **track**. The bottom panel has two zones: **track & tempo** (always), then **Fix** or **Loudness** (one at a time).
+
+**Always visible**
 
 | Control | What it does |
 |---------|----------------|
-| **BPM** box | Type the number, press Enter |
-| **Tap** | Tap the beat (at least 4 taps), then **Apply tap** |
+| **Title** / **Artist** | How the track shows in the list (library DB only; file name unchanged) |
+| **BPM** | Type the number, press Enter |
+| **Tap** / **Apply** | Tap the beat (≥4), then apply |
 | **½** / **×2** | Fix half/double tempo mistakes |
-| **Detect** | Re-analyze that song (BPM, key, beatgrid, waveform). Need this if Sync says “no beatgrid” |
-| **Title** / **Artist** | Edit how the track shows in the list (saved in the library DB; file name unchanged) |
-| **Check MP3** | See if a damaged MP3 plays short |
-| **Fixer preset** | Gentle / Normal / Aggressive — sets seam fade, trim, and de-click |
-| **Fade / Trim / De-click** | Fine-tune stitch healing; Preview and Write use the same settings. De-click heals mid-track ticks (adaptive + impulse) |
-| **Preview fix** | **Phones only** — hear the resilient decode before writing. Works on an MP3 or an existing Fixed/Normalized sibling (uses the source MP3). Not on booth/master |
-| **Write fixed WAV** | Makes a **new** fixed file next to it (`… (Fixed by SD).wav`). Original never changed |
-| **Rewrite fixed** | Overwrites the existing Fixed sibling with current knobs (no ` 2.wav` litter). Source MP3 untouched |
-| **Preview normalize** | **Phones only** — hear loudness normalize (after **Detect**). Separate from fix preview — not both at once |
-| **Write normalized** | Makes a **new** file (`… (Normalized by SD).wav`) toward the auto-gain LUFS target. Original never changed |
-| **Rewrite normalized** | Overwrites the existing Normalized sibling. Source untouched |
-| **Stop preview** | Ends whichever phones preview is running |
-| **Delete SD WAV** | Remove the selected Fixed/Normalized sibling from disk (confirm). Originals stay |
-| **Purge SD WAVs…** | Delete all Fixed/Normalized siblings in the open folder (or whole library if none) |
-| **Camelot** | Set the key yourself, or clear with `—` |
+| **Detect** | Re-analyze (BPM, key, beatgrid, waveform, loudness) |
+| **Camelot** | Set key yourself, or clear with `—` |
 
-**Right-click** a track → **Click & squeak fixer…** selects it, jumps to these tools (switches to Library if you were in Performance), and runs Check for MP3s. Same menu has Check / Preview / Write / **Rewrite** / Delete SD WAV / Load A / Load B.
+**Fix** tab (click & squeak)
+
+| Control | What it does |
+|---------|----------------|
+| **Preset** | Gentle / Normal / Aggressive |
+| **Tune** | Opens Fade / Trim / De-click (same settings for Preview and Write) |
+| **Preview** | **Phones only** — while playing, use the **PHONES** bar: Original / Fixed / A/B / Stop |
+| **Write** / **Rewrite** | New or overwrite `… (Fixed by SD).wav` — original never touched |
+| **Check** / **Delete** / **Purge…** | Quiet actions on the right (truncate check; remove SD siblings only) |
+
+**Loudness** tab
+
+| Control | What it does |
+|---------|----------------|
+| **Preview** | **Phones only** — Original / Normalized A/B (needs Detect first) |
+| **Write** / **Rewrite** | New or overwrite `… (Normalized by SD).wav` |
+
+**Right-click** a track → **Click & squeak fixer…** selects it, opens Library on the **Fix** tab (Tune expanded), and runs Check for MP3s. Same menu still has Check / Preview / Write / Rewrite / Delete / Load A·B.
 
 Fixes are remembered next time.
 
@@ -118,8 +125,16 @@ Fixes are remembered next time.
 |-----|---------|
 | **Double-click** | Deck **A** |
 | **Enter** | Deck **A** |
+| **Drag** a track onto a **waveform** (Performance) or **deck strip** (Library) | That deck |
 | RMX2 **Load** A or B | That deck |
 | In **Performance**: **Load A** / **Load B** | That deck |
+
+### Cue without a jog (mouse)
+
+In **Performance**, on a loaded deck’s waveform (big strip or overview under the deck):
+
+- **Drag** or **click** to move the playhead  
+- **Double-click** while paused to set the **cue** there (same as Cue when the playhead isn’t already on cue)
 
 ### Rules (so nothing explodes mid-set)
 

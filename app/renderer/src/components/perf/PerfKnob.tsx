@@ -1,6 +1,7 @@
 /** Vertical-drag rotary control (mouse / touch / keyboard). Double-click resets to `reset`. */
 
 import { useRef } from 'react';
+import { useWheelNudge01 } from '../../hooks/useWheelNudge01';
 
 export function PerfKnob(props: {
   value: number;
@@ -31,12 +32,15 @@ export function PerfKnob(props: {
   const showPickup = pickup != null && Number.isFinite(pickup);
   const hwAngle = showPickup ? (pickup! - 0.5) * 270 : 0;
   const drag = useRef<{ startY: number; startVal: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  useWheelNudge01(btnRef, value, onChange, !disabled);
 
   const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
   return (
     <div className={`perf-knob-wrap size-${size}${className ? ` ${className}` : ''}`}>
       <button
+        ref={btnRef}
         type="button"
         className={`perf-knob size-${size}${showPickup ? ' pickup' : ''}`}
         style={{ ['--knob-angle' as string]: `${angle}deg` }}
@@ -45,7 +49,7 @@ export function PerfKnob(props: {
         aria-valuemax={1}
         aria-valuenow={value}
         role="slider"
-        title={title ?? `${ariaLabel} — drag up/down`}
+        title={title ?? `${ariaLabel} — drag up/down · scroll to nudge`}
         disabled={disabled}
         onPointerDown={(e) => {
           if (disabled) return;
@@ -93,11 +97,6 @@ export function PerfKnob(props: {
             e.preventDefault();
             onChange(reset);
           }
-        }}
-        onWheel={(e) => {
-          if (disabled) return;
-          e.preventDefault();
-          onChange(clamp01(value + (e.deltaY < 0 ? 0.03 : -0.03)));
         }}
       >
         {showPickup && (

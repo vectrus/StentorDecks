@@ -1,6 +1,7 @@
 import { observer } from 'mobx-react-lite';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { type ControlId } from '@stentordeck/shared';
+import { useWheelNudge01 } from '../../hooks/useWheelNudge01';
 import type { DeckStore } from '../../stores/DeckStore';
 import { libraryStore, midiStore } from '../../stores/root';
 import { formatUserError } from '../../util/formatUserError';
@@ -42,6 +43,8 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
   const wetPickup = midiStore.takeoverView(wetId);
   const syncLit = deck.syncArmed || deck.phaseGluePartner != null;
   const [loadFlash, setLoadFlash] = useState(false);
+  const pitchRef = useRef<HTMLDivElement>(null);
+  useWheelNudge01(pitchRef, deck.pitchPos, (v) => deck.setPitchPos(v), !empty);
 
   useEffect(() => {
     if (!loadFlash) return;
@@ -87,12 +90,14 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
       <OverviewWaveform deck={deck} accent={accent} />
 
       <div
+        ref={pitchRef}
         className="perf-pitch-strip"
         role="slider"
         aria-valuemin={0}
         aria-valuemax={1}
         aria-valuenow={deck.pitchPos}
         aria-label={`Deck ${deck.id} pitch`}
+        title={empty ? undefined : `Pitch — drag or scroll`}
         tabIndex={empty ? -1 : 0}
         onPointerDown={(e) => {
           if (empty) return;

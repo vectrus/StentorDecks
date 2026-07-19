@@ -25,6 +25,25 @@
   gap: 0.75rem;
   font-size: 0.875rem;
   min-width: 0;
+  border: 1.5px solid transparent;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.prep-strip.drop-over:not(.drop-locked) {
+  border-color: currentColor;
+  background: color-mix(in srgb, currentColor 10%, var(--bg-panel));
+}
+
+.prep-strip.drop-over.drop-locked {
+  border-color: var(--vu-clip, #ff5d5d);
+}
+
+.prep-strip-a.drop-over:not(.drop-locked) {
+  color: var(--deck-a);
+}
+
+.prep-strip-b.drop-over:not(.drop-locked) {
+  color: var(--deck-b);
 }
 
 .prep-strip-a {
@@ -315,6 +334,14 @@
   background: var(--bg-raised);
 }
 
+.prep-row[draggable='true'] {
+  cursor: grab;
+}
+
+.prep-row[draggable='true']:active {
+  cursor: grabbing;
+}
+
 .prep-col {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -334,27 +361,40 @@
   font-size: 0.875rem;
 }
 
+/* Correction strip — calm two-zone panel (docs/06); not a button farm */
 .prep-correct {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.45rem;
   margin-top: 0.55rem;
-  padding-top: 0.55rem;
-  border-top: 0.5px solid var(--border);
+  padding: 0.65rem 0.75rem 0.7rem;
+  background: var(--bg-panel);
+  border: 0.5px solid var(--border);
+  border-radius: 0.5rem;
   flex-shrink: 0;
   font-size: 0.875rem;
+  min-width: 0;
 }
 
 .prep-correct.dim {
   color: var(--text-faint);
+  padding: 0.75rem;
+}
+
+.prep-correct-lab {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  flex-shrink: 0;
 }
 
 .prep-correct label {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
   color: var(--text-dim);
+  min-width: 0;
 }
 
 .prep-correct input,
@@ -363,8 +403,35 @@
   border: 1px solid var(--border-strong);
   border-radius: 0.35rem;
   color: var(--text);
-  padding: 0.3rem 0.4rem;
+  padding: 0.35rem 0.45rem;
   font-size: 0.9rem;
+  min-height: 2rem;
+}
+
+.prep-correct-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.prep-correct-title,
+.prep-correct-artist {
+  min-width: 0;
+}
+
+.prep-correct-title input,
+.prep-correct-artist input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+}
+
+.prep-correct-tempo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .prep-correct-bpm input {
@@ -376,8 +443,9 @@
   background: var(--bg-raised);
   color: var(--text);
   border-radius: 0.35rem;
-  padding: 0.3rem 0.55rem;
-  font-size: 0.85rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.875rem;
+  min-height: 2rem;
 }
 
 .prep-correct button:disabled {
@@ -400,49 +468,150 @@
   color: var(--deck-a);
 }
 
-.prep-correct button.prep-mp3-delete,
-.prep-correct button.prep-mp3-purge {
-  border-color: var(--text-faint);
+.prep-correct-status {
+  margin: 0;
+  padding: 0.15rem 0 0;
+  color: var(--text-faint);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prep-correct-status.needs-fix {
+  color: var(--vu-hot, #ffb454);
+}
+
+.prep-preview-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.4rem;
+}
+
+.prep-preview-tag {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: var(--vu-hot, #ffb454);
+  margin-right: 0.15rem;
+}
+
+.prep-mp3-ab {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.prep-correct button.prep-mp3-preview.on,
+.prep-correct button.prep-mp3-preview-stop,
+.prep-correct button.prep-mp3-ab-btn.on {
+  border-color: var(--vu-hot, #ffb454);
+  color: var(--vu-hot, #ffb454);
+}
+
+.prep-tool-rail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.75rem;
+  padding-top: 0.35rem;
+  border-top: 0.5px solid var(--border);
+}
+
+.prep-tool-tabs {
+  display: inline-flex;
+  padding: 0.15rem;
+  gap: 0.15rem;
+  background: var(--bg-panel-2);
+  border: 0.5px solid var(--border);
+  border-radius: 0.4rem;
+  flex-shrink: 0;
+}
+
+.prep-correct button.prep-tool-tab {
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  padding: 0.35rem 0.85rem;
+  letter-spacing: 0.04em;
+  font-size: 0.875rem;
+}
+
+.prep-correct button.prep-tool-tab.on {
+  background: var(--bg-raised);
+  color: var(--text);
+  border: 0.5px solid var(--border-strong);
+}
+
+.prep-tool-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.prep-loudness-hint {
+  color: var(--text-faint);
+  font-size: 0.8rem;
+  margin-right: 0.25rem;
+}
+
+.prep-tool-quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-left: auto;
+}
+
+.prep-correct button.prep-quiet {
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  padding: 0.3rem 0.45rem;
+  font-size: 0.8rem;
+}
+
+.prep-correct button.prep-quiet:hover:not(:disabled) {
   color: var(--text-dim);
 }
 
-.prep-correct-title input,
-.prep-correct-artist input {
-  width: 8rem;
+.prep-correct button.prep-tool-tune.on {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.prep-tune-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.15rem 0.1rem;
 }
 
 .prep-fixer-num input {
   width: 3.5rem;
 }
 
-.prep-correct button.prep-mp3-preview.on,
-.prep-correct button.prep-mp3-preview-stop {
-  border-color: var(--vu-hot, #ffb454);
-  color: var(--vu-hot, #ffb454);
-}
-
-.prep-mp3-detail {
-  flex: 1 1 100%;
-  color: var(--text-dim);
-}
-
-.prep-mp3-detail.needs-fix {
-  color: var(--vu-hot, #ffb454);
-}
-
 .prep-correct.mp3-fixer-focus {
   outline: 2px solid var(--deck-b, #5bd0ff);
-  outline-offset: 4px;
-  border-radius: 0.4rem;
+  outline-offset: 2px;
   animation: mp3-fixer-pulse 1.4s ease-out 1;
 }
 
 @keyframes mp3-fixer-pulse {
   0% {
-    background: rgba(91, 208, 255, 0.14);
+    background: color-mix(in srgb, var(--deck-b) 14%, var(--bg-panel));
   }
   100% {
-    background: transparent;
+    background: var(--bg-panel);
   }
 }
 

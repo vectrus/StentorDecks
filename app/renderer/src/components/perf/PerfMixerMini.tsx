@@ -1,10 +1,12 @@
 import { observer } from 'mobx-react-lite';
+import { useRef } from 'react';
 import {
   gainKnobFromTrimDb,
   trimDbFromGainKnob,
   type ControlId,
 } from '@stentordeck/shared';
 import { dbToVuNorm, vuSegments } from '../../audio/vuMeter';
+import { useWheelNudge01 } from '../../hooks/useWheelNudge01';
 import { deckA, deckB, midiStore, mixerStore } from '../../stores/root';
 import type { DeckStore } from '../../stores/DeckStore';
 import { PerfKnob } from './PerfKnob';
@@ -96,6 +98,9 @@ function KnobFaderCol(props: {
   const capTop = `calc(0.55rem + (100% - 1.1rem) * ${1 - fader})`;
   const ghostTop = `calc(0.55rem + (100% - 1.1rem) * ${1 - hw})`;
   const tip = pflMeter ? 'PFL / pre-fader' : 'post-fader';
+  const faderRef = useRef<HTMLDivElement>(null);
+  // Whole fader+VU cell — easier to hit than the thin lane alone.
+  useWheelNudge01(faderRef, fader, onFader, true);
 
   return (
     <div className={`perf-mx-col perf-mx-ch accent-${accent}`}>
@@ -114,7 +119,11 @@ function KnobFaderCol(props: {
         );
       })}
 
-      <div className={`perf-fw vu-out-${deckId === 'A' ? 'left' : 'right'}`}>
+      <div
+        ref={faderRef}
+        className={`perf-fw vu-out-${deckId === 'A' ? 'left' : 'right'}`}
+        title={`Channel fader ${deckId} — drag or scroll`}
+      >
         <div
           className="perf-ft"
           role="slider"
