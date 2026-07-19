@@ -160,10 +160,17 @@ export type IpcInvokeMap = {
       artist: string | null;
       /** fixed = click/squeak (MP3); normalized = LUFS sibling (separate). Default fixed. */
       kind?: 'fixed' | 'normalized';
+      /** Overwrite existing sibling instead of creating ` 2.wav` (Rewrite). */
+      overwrite?: boolean;
     };
     res:
       | { ok: true; path: string; trackId: number }
       | { ok: false; reason: string };
+  };
+  /** Resolve Fixed/Normalized sibling → source track id (same folder stem). */
+  'library:resolveSdSource': {
+    req: { id: number };
+    res: { sourceTrackId: number; path: string } | null;
   };
   /** Delete one Fixed/Normalized sibling WAV (R5.1 exception). */
   'library:deleteSdSibling': {
@@ -228,6 +235,7 @@ export const IPC_INVOKE_CHANNELS = [
   'library:pickRoot',
   'library:updateManual',
   'library:mp3FixWrite',
+  'library:resolveSdSource',
   'library:deleteSdSibling',
   'library:purgeSdSiblings',
   'analysis:enqueue',

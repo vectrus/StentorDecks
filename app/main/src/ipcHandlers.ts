@@ -32,6 +32,7 @@ import {
   getWaveformBlob,
   queryTracks,
   readTrackFile,
+  resolveSdSourceTrack,
   updateManualMeta,
 } from './db/tracksRepo';
 import { writeSiblingWav } from './library/mp3FixWrite';
@@ -133,6 +134,7 @@ export function registerIpcHandlers(ctx: Ctx): void {
     }
     return result;
   });
+  handle('library:resolveSdSource', (req) => resolveSdSourceTrack(getDb(), req.id));
   handle('library:deleteSdSibling', (req) => {
     const roots = ctx.getSettingsState().settings.library.roots;
     return deleteSdSiblingById(getDb(), roots, req.id);

@@ -10,19 +10,39 @@ describe('declickPcm', () => {
   });
 
   it('light heals a large jump', () => {
-    const ch = [new Float32Array(64)];
-    for (let i = 0; i < 32; i++) ch[0]![i] = 0.1;
-    ch[0]![32] = 0.9; // big spike jump from 0.1
-    for (let i = 33; i < 64; i++) ch[0]![i] = 0.1;
+    const ch = [new Float32Array(128)];
+    for (let i = 0; i < 128; i++) ch[0]![i] = 0.1;
+    ch[0]![64] = 0.95; // impulse
     const hits = declickChannelsInPlace(ch, 'light');
     expect(hits).toBeGreaterThanOrEqual(1);
-    expect(Math.abs(ch[0]![32]! - 0.1)).toBeLessThan(0.35);
+    expect(Math.abs(ch[0]![64]! - 0.1)).toBeLessThan(0.25);
   });
 
-  it('strong uses a lower threshold', () => {
+  it('light heals a single-sample spike without huge consecutive jump setup', () => {
+    const ch = [new Float32Array(128)];
+    for (let i = 0; i < 128; i++) ch[0]![i] = 0.05;
+    // Spike: neighbors stay low; sample is high (squeak tick).
+    ch[0]![60] = 0.85;
+    const hits = declickChannelsInPlace(ch, 'light');
+    expect(hits).toBeGreaterThanOrEqual(1);
+    expect(Math.abs(ch[0]![60]!)).toBeLessThan(0.4);
+  });
+
+  it('strong is more aggressive than light', () => {
     const light = declickParams('light')!;
     const strong = declickParams('strong')!;
-    expect(strong.threshold).toBeLessThan(light.threshold);
+    expect(strong.absFloor).toBeLessThan(light.absFloor);
+    expect(strong.rmsMul).toBeLessThan(light.rmsMul);
     expect(strong.halfWin).toBeGreaterThan(light.halfWin);
+    expect(strong.passes).toBeGreaterThan(light.passes);
+  });
+
+  it('leaves a slow ramp alone', () => {
+    const ch = [new Float32Array(256)];
+    for (let i = 0; i < 256; i++) ch[0]![i] = (i / 255) * 0.4;
+    const before = ch[0]![128]!;
+    const hits = declickChannelsInPlace(ch, 'light');
+    expect(hits).toBe(0);
+    expect(ch[0]![128]).toBeCloseTo(before, 5);
   });
 });

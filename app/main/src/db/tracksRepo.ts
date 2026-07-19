@@ -6,6 +6,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   ANALYSIS_VERSION,
+  isSdSiblingWavPath,
+  sourceStemFromSdSiblingPath,
   type AnalysisResult,
   type FolderNode,
   type LibraryQuery,
@@ -580,6 +582,35 @@ export function updateManualMeta(
     db.prepare(`UPDATE tracks SET artist = ? WHERE id = ?`).run(a, id);
   }
   return getTrackDetail(db, id);
+}
+
+/**
+ * Map a Fixed/Normalized sibling row back to the original track in the same folder.
+ */
+export function resolveSdSourceTrack(
+  db: DbHandle,
+  siblingId: number,
+): { sourceTrackId: number; path: string } | null {
+  const row = db
+    .prepare(
+      `SELECT id, path, folder FROM tracks WHERE id = ? AND missing_since IS NULL`,
+    )
+    .get(siblingId) as { id: number; path: string; folder: string } | undefined;
+  if (!row || !isSdSiblingWavPath(row.path)) return null;
+  const stem = sourceStemFromSdSiblingPath(row.path);
+  if (stem == null || stem.length === 0) return null;
+  const folder = normalizePath(row.folder);
+  for (const ext of ['.mp3', '.flac', '.wav']) {
+    const hit = db
+      .prepare(
+        `SELECT id, path FROM tracks
+         WHERE missing_since IS NULL AND folder = ? AND filename = ? COLLATE NOCASE
+         LIMIT 1`,
+      )
+      .get(folder, `${stem}${ext}`) as { id: number; path: string } | undefined;
+    if (hit) return { sourceTrackId: hit.id, path: hit.path };
+  }
+  return null;
 }
 
 /** Hard-delete track row + waveforms (SD sibling cleanup). */

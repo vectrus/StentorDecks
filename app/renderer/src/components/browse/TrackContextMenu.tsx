@@ -57,8 +57,9 @@ export function TrackContextMenu({ target, onClose }: Props) {
 
   if (!target) return null;
 
-  const isMp3 = /\.mp3$/i.test(target.path);
   const isSdWav = isSdSiblingWavPath(target.path);
+  const isMp3 = /\.mp3$/i.test(target.path) && !isSdWav;
+  const canFixer = isMp3 || isSdWav;
   const busy = libraryStore.mp3FixBusy;
 
   const openFixer = () => {
@@ -102,11 +103,11 @@ export function TrackContextMenu({ target, onClose }: Props) {
       <button
         type="button"
         role="menuitem"
-        disabled={busy || !isMp3}
+        disabled={busy || !canFixer}
         title={
-          isMp3
-            ? 'Phones only — resilient decode preview (not booth)'
-            : 'MP3 only'
+          canFixer
+            ? 'Phones only — resilient decode preview (not booth). Sibling → source MP3.'
+            : 'MP3 or Fixed/Normalized sibling'
         }
         onClick={() => {
           onClose();
@@ -122,11 +123,11 @@ export function TrackContextMenu({ target, onClose }: Props) {
       <button
         type="button"
         role="menuitem"
-        disabled={busy || !isMp3}
+        disabled={busy || !canFixer}
         title={
-          isMp3
+          canFixer
             ? 'Write sibling WAV (Fixed by SD) — never changes the original'
-            : 'MP3 only'
+            : 'MP3 or Fixed/Normalized sibling'
         }
         onClick={() => {
           onClose();
@@ -138,6 +139,26 @@ export function TrackContextMenu({ target, onClose }: Props) {
         }}
       >
         Write fixed WAV
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        disabled={busy || !canFixer}
+        title={
+          canFixer
+            ? 'Overwrite Fixed by SD with current knobs (no ‘ 2.wav’)'
+            : 'MP3 or Fixed/Normalized sibling'
+        }
+        onClick={() => {
+          onClose();
+          void (async () => {
+            if (uiStore.mode !== 'prep') await uiStore.setMode('prep');
+            libraryStore.openInMp3Fixer(target.trackId, { runCheck: false });
+            await libraryStore.rewriteSelectedFixed();
+          })();
+        }}
+      >
+        Rewrite fixed WAV
       </button>
       <div className="track-ctx-sep" role="separator" />
       <button
@@ -171,6 +192,26 @@ export function TrackContextMenu({ target, onClose }: Props) {
         }}
       >
         Write normalized WAV
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        disabled={busy || !canFixer}
+        title={
+          canFixer
+            ? 'Overwrite Normalized by SD (no ‘ 2.wav’) — source untouched'
+            : 'MP3 or SD sibling'
+        }
+        onClick={() => {
+          onClose();
+          void (async () => {
+            if (uiStore.mode !== 'prep') await uiStore.setMode('prep');
+            libraryStore.openInMp3Fixer(target.trackId, { runCheck: false });
+            await libraryStore.rewriteSelectedNormalized();
+          })();
+        }}
+      >
+        Rewrite normalized WAV
       </button>
       <button
         type="button"

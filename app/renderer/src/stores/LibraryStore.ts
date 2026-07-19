@@ -810,9 +810,13 @@ export class LibraryStore {
       return;
     }
     const row = this.selectedTrack;
-    if (!row || !/\.mp3$/i.test(row.path)) {
+    if (!row) return;
+    const canFix =
+      (/\.mp3$/i.test(row.path) && !isSdSiblingWavPath(row.path)) ||
+      isSdSiblingWavPath(row.path);
+    if (!canFix) {
       runInAction(() => {
-        this.mp3FixStatus = 'Select an MP3 for fixer preview';
+        this.mp3FixStatus = 'Select an MP3 or a Fixed/Normalized sibling for fixer preview';
       });
       return;
     }
@@ -822,17 +826,26 @@ export class LibraryStore {
     });
     try {
       await phonesPreviewPlayer.stop();
-      const { buf, declickHits } = await this.decodeSelectedForFixer();
-      if (!buf) return;
+      const { buf, declickHits, sourcePath } = await this.decodeSelectedForFixer();
+      if (!buf) {
+        runInAction(() => {
+          this.phonesPreviewBusy = false;
+          if (!this.mp3FixStatus) {
+            this.mp3FixStatus = 'Select an MP3 or a Fixed/Normalized sibling';
+          }
+        });
+        return;
+      }
       await phonesPreviewPlayer.start(buf, { kind: 'fixer', gainLinear: 0.85 });
       const fx = settingsStore.settings.library.fixer;
+      const srcName = sourcePath?.split(/[/\\]/).pop() ?? 'source';
       runInAction(() => {
         this.phonesPreviewKind = 'fixer';
         this.phonesPreviewBusy = false;
         this.mp3FixStatus =
           `Phones preview (fix · ${fx.preset}` +
           (declickHits > 0 ? ` · de-click ${declickHits}` : '') +
-          ') — Stop preview to end';
+          ` · ${srcName}) — Stop preview to end`;
       });
     } catch (err) {
       runInAction(() => {
@@ -894,35 +907,53 @@ export class LibraryStore {
    * Write loudness-normalized sibling `* (Normalized by SD).wav`. Never touches source.
    * Separate option from Write fixed WAV — stop phones preview first.
    */
-  async writeNormalizedSibling(): Promise<void> {
+  async writeNormalizedSibling(opts?: { overwrite?: boolean }): Promise<void> {
     const row = this.selectedTrack;
     if (!row || this.mp3FixBusy) return;
-    if (row.loudnessLufs == null || !Number.isFinite(row.loudnessLufs)) {
+    const overwrite = opts?.overwrite === true;
+
+    let sourceId = row.id;
+    let loudness = row.loudnessLufs;
+    if (isSdSiblingWavPath(row.path)) {
+      const src = await invoke('library:resolveSdSource', { id: row.id });
+      if (!src) {
+        runInAction(() => {
+          this.mp3FixStatus = 'No original next to this SD WAV for normalize';
+        });
+        return;
+      }
+      sourceId = src.sourceTrackId;
+      const detail = await invoke('library:read', { id: sourceId });
+      loudness = detail?.loudnessLufs ?? null;
+    }
+
+    if (loudness == null || !Number.isFinite(loudness)) {
       runInAction(() => {
-        this.mp3FixStatus = 'No loudness yet — run Detect first';
+        this.mp3FixStatus = 'No loudness yet — run Detect on the source first';
       });
       return;
     }
     await this.stopPhonesPreview();
     runInAction(() => {
       this.mp3FixBusy = true;
-      this.mp3FixStatus = 'Decoding for normalize…';
+      this.mp3FixStatus = overwrite
+        ? 'Rewriting normalized WAV…'
+        : 'Decoding for normalize…';
     });
     try {
-      const payload = await invoke('library:read', { id: row.id });
+      const payload = await invoke('library:read', { id: sourceId });
       if (!payload) throw new Error('Could not read track file');
       const u8 = payload.bytes;
       const ab = copyToArrayBuffer(u8);
       const expected =
-        expectedMpegDurationSec(u8, (payload.durationMs ?? row.durationMs ?? 0) / 1000) ??
-        null;
+        expectedMpegDurationSec(u8, (payload.durationMs ?? 0) / 1000) ?? null;
       await audioEngine.acquireDecode();
       let buf: AudioBuffer;
       try {
         const ctx = audioEngine.masterCtx;
         if (!ctx) throw new Error('Audio engine not ready');
         buf = await decodeArrayBufferOffThread(ctx, ab.slice(0), {
-          expectedDurationSec: /\.mp3$/i.test(row.path) ? expected : null,
+          expectedDurationSec: /\.mp3$/i.test(payload.path) ? expected : null,
         });
       } finally {
         audioEngine.endDecode();
@@ -935,14 +966,14 @@ export class LibraryStore {
       const target = settingsStore.settings.audio.autoGainTargetLufs;
       const applied = normalizeChannelsTowardLufs(
         channels,
-        row.loudnessLufs,
+        loudness,
         target,
         trimDbToGain,
         autoGainTrimDb,
       );
 
       runInAction(() => {
-        this.mp3FixStatus = `Writing normalized sibling (${(20 * Math.log10(applied)).toFixed(1)} dB)…`;
+        this.mp3FixStatus = `${overwrite ? 'Overwriting' : 'Writing'} normalized sibling (${(20 * Math.log10(applied)).toFixed(1)} dB)…`;
       });
 
       const wavBytes = encodeWavPcm16le({
@@ -950,13 +981,14 @@ export class LibraryStore {
         numberOfChannels: buf.numberOfChannels,
         channelData: channels,
       });
-      const title = withNormalizedBySdTitle(payload.title ?? row.title, 'Track');
+      const title = withNormalizedBySdTitle(payload.title, 'Track');
       const result = await invoke('library:mp3FixWrite', {
-        sourceTrackId: row.id,
+        sourceTrackId: sourceId,
         wavBytes,
         title,
-        artist: payload.artist ?? row.artist,
+        artist: payload.artist,
         kind: 'normalized',
+        overwrite,
       });
       if (!result.ok) throw new Error(result.reason);
 
@@ -996,19 +1028,55 @@ export class LibraryStore {
     return declickChannelsInPlace(channels, level);
   }
 
-  /** Resilient decode + fixer seam/de-click (Prep preview / write). */
+  /**
+   * Source track for fixer: selected MP3, or original next to a Fixed/Normalized sibling.
+   */
+  async resolveFixerSource(): Promise<{
+    sourceTrackId: number;
+    path: string;
+    fromSibling: boolean;
+  } | null> {
+    const row = this.selectedTrack;
+    if (!row) return null;
+    if (/\.mp3$/i.test(row.path) && !isSdSiblingWavPath(row.path)) {
+      return { sourceTrackId: row.id, path: row.path, fromSibling: false };
+    }
+    if (isSdSiblingWavPath(row.path)) {
+      const src = await invoke('library:resolveSdSource', { id: row.id });
+      if (!src) {
+        runInAction(() => {
+          this.mp3FixStatus =
+            'No original next to this SD WAV — open the folder with the source MP3';
+        });
+        return null;
+      }
+      return {
+        sourceTrackId: src.sourceTrackId,
+        path: src.path,
+        fromSibling: true,
+      };
+    }
+    return null;
+  }
+
+  /** Resilient decode + fixer seam/de-click from source MP3 (or sibling→source). */
   private async decodeSelectedForFixer(): Promise<{
     buf: AudioBuffer | null;
     declickHits: number;
+    sourceTrackId: number | null;
+    sourcePath: string | null;
   }> {
-    const row = this.selectedTrack;
-    if (!row) return { buf: null, declickHits: 0 };
-    const payload = await invoke('library:read', { id: row.id });
-    if (!payload) throw new Error('Could not read track file');
+    const src = await this.resolveFixerSource();
+    if (!src) return { buf: null, declickHits: 0, sourceTrackId: null, sourcePath: null };
+    if (!/\.mp3$/i.test(src.path)) {
+      throw new Error('Fixer needs an MP3 source');
+    }
+    const payload = await invoke('library:read', { id: src.sourceTrackId });
+    if (!payload) throw new Error('Could not read source track file');
     const u8 = payload.bytes;
     const ab = copyToArrayBuffer(u8);
     const expected =
-      expectedMpegDurationSec(u8, (payload.durationMs ?? row.durationMs ?? 0) / 1000) ?? null;
+      expectedMpegDurationSec(u8, (payload.durationMs ?? 0) / 1000) ?? null;
     await audioEngine.acquireDecode();
     try {
       const ctx = audioEngine.masterCtx;
@@ -1019,7 +1087,12 @@ export class LibraryStore {
         this.fixerDecodeOpts(expected),
       );
       const declickHits = this.applyFixerDeclick(buf);
-      return { buf, declickHits };
+      return {
+        buf,
+        declickHits,
+        sourceTrackId: src.sourceTrackId,
+        sourcePath: src.path,
+      };
     } finally {
       audioEngine.endDecode();
     }
@@ -1050,13 +1123,15 @@ export class LibraryStore {
 
   /**
    * Prep R5.9 — resilient decode → sibling `* (Fixed by SD).wav`. Never touches the MP3.
+   * @param overwrite Rewrite existing sibling (same path / bumped sibling) instead of ` 2.wav`.
    */
-  async fixSelectedMp3(): Promise<void> {
-    const row = this.selectedTrack;
-    if (!row || this.mp3FixBusy) return;
-    if (!/\.mp3$/i.test(row.path)) {
+  async fixSelectedMp3(opts?: { overwrite?: boolean }): Promise<void> {
+    if (this.mp3FixBusy) return;
+    const overwrite = opts?.overwrite === true;
+    const src = await this.resolveFixerSource();
+    if (!src || !/\.mp3$/i.test(src.path)) {
       runInAction(() => {
-        this.mp3FixStatus = 'Select an MP3 first';
+        this.mp3FixStatus = 'Select an MP3 (or its Fixed/Normalized sibling) first';
       });
       return;
     }
@@ -1064,17 +1139,18 @@ export class LibraryStore {
     await this.stopPhonesPreview();
     runInAction(() => {
       this.mp3FixBusy = true;
-      this.mp3FixStatus = 'Decoding (resilient)…';
+      this.mp3FixStatus = overwrite
+        ? 'Rewriting fixed WAV…'
+        : 'Decoding (resilient)…';
     });
 
     try {
-      const payload = await invoke('library:read', { id: row.id });
+      const payload = await invoke('library:read', { id: src.sourceTrackId });
       if (!payload) throw new Error('Could not read track file');
       const u8 = payload.bytes;
       const ab = copyToArrayBuffer(u8);
       const expected =
-        expectedMpegDurationSec(u8, (payload.durationMs ?? row.durationMs ?? 0) / 1000) ??
-        null;
+        expectedMpegDurationSec(u8, (payload.durationMs ?? 0) / 1000) ?? null;
       const probe = new OfflineAudioContext(2, 128, 44100);
       const buf = await decodeArrayBufferOffThread(
         probe,
@@ -1084,7 +1160,7 @@ export class LibraryStore {
       const declickHits = this.applyFixerDeclick(buf);
 
       runInAction(() => {
-        this.mp3FixStatus = 'Writing sibling WAV…';
+        this.mp3FixStatus = overwrite ? 'Overwriting sibling WAV…' : 'Writing sibling WAV…';
       });
 
       const channels: Float32Array[] = [];
@@ -1097,13 +1173,14 @@ export class LibraryStore {
         channelData: channels,
       });
 
-      const title = withFixedBySdTitle(payload.title ?? row.title, 'Track');
+      const title = withFixedBySdTitle(payload.title, 'Track');
       const result = await invoke('library:mp3FixWrite', {
-        sourceTrackId: row.id,
+        sourceTrackId: src.sourceTrackId,
         wavBytes,
         title,
-        artist: payload.artist ?? row.artist,
+        artist: payload.artist,
         kind: 'fixed',
+        overwrite,
       });
 
       if (!result.ok) throw new Error(result.reason);
@@ -1115,8 +1192,9 @@ export class LibraryStore {
           (e) => e.kind === 'track' && e.track.id === result.trackId,
         );
         if (idx >= 0) this.cursor = idx;
+        const verb = overwrite ? 'Rewrote' : 'Wrote';
         this.mp3FixStatus =
-          `Wrote ${result.path.split(/[/\\]/).pop()} (${fx.preset}` +
+          `${verb} ${result.path.split(/[/\\]/).pop()} (${fx.preset}` +
           (declickHits > 0 ? ` · de-click ${declickHits}` : '') +
           ') — original untouched';
         this.mp3Inspect = null;
@@ -1128,6 +1206,16 @@ export class LibraryStore {
         this.mp3FixStatus = err instanceof Error ? err.message : String(err);
       });
     }
+  }
+
+  /** Rewrite Fixed WAV with current fixer knobs (overwrite; no ` 2.wav`). */
+  async rewriteSelectedFixed(): Promise<void> {
+    await this.fixSelectedMp3({ overwrite: true });
+  }
+
+  /** Rewrite Normalized WAV with current LUFS target (overwrite; no ` 2.wav`). */
+  async rewriteSelectedNormalized(): Promise<void> {
+    await this.writeNormalizedSibling({ overwrite: true });
   }
 
   /** Delete selected Fixed/Normalized sibling WAV from disk + DB (R5.1 exception). */

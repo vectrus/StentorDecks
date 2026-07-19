@@ -6,6 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  overwriteSiblingWavPath,
   uniqueFixedSiblingWavPath,
   uniqueNormalizedSiblingWavPath,
   withFixedBySdTitle,
@@ -40,9 +41,12 @@ export async function writeSiblingWav(
     title: string;
     artist: string | null;
     kind?: SiblingWavKind;
+    /** Rewrite existing sibling instead of unique ` 2.wav`. */
+    overwrite?: boolean;
   },
 ): Promise<Mp3FixWriteResult> {
   const kind: SiblingWavKind = req.kind ?? 'fixed';
+  const overwrite = req.overwrite === true;
   const row = db
     .prepare(
       `SELECT id, path, title, artist, bpm, key_camelot, key_name, bpm_source, key_source
@@ -74,6 +78,10 @@ export async function writeSiblingWav(
   if (kind === 'normalized' && !/\.(mp3|flac|wav)$/i.test(sourcePath)) {
     return { ok: false, reason: 'Normalize supports MP3 / FLAC / WAV sources' };
   }
+  // Normalize rewrite must not target an SD sibling as "source" of itself.
+  if (kind === 'normalized' && /\(Fixed by SD\)|\(Normalized by SD\)/i.test(sourcePath)) {
+    return { ok: false, reason: 'Normalize from the original track, not an SD sibling' };
+  }
   if (!fs.existsSync(sourcePath)) {
     return { ok: false, reason: 'Source file missing on disk' };
   }
@@ -83,10 +91,14 @@ export async function writeSiblingWav(
 
   let dest: string;
   try {
-    dest =
-      kind === 'normalized'
-        ? uniqueNormalizedSiblingWavPath(sourcePath, (p) => fs.existsSync(p))
-        : uniqueFixedSiblingWavPath(sourcePath, (p) => fs.existsSync(p));
+    if (overwrite) {
+      dest = overwriteSiblingWavPath(sourcePath, kind, (p) => fs.existsSync(p));
+    } else {
+      dest =
+        kind === 'normalized'
+          ? uniqueNormalizedSiblingWavPath(sourcePath, (p) => fs.existsSync(p))
+          : uniqueFixedSiblingWavPath(sourcePath, (p) => fs.existsSync(p));
+    }
   } catch (err) {
     return {
       ok: false,
@@ -101,7 +113,7 @@ export async function writeSiblingWav(
   if (!isUnderRoots(destNorm, roots)) {
     return { ok: false, reason: 'Destination would be outside library roots' };
   }
-  if (fs.existsSync(destNorm)) {
+  if (!overwrite && fs.existsSync(destNorm)) {
     return { ok: false, reason: 'Destination already exists' };
   }
 

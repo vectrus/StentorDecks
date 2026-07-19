@@ -137,6 +137,9 @@ export function mockStentorInitScript(
       if (channel === 'midi:mapping:reset') {
         return { 'deckA.play': { kind: 'button', ch: 0, note: 0x21 } };
       }
+      if (channel === 'library:resolveSdSource') {
+        return null;
+      }
       if (channel === 'library:deleteSdSibling') {
         return { ok: false, reason: 'e2e mock — no delete' };
       }

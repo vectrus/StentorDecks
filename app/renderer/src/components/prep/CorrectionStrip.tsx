@@ -46,7 +46,10 @@ export const CorrectionStrip = observer(function CorrectionStrip() {
 
   const row = track;
   const isSdWav = isSdSiblingWavPath(row.path);
-  const isMp3 = /\.mp3$/i.test(row.path);
+  const isMp3 = /\.mp3$/i.test(row.path) && !isSdWav;
+  /** Fixer Preview / Write / Rewrite — MP3 or existing SD sibling (resolves to source). */
+  const canFixer = isMp3 || isSdWav;
+  const isNormSibling = /\(Normalized by SD\)/i.test(row.path);
 
   function commitTitleArtist(): void {
     const title = titleDraft.trim() === '' ? null : titleDraft.trim();
@@ -294,9 +297,9 @@ export const CorrectionStrip = observer(function CorrectionStrip() {
       <button
         type="button"
         className={`prep-mp3-preview${libraryStore.phonesPreviewKind === 'fixer' ? ' on' : ''}`}
-        title="Phones only — hear resilient decode with current fixer knobs."
+        title="Phones only — resilient decode with current fixer knobs (source MP3 if sibling selected)."
         disabled={
-          libraryStore.mp3FixBusy || libraryStore.phonesPreviewBusy || !isMp3
+          libraryStore.mp3FixBusy || libraryStore.phonesPreviewBusy || !canFixer
         }
         onClick={() => void libraryStore.toggleFixerPhonesPreview()}
       >
@@ -305,11 +308,20 @@ export const CorrectionStrip = observer(function CorrectionStrip() {
       <button
         type="button"
         className="prep-mp3-fix"
-        title="Write sibling WAV (Fixed by SD). Never changes the original."
-        disabled={libraryStore.mp3FixBusy || !isMp3}
+        title="Write sibling WAV (Fixed by SD). Never changes the original. Prefer Rewrite if one already exists."
+        disabled={libraryStore.mp3FixBusy || !canFixer}
         onClick={() => void libraryStore.fixSelectedMp3()}
       >
         {libraryStore.mp3FixBusy ? 'Fixing…' : 'Write fixed WAV'}
+      </button>
+      <button
+        type="button"
+        className="prep-mp3-fix"
+        title="Overwrite the Fixed by SD WAV with current knobs (no ‘ 2.wav’). Source MP3 untouched."
+        disabled={libraryStore.mp3FixBusy || !canFixer}
+        onClick={() => void libraryStore.rewriteSelectedFixed()}
+      >
+        Rewrite fixed
       </button>
       <button
         type="button"
@@ -334,6 +346,18 @@ export const CorrectionStrip = observer(function CorrectionStrip() {
         onClick={() => void libraryStore.writeNormalizedSibling()}
       >
         Write normalized
+      </button>
+      <button
+        type="button"
+        className="prep-mp3-norm"
+        title="Overwrite the Normalized by SD WAV (no ‘ 2.wav’). Source untouched."
+        disabled={
+          libraryStore.mp3FixBusy ||
+          !(isNormSibling || (canFixer && track.loudnessLufs != null))
+        }
+        onClick={() => void libraryStore.rewriteSelectedNormalized()}
+      >
+        Rewrite normalized
       </button>
       {libraryStore.phonesPreviewKind != null ? (
         <button

@@ -118,10 +118,10 @@ export const defaultSettings: Settings = {
     harmonicBoost: false,
     fixer: {
       preset: 'normal',
-      // ≈ 256 / 44100 * 1000 and 576 / 44100 * 1000 (MPEG seam defaults).
-      seamFadeMs: 5.8,
+      // Milder than MPEG sample defaults alone — light de-click on by default.
+      seamFadeMs: 8,
       seamTrimMs: 13.1,
-      declick: 'off',
+      declick: 'light',
     },
   },
   ai: {
@@ -252,16 +252,16 @@ export function fixerKnobsForPreset(
 ): Settings['library']['fixer'] {
   switch (preset) {
     case 'gentle':
-      return { preset, seamFadeMs: 12, seamTrimMs: 8, declick: 'off' };
+      return { preset, seamFadeMs: 14, seamTrimMs: 10, declick: 'light' };
     case 'aggressive':
-      return { preset, seamFadeMs: 22, seamTrimMs: 20, declick: 'light' };
+      return { preset, seamFadeMs: 28, seamTrimMs: 24, declick: 'strong' };
     case 'normal':
     default:
       return {
         preset: 'normal',
-        seamFadeMs: 5.8,
+        seamFadeMs: 8,
         seamTrimMs: 13.1,
-        declick: 'off',
+        declick: 'light',
       };
   }
 }

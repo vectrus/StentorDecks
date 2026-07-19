@@ -59,9 +59,9 @@ Stored as `settings.json` in `app.getPath('userData')`, written atomically (temp
     "harmonicBoost": false,                          // soft-rank Camelot neighbours (±1/rel, then ±2) when a deck plays
     "fixer": {                                       // R5.9 Prep MP3 fix — Preview + Write share these
       "preset": "normal",                            // gentle | normal | aggressive (shortcut; knobs editable after)
-      "seamFadeMs": 5.8,                             // ~3–40; Normal ≈ 256 samples @ 44.1
-      "seamTrimMs": 13.1,                            // ~0–26; Normal ≈ 576 samples @ 44.1
-      "declick": "off"                               // off | light | strong
+      "seamFadeMs": 8,                               // ~3–40; Aggressive uses longer fades
+      "seamTrimMs": 13.1,                            // ~0–26; ≈ 576 samples @ 44.1
+      "declick": "light"                             // off | light | strong (RMS-adaptive + spike heal; strong = multi-pass)
     }
   },
 

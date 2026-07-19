@@ -7,6 +7,9 @@ import {
   fixedSiblingWavPath,
   isSdSiblingWavPath,
   normalizeChannelsTowardLufs,
+  overwriteSiblingWavPath,
+  sourcePathCandidatesFromSdSibling,
+  sourceStemFromSdSiblingPath,
   uniqueFixedSiblingWavPath,
   uniqueNormalizedSiblingWavPath,
   withFixedBySdTitle,
@@ -53,6 +56,28 @@ describe('mp3Fix (R5.9)', () => {
     expect(isSdSiblingWavPath('C:\\a\\x.mp3')).toBe(false);
     expect(isSdSiblingWavPath('C:\\a\\x.wav')).toBe(false);
     expect(isSdSiblingWavPath(`C:\\a\\x${FIXED_BY_SD_MARK}.mp3`)).toBe(false);
+  });
+
+  it('sourceStemFromSdSiblingPath + overwriteSiblingWavPath', () => {
+    expect(sourceStemFromSdSiblingPath(`C:\\Music\\banger${FIXED_BY_SD_MARK}.wav`)).toBe(
+      'banger',
+    );
+    expect(sourceStemFromSdSiblingPath(`C:\\Music\\banger${FIXED_BY_SD_MARK} 2.wav`)).toBe(
+      'banger',
+    );
+    const cands = sourcePathCandidatesFromSdSibling(
+      `C:\\Music\\banger${FIXED_BY_SD_MARK}.wav`,
+    );
+    expect(cands.some((p) => p.endsWith('banger.mp3'))).toBe(true);
+
+    const exists = (p: string) => p.endsWith(`${FIXED_BY_SD_MARK}.wav`);
+    expect(overwriteSiblingWavPath('C:\\Music\\banger.mp3', 'fixed', exists)).toBe(
+      `C:\\Music\\banger${FIXED_BY_SD_MARK}.wav`,
+    );
+    const onlyBump = (p: string) => p.includes(`${FIXED_BY_SD_MARK} 2.wav`);
+    expect(overwriteSiblingWavPath('C:\\Music\\banger.mp3', 'fixed', onlyBump)).toBe(
+      `C:\\Music\\banger${FIXED_BY_SD_MARK} 2.wav`,
+    );
   });
 
   it('normalizeChannelsTowardLufs applies gain and respects peak', () => {

@@ -91,17 +91,19 @@ Select a **track**, then:
 | **Title** / **Artist** | Edit how the track shows in the list (saved in the library DB; file name unchanged) |
 | **Check MP3** | See if a damaged MP3 plays short |
 | **Fixer preset** | Gentle / Normal / Aggressive — sets seam fade, trim, and de-click |
-| **Fade / Trim / De-click** | Fine-tune stitch healing; Preview and Write use the same settings |
-| **Preview fix** | **Phones only** — hear the resilient decode before writing. Not on booth/master |
+| **Fade / Trim / De-click** | Fine-tune stitch healing; Preview and Write use the same settings. De-click heals mid-track ticks (adaptive + impulse) |
+| **Preview fix** | **Phones only** — hear the resilient decode before writing. Works on an MP3 or an existing Fixed/Normalized sibling (uses the source MP3). Not on booth/master |
 | **Write fixed WAV** | Makes a **new** fixed file next to it (`… (Fixed by SD).wav`). Original never changed |
+| **Rewrite fixed** | Overwrites the existing Fixed sibling with current knobs (no ` 2.wav` litter). Source MP3 untouched |
 | **Preview normalize** | **Phones only** — hear loudness normalize (after **Detect**). Separate from fix preview — not both at once |
 | **Write normalized** | Makes a **new** file (`… (Normalized by SD).wav`) toward the auto-gain LUFS target. Original never changed |
+| **Rewrite normalized** | Overwrites the existing Normalized sibling. Source untouched |
 | **Stop preview** | Ends whichever phones preview is running |
 | **Delete SD WAV** | Remove the selected Fixed/Normalized sibling from disk (confirm). Originals stay |
 | **Purge SD WAVs…** | Delete all Fixed/Normalized siblings in the open folder (or whole library if none) |
-
-**Right-click** a track → **Click & squeak fixer…** selects it, jumps to these tools (switches to Library if you were in Performance), and runs Check for MP3s. Same menu has Check / Preview / Write / Delete SD WAV / Load A / Load B.
 | **Camelot** | Set the key yourself, or clear with `—` |
+
+**Right-click** a track → **Click & squeak fixer…** selects it, jumps to these tools (switches to Library if you were in Performance), and runs Check for MP3s. Same menu has Check / Preview / Write / **Rewrite** / Delete SD WAV / Load A / Load B.
 
 Fixes are remembered next time.
 

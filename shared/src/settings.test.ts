@@ -57,12 +57,12 @@ describe('settings schema', () => {
       library: libWithout as Settings['library'],
     });
     expect(merged.library.fixer.preset).toBe('normal');
-    expect(merged.library.fixer.declick).toBe('off');
+    expect(merged.library.fixer.declick).toBe('light');
     expect(parseSettings(merged).ok).toBe(true);
   });
 
   it('fixerKnobsForPreset and msToSamples', () => {
-    expect(fixerKnobsForPreset('aggressive').declick).toBe('light');
+    expect(fixerKnobsForPreset('aggressive').declick).toBe('strong');
     expect(fixerKnobsForPreset('gentle').seamFadeMs).toBeGreaterThan(
       fixerKnobsForPreset('normal').seamFadeMs,
     );

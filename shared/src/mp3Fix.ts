@@ -91,6 +91,60 @@ export function isSdSiblingWavPath(filePath: string): boolean {
   return base.includes(FIXED_BY_SD_MARK) || base.includes(NORMALIZED_BY_SD_MARK);
 }
 
+/**
+ * Strip `(Fixed|Normalized by SD)` (+ optional ` 2` bump) from a sibling WAV basename.
+ * Returns original stem for guessing the source file, or null if not an SD sibling.
+ */
+export function sourceStemFromSdSiblingPath(filePath: string): string | null {
+  if (!isSdSiblingWavPath(filePath)) return null;
+  const base = splitPath(filePath).base;
+  let stem = base.replace(/\.wav$/i, '');
+  stem = stem.replace(/ \d+$/, '');
+  if (stem.endsWith(FIXED_BY_SD_MARK)) {
+    return stem.slice(0, -FIXED_BY_SD_MARK.length);
+  }
+  if (stem.endsWith(NORMALIZED_BY_SD_MARK)) {
+    return stem.slice(0, -NORMALIZED_BY_SD_MARK.length);
+  }
+  const fi = stem.indexOf(FIXED_BY_SD_MARK);
+  if (fi >= 0) return stem.slice(0, fi);
+  const ni = stem.indexOf(NORMALIZED_BY_SD_MARK);
+  if (ni >= 0) return stem.slice(0, ni);
+  return null;
+}
+
+/** Candidate source paths next to an SD sibling (existence checked by caller). */
+export function sourcePathCandidatesFromSdSibling(sdPath: string): string[] {
+  const stem = sourceStemFromSdSiblingPath(sdPath);
+  if (stem == null) return [];
+  const { dir } = splitPath(sdPath);
+  const exts = ['.mp3', '.MP3', '.flac', '.FLAC', '.wav', '.WAV'];
+  return exts.map((ext) => joinPath(dir, `${stem}${ext}`));
+}
+
+/**
+ * Destination for overwrite rewrite: prefer existing sibling (canonical, then ` 2`…),
+ * else canonical path (will be created).
+ */
+export function overwriteSiblingWavPath(
+  originalPath: string,
+  kind: SiblingWavKind,
+  exists: (p: string) => boolean,
+): string {
+  const canonical =
+    kind === 'normalized'
+      ? normalizedSiblingWavPath(originalPath)
+      : fixedSiblingWavPath(originalPath);
+  if (exists(canonical)) return canonical;
+  const { dir, base } = splitPath(canonical);
+  const stem = base.endsWith('.wav') ? base.slice(0, -4) : base;
+  for (let n = 2; n < 1000; n++) {
+    const candidate = joinPath(dir, `${stem} ${n}.wav`);
+    if (exists(candidate)) return candidate;
+  }
+  return canonical;
+}
+
 /** Peak of |samples| across channels. */
 export function peakAbsChannels(channelData: Float32Array[]): number {
   let peak = 0;

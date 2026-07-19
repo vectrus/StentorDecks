@@ -5,6 +5,18 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-20 — Ship 0.2.11: Rewrite SD siblings + stronger de-click
+
+Booth polish since 0.2.10: **Rewrite fixed** / **Rewrite normalized** overwrite existing SD sibling WAVs with current knobs (no ` 2.wav` litter); selecting a sibling resolves to the source MP3 for Preview/Write/Rewrite. Stronger de-click (RMS-adaptive + spike/accel heal; Aggressive = multi-pass). Source music never touched. R5.9, docs/07.
+
+---
+
+## 2026-07-19 — Prep: Rewrite SD siblings + stronger de-click (R5.9)
+
+**Rewrite fixed** / **Rewrite normalized** overwrite the existing `(Fixed by SD)` / `(Normalized by SD)` WAV with current knobs (no ` 2.wav` litter); source music still never touched. Selecting a sibling resolves to the original for Preview/Write/Rewrite. De-click improved: RMS-adaptive threshold, single-sample spike + acceleration gates, wider strong multi-pass heal. R5.9, docs/07.
+
+---
+
 ## 2026-07-19 — Ship 0.2.10: Fixer knobs, SD WAV purge, title/artist, update toggles
 
 Booth polish since 0.2.9: Library fixer presets (Gentle/Normal/Aggressive) + seam fade/trim + de-click; **Delete SD WAV** / **Purge SD WAVs** for StentorDeck siblings only; title/artist edit in DB (no disk rename); Settings → Updates **Check on launch** + **Download automatically**. R5.1, R5.9, R5.10, R1.1.
