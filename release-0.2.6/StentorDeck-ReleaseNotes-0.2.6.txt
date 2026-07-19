@@ -1,0 +1,20 @@
+StentorDeck 0.2.6
+Installer: StentorDeck-Setup-0.2.6.exe
+Date: 2026-07-19
+
+Install over your current build. Library, settings, and MIDI map stay in %APPDATA%.
+
+What's new
+-----------
+2026-07-19 - Ship 0.2.6: VU / folder scroll / shared FX AMT
+Booth polish since 0.2.5: channel VU peaking tip + red when hot, PFL shows pre-fader levels for gain match; left folder tree scrolls selection into view + sticky folder name; while FLANGER is on, AMT also drives wet (both pads -> shared amount). R7.6, R2.8, R5.3, R3.1.
+
+How to update
+-------------
+- Run StentorDeck-Setup-0.2.6.exe, or use Settings > Updates > Check for updates (needs latest.yml on GitHub).
+- Open StentorDeck from the desktop shortcut (not only the source .bat).
+
+Notes
+-----
+- Builds are unsigned - Windows SmartScreen may warn once.
+- Auto-update requires a full GitHub Release with latest.yml (not Setup.exe alone).
