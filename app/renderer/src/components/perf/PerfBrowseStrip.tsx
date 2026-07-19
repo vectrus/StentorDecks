@@ -8,7 +8,10 @@ import {
   type TrackContextTarget,
 } from '../browse/TrackContextMenu';
 import { FolderTree } from '../prep/FolderTree';
-import { setLibraryTrackDragData } from '../../library/libraryTrackDrag';
+import {
+  clearLibraryTrackDrag,
+  setLibraryTrackDragData,
+} from '../../library/libraryTrackDrag';
 import { fmtBpm, fmtDur } from '../prep/fmt';
 
 /** Row height matches R7.1 (≥42 px) — keep in sync with `.perf-row` in perf.css. */
@@ -130,6 +133,7 @@ export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
                     libraryStore.selectIndex(index);
                     setLibraryTrackDragData(e.dataTransfer, entry.track.id);
                   }}
+                  onDragEnd={() => clearLibraryTrackDrag()}
                   onClick={() => libraryStore.selectIndex(index)}
                   onDoubleClick={() => {
                     libraryStore.selectIndex(index);

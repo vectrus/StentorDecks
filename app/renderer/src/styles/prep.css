@@ -336,6 +336,8 @@
 
 .prep-row[draggable='true'] {
   cursor: grab;
+  -webkit-user-drag: element;
+  user-select: none;
 }
 
 .prep-row[draggable='true']:active {

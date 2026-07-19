@@ -115,6 +115,11 @@
 .perf-wave.overview.scrubbable {
   cursor: ew-resize;
   touch-action: none;
+  /* Canvas is a child — keep hit-testing on the drop/scrub wrapper. */
+}
+
+.perf-wave-drop.scrubbable .perf-wave.detail {
+  pointer-events: none;
 }
 
 .perf-wave-drop.scrubbing,
@@ -965,6 +970,8 @@
 
 .perf-row[draggable='true'] {
   cursor: grab;
+  -webkit-user-drag: element;
+  user-select: none;
 }
 
 .perf-row[draggable='true']:active {

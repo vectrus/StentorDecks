@@ -8,7 +8,10 @@ import {
   TrackContextMenu,
   type TrackContextTarget,
 } from '../browse/TrackContextMenu';
-import { setLibraryTrackDragData } from '../../library/libraryTrackDrag';
+import {
+  clearLibraryTrackDrag,
+  setLibraryTrackDragData,
+} from '../../library/libraryTrackDrag';
 import { fmtBpm, fmtDur } from './fmt';
 
 /** docs/06 — browser row 42 px at 16 px type */
@@ -139,6 +142,7 @@ const BrowseRow = observer(function BrowseRow(props: {
         libraryStore.selectIndex(index);
         setLibraryTrackDragData(e.dataTransfer, entry.track.id);
       }}
+      onDragEnd={() => clearLibraryTrackDrag()}
       onClick={() => libraryStore.selectIndex(index)}
       onDoubleClick={() => {
         libraryStore.selectIndex(index);

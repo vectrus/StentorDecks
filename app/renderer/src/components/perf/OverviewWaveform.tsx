@@ -1,23 +1,17 @@
 import { observer } from 'mobx-react-lite';
-import {
-  useEffect,
-  useRef,
-  useState,
-  type PointerEvent as ReactPointerEvent,
-} from 'react';
+import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react';
 import type { DeckStore } from '../../stores/DeckStore';
 import { registerFrameDraw } from '../../audio/frameClock';
 import { drawOverviewWaveform } from '../../waveform/drawOverview';
 import { overviewNormAtX } from '../../waveform/waveformScrub';
+import { isLibraryTrackDrag } from '../../library/libraryTrackDrag';
 
 type Props = {
   deck: DeckStore;
   accent: 'a' | 'b';
 };
 
-type ScrubSession = {
-  pointerId: number;
-};
+type ScrubSession = { pointerId: number };
 
 function token(name: string, fallback: string): string {
   if (typeof document === 'undefined') return fallback;
@@ -26,15 +20,15 @@ function token(name: string, fallback: string): string {
 }
 
 /**
- * Overview strip — canvas from typed array (docs/05 / E6).
- * Click / drag seeks (mouse jog substitute, R1.5). Double-click sets cue when paused.
+ * Overview strip — native pointer scrub (no setState mid-gesture). R1.5.
  */
 export const OverviewWaveform = observer(function OverviewWaveform({ deck, accent }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scrubRef = useRef<ScrubSession | null>(null);
+  const deckRef = useRef(deck);
+  deckRef.current = deck;
   const overview = deck.overviewWaveform;
   const empty = deck.state === 'empty';
-  const [scrubbing, setScrubbing] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -56,12 +50,13 @@ export const OverviewWaveform = observer(function OverviewWaveform({ deck, accen
         canvas.width = pw;
         canvas.height = ph;
       }
-      const blob = deck.overviewWaveform;
-      if (blob && deck.state !== 'empty' && deck.duration > 0) {
-        const pos = deck.visualPosSec;
-        const progress = Math.min(1, Math.max(0, pos / deck.duration));
-        const cueNorm = Math.min(1, Math.max(0, deck.cueOffset / deck.duration));
-        const remaining = Math.max(0, deck.duration - pos);
+      const d = deckRef.current;
+      const blob = d.overviewWaveform;
+      if (blob && d.state !== 'empty' && d.duration > 0) {
+        const pos = d.visualPosSec;
+        const progress = Math.min(1, Math.max(0, pos / d.duration));
+        const cueNorm = Math.min(1, Math.max(0, d.cueOffset / d.duration));
+        const remaining = Math.max(0, d.duration - pos);
         drawOverviewWaveform(ctx, blob, {
           width: pw,
           height: ph,
@@ -77,55 +72,75 @@ export const OverviewWaveform = observer(function OverviewWaveform({ deck, accen
     };
 
     return registerFrameDraw(draw);
-  }, [deck, accent, overview, empty]);
+  }, [accent, overview, empty]);
 
-  function seekAtClientX(clientX: number, micro: boolean): void {
+  useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || deck.state === 'empty' || deck.duration <= 0) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = overviewNormAtX(clientX, rect);
-    deck.seek(x * deck.duration, { micro });
-  }
+    if (!canvas) return;
 
-  function onPointerDown(e: ReactPointerEvent<HTMLCanvasElement>): void {
-    if (empty || deck.duration <= 0 || e.button !== 0) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    scrubRef.current = { pointerId: e.pointerId };
-    setScrubbing(true);
-    seekAtClientX(e.clientX, deck.state === 'playing');
-  }
+    const seekAt = (clientX: number, micro: boolean) => {
+      const d = deckRef.current;
+      if (d.state === 'empty' || d.duration <= 0) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = overviewNormAtX(clientX, rect);
+      d.seek(x * d.duration, { micro });
+    };
 
-  function onPointerMove(e: ReactPointerEvent<HTMLCanvasElement>): void {
-    const s = scrubRef.current;
-    if (!s || s.pointerId !== e.pointerId) return;
-    seekAtClientX(e.clientX, true);
-  }
+    const onPointerDown = (e: PointerEvent) => {
+      const d = deckRef.current;
+      if (d.state === 'empty' || d.duration <= 0 || e.button !== 0) return;
+      if (isLibraryTrackDrag()) return;
+      e.preventDefault();
+      canvas.setPointerCapture(e.pointerId);
+      scrubRef.current = { pointerId: e.pointerId };
+      canvas.classList.add('scrubbing');
+      seekAt(e.clientX, d.state === 'playing');
+    };
 
-  function endScrub(e: ReactPointerEvent<HTMLCanvasElement>): void {
-    const s = scrubRef.current;
-    if (!s || s.pointerId !== e.pointerId) return;
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-      /* ignore */
-    }
-    scrubRef.current = null;
-    setScrubbing(false);
-  }
+    const onPointerMove = (e: PointerEvent) => {
+      const s = scrubRef.current;
+      if (!s || s.pointerId !== e.pointerId) return;
+      seekAt(e.clientX, true);
+    };
 
-  function onDoubleClick(e: React.MouseEvent<HTMLCanvasElement>): void {
-    if (empty || deck.duration <= 0) return;
-    seekAtClientX(e.clientX, false);
-    if (deck.state !== 'playing') {
-      deck.setCueAtPlayhead();
-    }
+    const endScrub = (e: PointerEvent) => {
+      const s = scrubRef.current;
+      if (!s || s.pointerId !== e.pointerId) return;
+      try {
+        canvas.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      scrubRef.current = null;
+      canvas.classList.remove('scrubbing');
+    };
+
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerup', endScrub);
+    canvas.addEventListener('pointercancel', endScrub);
+    return () => {
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointerup', endScrub);
+      canvas.removeEventListener('pointercancel', endScrub);
+    };
+  }, []);
+
+  function onDoubleClick(e: ReactMouseEvent<HTMLCanvasElement>): void {
+    const d = deck;
+    if (d.state === 'empty' || d.duration <= 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = overviewNormAtX(e.clientX, rect);
+    d.seek(x * d.duration, { micro: false });
+    if (d.state !== 'playing') d.setCueAtPlayhead();
   }
 
   return (
     <canvas
       className={`perf-wave overview accent-${accent}${empty ? ' empty' : ''}${
         overview ? '' : ' pending'
-      }${scrubbing ? ' scrubbing' : ''}${!empty ? ' scrubbable' : ''}`}
+      }${!empty ? ' scrubbable' : ''}`}
       ref={canvasRef}
       role="img"
       aria-label={
@@ -133,10 +148,6 @@ export const OverviewWaveform = observer(function OverviewWaveform({ deck, accen
           ? `Deck ${deck.id} empty`
           : `Deck ${deck.id} overview — drag to seek, double-click sets cue when paused`
       }
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={endScrub}
-      onPointerCancel={endScrub}
       onDoubleClick={onDoubleClick}
     />
   );

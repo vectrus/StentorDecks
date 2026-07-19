@@ -1,5 +1,5 @@
 import { observer } from 'mobx-react-lite';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { type ControlId } from '@stentordeck/shared';
 import { useWheelNudge01 } from '../../hooks/useWheelNudge01';
 import type { DeckStore } from '../../stores/DeckStore';
@@ -43,8 +43,8 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
   const wetPickup = midiStore.takeoverView(wetId);
   const syncLit = deck.syncArmed || deck.phaseGluePartner != null;
   const [loadFlash, setLoadFlash] = useState(false);
-  const pitchRef = useRef<HTMLDivElement>(null);
-  useWheelNudge01(pitchRef, deck.pitchPos, (v) => deck.setPitchPos(v), !empty);
+  const [pitchEl, setPitchEl] = useState<HTMLDivElement | null>(null);
+  useWheelNudge01(pitchEl, deck.pitchPos, (v) => deck.setPitchPos(v), !empty);
 
   useEffect(() => {
     if (!loadFlash) return;
@@ -90,7 +90,7 @@ export const PerfDeckMini = observer(function PerfDeckMini(props: {
       <OverviewWaveform deck={deck} accent={accent} />
 
       <div
-        ref={pitchRef}
+        ref={setPitchEl}
         className="perf-pitch-strip"
         role="slider"
         aria-valuemin={0}

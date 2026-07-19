@@ -1,6 +1,6 @@
 /** Vertical-drag rotary control (mouse / touch / keyboard). Double-click resets to `reset`. */
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useWheelNudge01 } from '../../hooks/useWheelNudge01';
 
 export function PerfKnob(props: {
@@ -32,15 +32,15 @@ export function PerfKnob(props: {
   const showPickup = pickup != null && Number.isFinite(pickup);
   const hwAngle = showPickup ? (pickup! - 0.5) * 270 : 0;
   const drag = useRef<{ startY: number; startVal: number } | null>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  useWheelNudge01(btnRef, value, onChange, !disabled);
+  const [btnEl, setBtnEl] = useState<HTMLButtonElement | null>(null);
+  useWheelNudge01(btnEl, value, onChange, !disabled);
 
   const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
   return (
     <div className={`perf-knob-wrap size-${size}${className ? ` ${className}` : ''}`}>
       <button
-        ref={btnRef}
+        ref={setBtnEl}
         type="button"
         className={`perf-knob size-${size}${showPickup ? ' pickup' : ''}`}
         style={{ ['--knob-angle' as string]: `${angle}deg` }}

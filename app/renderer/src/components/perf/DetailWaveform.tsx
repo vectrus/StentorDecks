@@ -5,7 +5,6 @@ import {
   useState,
   type DragEvent,
   type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
 } from 'react';
 import type { DeckStore } from '../../stores/DeckStore';
 import { settingsStore } from '../../stores/SettingsStore';
@@ -42,21 +41,20 @@ function token(name: string, fallback: string): string {
 }
 
 /**
- * Scrolling detail strip — fixed center playhead via CSS; canvas scrolls under it.
- * Drawn from the shared frame clock (same rAF as transport tick). R7.5 / E7.
- * Mouse: drag scrub / click seek (jog substitute, R1.5); double-click sets cue when paused.
- * Drop library tracks to load (R4.1) — blocked while playing (R4.2).
+ * Detail waveform — scrub (native pointer, no React setState mid-gesture) +
+ * library drop-to-load. R7.5 / R1.5 / R4.1 / R4.2.
  */
 export const DetailWaveform = observer(function DetailWaveform({ deck, accent }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const scrubRef = useRef<ScrubSession | null>(null);
+  const deckRef = useRef(deck);
+  deckRef.current = deck;
   const detail = deck.detailWaveform;
   const empty = deck.state === 'empty';
   const playing = deck.state === 'playing';
   const showTicks = settingsStore.settings.ui.showBeatTicks;
   const [dragOver, setDragOver] = useState(false);
-  const [scrubbing, setScrubbing] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -78,20 +76,21 @@ export const DetailWaveform = observer(function DetailWaveform({ deck, accent }:
         canvas.width = pw;
         canvas.height = ph;
       }
-      const blob = deck.detailWaveform;
-      if (blob && deck.state !== 'empty' && deck.duration > 0) {
-        const rate = Math.min(4, Math.max(0.25, deck.pitchOnlyRate || 1));
+      const d = deckRef.current;
+      const blob = d.detailWaveform;
+      if (blob && d.state !== 'empty' && d.duration > 0) {
+        const rate = Math.min(4, Math.max(0.25, d.pitchOnlyRate || 1));
         drawDetailWaveform(ctx, blob, {
           width: pw,
           height: ph,
-          positionSec: deck.visualPosSec,
-          durationSec: deck.duration,
-          cueOffsetSec: deck.cueOffset,
-          detailPps: deck.detailPps || 50,
+          positionSec: d.visualPosSec,
+          durationSec: d.duration,
+          cueOffsetSec: d.cueOffset,
+          detailPps: d.detailPps || 50,
           accent: accentCss,
           tickColor: tickCss,
-          gridBpm: deck.fileBpm,
-          beatGridOffsetSec: deck.beatGridOffsetSec,
+          gridBpm: d.fileBpm,
+          beatGridOffsetSec: d.beatGridOffsetSec,
           showBeatTicks: settingsStore.settings.ui.showBeatTicks,
           devicePixelRatio: dpr,
           halfWindowSec: DETAIL_HALF_WINDOW_SEC * rate,
@@ -102,78 +101,94 @@ export const DetailWaveform = observer(function DetailWaveform({ deck, accent }:
     };
 
     return registerFrameDraw(draw);
-  }, [deck, accent, detail, empty, showTicks]);
+  }, [accent, detail, empty, showTicks]);
 
-  function halfWin(): number {
-    return detailHalfWindowSec(deck.pitchOnlyRate);
-  }
-
-  function seekAtClientX(clientX: number, micro: boolean): void {
-    const el = wrapRef.current;
-    if (!el || deck.state === 'empty' || deck.duration <= 0) return;
-    const rect = el.getBoundingClientRect();
-    const t = detailTimeAtX(clientX, rect, deck.visualPosSec, halfWin());
-    deck.seek(t, { micro });
-  }
-
-  function onPointerDown(e: ReactPointerEvent): void {
-    if (empty || deck.duration <= 0 || e.button !== 0) return;
-    // Don't steal library HTML5 drags — those use drag events, not primary scrub.
-    e.currentTarget.setPointerCapture(e.pointerId);
-    scrubRef.current = {
-      pointerId: e.pointerId,
-      lastX: e.clientX,
-      startX: e.clientX,
-      startY: e.clientY,
-      moved: false,
-    };
-    setScrubbing(true);
-  }
-
-  function onPointerMove(e: ReactPointerEvent): void {
-    const s = scrubRef.current;
-    if (!s || s.pointerId !== e.pointerId) return;
+  // Native pointer scrub — avoid React setState on pointerdown (breaks capture).
+  useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const dx = e.clientX - s.startX;
-    const dy = e.clientY - s.startY;
-    if (!s.moved && dx * dx + dy * dy > 9) s.moved = true;
-    if (!s.moved) return;
-    const rect = el.getBoundingClientRect();
-    const dSec = (e.clientX - s.lastX) * detailSecPerPx(rect.width, halfWin());
-    s.lastX = e.clientX;
-    // Drag right → earlier time under fixed playhead (jog-like).
-    deck.seek(deck.position - dSec, { micro: true });
-  }
 
-  function endScrub(e: ReactPointerEvent): void {
-    const s = scrubRef.current;
-    if (!s || s.pointerId !== e.pointerId) return;
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-      /* already released */
-    }
-    if (!s.moved) {
-      // Click: put that sample under the playhead.
-      seekAtClientX(e.clientX, playing);
-    }
-    scrubRef.current = null;
-    setScrubbing(false);
-  }
+    const halfWin = () => detailHalfWindowSec(deckRef.current.pitchOnlyRate);
+
+    const onPointerDown = (e: PointerEvent) => {
+      const d = deckRef.current;
+      if (d.state === 'empty' || d.duration <= 0 || e.button !== 0) return;
+      // Don't start scrub while a library HTML5 drag is active.
+      if (isLibraryTrackDrag()) return;
+      e.preventDefault();
+      el.setPointerCapture(e.pointerId);
+      scrubRef.current = {
+        pointerId: e.pointerId,
+        lastX: e.clientX,
+        startX: e.clientX,
+        startY: e.clientY,
+        moved: false,
+      };
+      el.classList.add('scrubbing');
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      const s = scrubRef.current;
+      if (!s || s.pointerId !== e.pointerId) return;
+      const d = deckRef.current;
+      const dx = e.clientX - s.startX;
+      const dy = e.clientY - s.startY;
+      if (!s.moved && dx * dx + dy * dy > 9) s.moved = true;
+      if (!s.moved) return;
+      const rect = el.getBoundingClientRect();
+      const dSec = (e.clientX - s.lastX) * detailSecPerPx(rect.width, halfWin());
+      s.lastX = e.clientX;
+      d.seek(d.position - dSec, { micro: true });
+    };
+
+    const endScrub = (e: PointerEvent) => {
+      const s = scrubRef.current;
+      if (!s || s.pointerId !== e.pointerId) return;
+      try {
+        el.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      const d = deckRef.current;
+      if (!s.moved && d.state !== 'empty' && d.duration > 0) {
+        const rect = el.getBoundingClientRect();
+        const t = detailTimeAtX(e.clientX, rect, d.visualPosSec, halfWin());
+        d.seek(t, { micro: d.state === 'playing' });
+      }
+      scrubRef.current = null;
+      el.classList.remove('scrubbing');
+    };
+
+    el.addEventListener('pointerdown', onPointerDown);
+    el.addEventListener('pointermove', onPointerMove);
+    el.addEventListener('pointerup', endScrub);
+    el.addEventListener('pointercancel', endScrub);
+    return () => {
+      el.removeEventListener('pointerdown', onPointerDown);
+      el.removeEventListener('pointermove', onPointerMove);
+      el.removeEventListener('pointerup', endScrub);
+      el.removeEventListener('pointercancel', endScrub);
+    };
+  }, []);
 
   function onDoubleClick(e: ReactMouseEvent): void {
-    if (empty || deck.duration <= 0) return;
-    seekAtClientX(e.clientX, false);
-    // Pause path: set cue at the new playhead (R2.10 / R1.5 — no jog needed).
-    if (deck.state !== 'playing') {
-      deck.setCueAtPlayhead();
-    }
+    const d = deck;
+    if (d.state === 'empty' || d.duration <= 0) return;
+    const el = wrapRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const t = detailTimeAtX(
+      e.clientX,
+      rect,
+      d.visualPosSec,
+      detailHalfWindowSec(d.pitchOnlyRate),
+    );
+    d.seek(t, { micro: false });
+    if (d.state !== 'playing') d.setCueAtPlayhead();
   }
 
   function onDragOver(e: DragEvent): void {
     if (!isLibraryTrackDrag(e.dataTransfer)) return;
-    // R4.2: playing deck is not a drop target (no-drop cursor).
     if (playing) {
       e.dataTransfer.dropEffect = 'none';
       e.preventDefault();
@@ -195,7 +210,6 @@ export const DetailWaveform = observer(function DetailWaveform({ deck, accent }:
     e.preventDefault();
     e.stopPropagation();
     setDragOver(false);
-    // R4.2 — never load into a playing channel (also guarded in loadTrackId).
     if (playing || deck.state === 'playing') {
       libraryStore.rejectLoad(`Deck ${deck.id} is playing — pause first`);
       return;
@@ -212,16 +226,10 @@ export const DetailWaveform = observer(function DetailWaveform({ deck, accent }:
       ref={wrapRef}
       className={`perf-wave-drop accent-${accent}${empty ? ' empty' : ''}${
         dragOver ? ' over' : ''
-      }${playing ? ' locked' : ''}${scrubbing ? ' scrubbing' : ''}${
-        !empty ? ' scrubbable' : ''
-      }`}
+      }${playing ? ' locked' : ''}${!empty ? ' scrubbable' : ''}`}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={endScrub}
-      onPointerCancel={endScrub}
       onDoubleClick={onDoubleClick}
     >
       <canvas

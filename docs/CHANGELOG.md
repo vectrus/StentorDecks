@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-20 — Ship 0.2.13: Mouse load/scrub/fader scroll (actually in the installer)
+
+Fixes that only lived in source until now: library drag→waveform load (Electron MIME session), waveform scrub without broken pointer capture, channel/pitch fader + knob scroll via non-passive wheel. Install this build — restarting the old AppData install cannot pick up repo edits. R1.5, R4.1, R4.2, R2.2.
+
+---
+
 ## 2026-07-20 — Waveform mouse scrub + cue (R2.2 / R1.5)
 
 Drag or click the detail/overview waveform to move the playhead (jog substitute when no controller). Double-click while paused sets the cue at that position. R2.2, R2.10, R1.5.

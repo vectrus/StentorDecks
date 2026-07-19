@@ -1,14 +1,14 @@
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useRef } from 'react';
 
 const STEP = 0.03;
 
 /**
  * Scroll-wheel nudge for 0..1 controls (knobs / faders).
- * Uses a non-passive native listener — React's onWheel is often passive, so
- * preventDefault is ignored and the gesture can be swallowed by a parent scroller.
+ * Pass the DOM node (callback-ref state), not only a RefObject — so the
+ * listener attaches after mount. Non-passive so preventDefault works.
  */
 export function useWheelNudge01(
-  ref: RefObject<HTMLElement | null>,
+  element: HTMLElement | null,
   value: number,
   onChange: (v: number) => void,
   enabled = true,
@@ -19,8 +19,8 @@ export function useWheelNudge01(
   onChangeRef.current = onChange;
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el || !enabled) return;
+    if (!element || !enabled) return;
+
     const onWheel = (e: WheelEvent) => {
       const dominant =
         Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
@@ -33,7 +33,8 @@ export function useWheelNudge01(
       );
       onChangeRef.current(next);
     };
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, [enabled]);
+
+    element.addEventListener('wheel', onWheel, { passive: false });
+    return () => element.removeEventListener('wheel', onWheel);
+  }, [element, enabled]);
 }
