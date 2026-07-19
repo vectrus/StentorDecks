@@ -1,13 +1,14 @@
 # Run from source on macOS (unsupported / DIY)
 
-StentorDeck’s **supported product** is Windows + Hercules DJConsole RMX2
-([R1.1](../01-requirements.md)). There is **no** official Mac installer, no
-notarized `.dmg`, and no promise that Plan A audio or RMX2 LEDs work on macOS.
+> **This is not a DJ booth guide.**  
+> Normal users: install the **Windows** app. Mac DJs: there is no supported Mac product yet.  
+> This page is for developers who want to poke at the source on a Mac.
 
-If you have a Mac and want to **try the source yourself**, this page is for you.
-You are on your own for Gatekeeper, drivers, and audio routing. Pull requests
-that improve Mac ergonomics are welcome **only if they do not regress the
-Windows RMX2 booth path**.
+StentorDeck’s **supported product** is Windows + Hercules DJConsole RMX2.
+There is **no** official Mac installer and no promise that 4-channel RMX2 audio or LEDs work on macOS.
+
+If you have a Mac and want to **try the source yourself**, keep reading.
+You are on your own for Gatekeeper, drivers, and audio routing.
 
 ## What you need
 

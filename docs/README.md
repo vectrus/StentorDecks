@@ -38,7 +38,7 @@ Explicitly out of scope for v1: scratching, keylock/master tempo, recording, hot
 | [`mockups/`](./mockups/MOCKUPS.md) | Approved HTML mockups (design contract for E2/E6) |
 | [`screenshots/`](./screenshots/README.md) | Live-app PNGs for README + website (`manifest.json`, `npm run docs:screenshots`) |
 | [`playwright/`](./playwright/README.md) | Doc screenshot Playwright suite |
-| [`guides/`](./guides/README.md) | Operator guides (Library, updating, …) + DIY macOS from source |
+| [`guides/`](./guides/README.md) | **DJ how-tos** (Help + website For DJs). Specs `01`–`07` = developers only. |
 
 ## Repository layout (this spec)
 

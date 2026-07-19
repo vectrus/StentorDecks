@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { resolveHelpImageSrc } from './helpScreenshots';
 
 /** Tiny markdown subset for operator guides — no new dependency. */
 function inline(text: string): ReactNode[] {
@@ -62,6 +63,23 @@ export function RenderMarkdown(props: { source: string }): ReactNode {
 
     if (line.trim() === '---') {
       out.push(<hr key={k++} />);
+      i += 1;
+      continue;
+    }
+
+    const imgLine = line.trim().match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
+    if (imgLine) {
+      const alt = imgLine[1] ?? '';
+      const href = imgLine[2] ?? '';
+      const src = resolveHelpImageSrc(href);
+      if (src) {
+        out.push(
+          <figure key={k++} className="help-figure">
+            <img className="help-img" src={src} alt={alt} loading="lazy" />
+            {alt ? <figcaption className="help-figcap">{alt}</figcaption> : null}
+          </figure>,
+        );
+      }
       i += 1;
       continue;
     }

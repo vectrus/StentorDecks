@@ -1,84 +1,121 @@
 {
   "generatedBy": "npm run docs:screenshots",
   "suite": "docs/playwright/app-screenshots.spec.ts",
+  "rawBase": "https://raw.githubusercontent.com/vectrus/StentorDecks/main/docs/screenshots/",
   "images": [
     {
       "file": "01-performance-mode.png",
       "id": "performance",
-      "caption": "Performance mode — decks, waveforms, mixer, library",
-      "tags": ["hero", "performance", "mixer"]
+      "caption": "Performance mode — two decks, scrolling waveforms, central mixer",
+      "alt": "StentorDecks performance mode: two decks with scrolling beatmatched waveforms and a central mixer",
+      "tags": ["hero", "performance", "mixer"],
+      "website": true,
+      "websiteFull": true,
+      "websiteOrder": 1
     },
     {
       "file": "02-prep-mode.png",
       "id": "library",
-      "caption": "Library mode — folder tree + track list",
-      "tags": ["library", "prep"]
+      "caption": "Library mode — dual-pane browsing, BPM & key on every track",
+      "alt": "StentorDecks library mode with dual-pane music library browser showing BPM and key columns",
+      "tags": ["library", "prep"],
+      "website": true,
+      "websiteOrder": 2
+    },
+    {
+      "file": "05-mixer-column.png",
+      "id": "mixer",
+      "caption": "Mixer column — faders, EQ, VU metering with peak hold",
+      "alt": "StentorDecks mixer column with channel faders, EQ and VU meters",
+      "tags": ["mixer", "detail"],
+      "website": true,
+      "websiteOrder": 3
     },
     {
       "file": "03-audio-setup.png",
       "id": "audio",
-      "caption": "Audio setup — master / cue routing",
-      "tags": ["audio", "setup"]
+      "caption": "Audio setup — route master and headphones anywhere",
+      "alt": "StentorDecks audio setup screen for routing master and headphone outputs",
+      "tags": ["audio", "setup"],
+      "website": true,
+      "websiteOrder": 4
+    },
+    {
+      "file": "06-settings-faders-mixer.png",
+      "id": "settings-faders",
+      "caption": "Settings → Faders & mixer — channel curve, pitch, EQ (live)",
+      "alt": "StentorDecks settings: channel fader curves, pitch range, EQ and gain — applied live",
+      "tags": ["settings", "faders"],
+      "website": true,
+      "websiteFull": true,
+      "websiteOrder": 5
     },
     {
       "file": "04-help-panel.png",
       "id": "help",
       "caption": "In-app Help — searchable operator guides",
-      "tags": ["help", "support"]
+      "alt": "StentorDecks in-app Help panel with searchable guides",
+      "tags": ["help", "support"],
+      "website": true,
+      "websiteOrder": 6
     },
     {
-      "file": "05-mixer-column.png",
-      "id": "mixer",
-      "caption": "Mixer column close-up",
-      "tags": ["mixer", "detail"]
+      "file": "10-settings-midi.png",
+      "id": "settings-midi",
+      "caption": "Settings → MIDI — RMX2 factory map and community profiles",
+      "alt": "StentorDecks MIDI settings with controller profiles and Learn",
+      "tags": ["settings", "midi", "controllers"],
+      "website": true,
+      "websiteOrder": 7
     },
     {
-      "file": "06-settings-faders-mixer.png",
-      "id": "settings-faders",
-      "caption": "Settings → Faders & mixer (channel curve, pitch, EQ)",
-      "tags": ["settings", "faders"]
-    },
-    {
-      "file": "06-fader-curve-editor.png",
-      "id": "settings-faders-legacy",
-      "caption": "Settings → Faders & mixer (legacy filename)",
-      "tags": ["settings", "faders", "legacy"]
+      "file": "11-settings-updates.png",
+      "id": "settings-updates",
+      "caption": "Settings → Updates — GitHub Releases auto-update",
+      "alt": "StentorDecks updates settings checking GitHub Releases",
+      "tags": ["settings", "updates"],
+      "website": true,
+      "websiteOrder": 8
     },
     {
       "file": "07-settings-jog.png",
       "id": "settings-jog",
       "caption": "Settings → Jog feel",
-      "tags": ["settings", "jog"]
+      "alt": "StentorDecks jog feel settings",
+      "tags": ["settings", "jog"],
+      "website": false
     },
     {
       "file": "08-settings-library.png",
       "id": "settings-library",
       "caption": "Settings → Library",
-      "tags": ["settings", "library"]
+      "alt": "StentorDecks library settings for music roots and sort",
+      "tags": ["settings", "library"],
+      "website": false
     },
     {
       "file": "09-settings-display.png",
       "id": "settings-display",
       "caption": "Settings → Display",
-      "tags": ["settings", "display", "a11y"]
+      "alt": "StentorDecks display scale settings",
+      "tags": ["settings", "display", "a11y"],
+      "website": false
     },
     {
-      "file": "10-settings-midi.png",
-      "id": "settings-midi",
-      "caption": "Settings → MIDI / controllers",
-      "tags": ["settings", "midi", "controllers"]
-    },
-    {
-      "file": "11-settings-updates.png",
-      "id": "settings-updates",
-      "caption": "Settings → Updates (GitHub Releases)",
-      "tags": ["settings", "updates"]
+      "file": "06-fader-curve-editor.png",
+      "id": "settings-faders-legacy",
+      "caption": "Settings → Faders (legacy filename)",
+      "alt": "StentorDecks fader curve editor",
+      "tags": ["settings", "faders", "legacy"],
+      "website": false
     },
     {
       "file": "06-settings-faders-mixer-booth.png",
       "id": "settings-faders-booth",
-      "caption": "Settings → Faders (owner booth crop; not regenerated)",
-      "tags": ["settings", "faders", "booth"]
+      "caption": "Settings → Faders (owner booth crop)",
+      "alt": "StentorDecks settings faders from a booth laptop",
+      "tags": ["settings", "faders", "booth"],
+      "website": false
     }
   ]
 }

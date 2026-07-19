@@ -1,6 +1,7 @@
 # 05 — Library & analysis
 
-> **Operator how-to (plain language):** [`guides/prep-library.md`](./guides/prep-library.md) — what Prep’s library is and how to browse, load, and fix BPM/key.
+> **DJs: use the plain guide** — [`guides/prep-library.md`](./guides/prep-library.md) (Help → Library mode).  
+> This document is for developers (scanner identity, analysis pipeline, DB).
 
 ## Scanner (main process)
 

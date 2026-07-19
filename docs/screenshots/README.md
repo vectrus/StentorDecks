@@ -9,8 +9,13 @@ npm run docs:screenshots
 Suite: [`../playwright/app-screenshots.spec.ts`](../playwright/app-screenshots.spec.ts).
 Commit PNGs when UI changes in a user-visible way.
 
-These files are the **image pack** for the StentorDeck marketing / docs website:
-use stable filenames below; captions are website-ready.
+These files are the **shared image pack** for:
+
+- [stentordecks.com](https://stentordecks.com/) (`manifest.json` from GitHub)
+- **In-app Help** (Vite bundles `docs/screenshots/*.png`; guides use `![…](../screenshots/…)`)
+- README
+
+Set `"website": true` + `websiteOrder` on an image to show it on the homepage gallery.
 
 | File | Caption | Suggested use |
 |------|---------|----------------|

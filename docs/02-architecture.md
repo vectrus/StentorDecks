@@ -1,5 +1,9 @@
 # 02 — Architecture
 
+> **DJs: you can skip this file.**  
+> Booth how-tos live under [`guides/`](./guides/) (Help in the app, or **For DJs** on the website).  
+> This document is for developers (processes, IPC, routing plans).
+
 ## Process model
 
 ```

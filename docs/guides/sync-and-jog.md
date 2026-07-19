@@ -1,37 +1,40 @@
-# SYNC & jog
+# SYNC & jog wheels
 
-## SYNC (manual-first)
+![Settings — Jog feel](../screenshots/07-settings-jog.png)
 
-StentorDeck is built for **manual beatmatching**. SYNC helps, it does not replace ears.
+For DJs. Manual beatmatching first — SYNC helps, it does not replace your ears.
 
-1. Press **SYNC** on the deck you want as the **slave** (the other becomes master).  
-2. Tempo follows the master’s **pitch fader** BPM.  
-3. One-shot **beatgrid snap**, then soft phase assist while SYNC stays lit.  
-4. Press SYNC again to turn it off — **phase glue** holds your offset so the mix doesn’t jump.
+## SYNC
 
-Needs a **beatgrid** on both tracks. In Library: select track → **Detect**, then reload the deck.
+1. Press **SYNC** on the deck that should **follow** (the other deck is the master).  
+2. Tempo follows the master’s pitch fader.  
+3. Beats snap into place, then soft help while SYNC stays lit.  
+4. Press SYNC again to turn it off — your phase offset **stays** so the mix does not jump.
 
-Loading a **new track on the master** (the deck you are not SYNC’d on) turns SYNC off on the slave and **keeps the slave’s pitch** — it will not jump to the new track’s BPM mid-play. Press SYNC again when you want to match the new master.
+### If SYNC sounds wrong
 
-Half/double BPM mistakes are common — use **½ / ×2 / Tap** in Library first.
+- BPM might be half or double → in **Library**, select the track → try **½** / **×2** / **Tap**.  
+- Track needs a beatgrid → select track → **Detect**, wait, **reload** the deck, then SYNC again.  
+- Both tracks need a good BPM / grid before SYNC is happy.
 
-Phase math uses each track’s **file BPM** grid (same ticks you see on the detail waveform). Pitch only changes how fast the playhead moves through that grid.
+### Loading a new track on the master
 
-## Jog (RMX2 platter)
+If the other deck is SYNC’d to you and you load a **new** track on your deck, SYNC turns off on the follower so its pitch does not jump mid-play. Press SYNC again when you want to match the new track.
 
-The RMX2 jog is a relative MIDI stream — not a heavy SL-1200. Soft feel is simulated from **rim speed** (message rate).
+## Jog wheels (RMX2)
 
-**Soft / Vinyl OFF** (default):
+| How you turn | Feel |
+|--------------|------|
+| **Slow** | Gentle ride — nudge the beat forward or back |
+| **Faster push / flick** | Stronger nudge |
+| **Paused** | Scrub through the track |
 
-| Rim speed | Feel |
-|-----------|------|
-| **Slow** (~&lt;1 cm/s on the outer edge) | **Ride** — forward speeds the track up a bit (phase creeps forward); back slows it (phase the other way) |
-| **Faster** (a deliberate push / flick) | **Nudge** — stronger speed throw through the offset + a tiny sticky park (smooth, not skippy) |
+When you stop turning, tempo goes back to the pitch fader. The phase offset you made **stays**.
 
-When you stop turning, tempo returns to the pitch fader; the phase offset you rode or nudged **stays**.
+**Vinyl** button on the RMX2: more “spinny” feel (including a hard whip / spinback). Try Soft vs Vinyl and pick what your hands like.
 
-**Vinyl ON** (button / dual-zone): fine sticky phase + spinback on a hard whip.
+Want more or less aggressive jogs? **Settings → Jog feel** — presets **Soft · Balanced · Spinny**.
 
-Presets in Settings: **Soft (ride + chunk) · Balanced · Spinny**. If chunks come too early/late, tune **Chunk starts at** / **Full chunk at** (msg/s proxy for rim speed on your RMX2).
+## Spec links
 
-Paused jog always scrubs through the track.
+Operator guide ends here. Engine detail: [`../03-audio-engine.md`](../03-audio-engine.md), MIDI: [`../04-midi-map.md`](../04-midi-map.md).

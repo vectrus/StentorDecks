@@ -758,6 +758,31 @@
   color: var(--text-dim);
 }
 
+.help-figure {
+  margin: 0.75rem 0 1rem;
+  border: 1px solid var(--border, #2a3140);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: var(--bg-raised, #12161c);
+}
+
+.help-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(52vh, 420px);
+  object-fit: contain;
+  object-position: top center;
+  background: #0e1115;
+}
+
+.help-figcap {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  border-top: 1px solid var(--border, #2a3140);
+}
+
 .help-article strong {
   color: var(--text);
   font-weight: 600;

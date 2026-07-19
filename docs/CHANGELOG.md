@@ -5,6 +5,24 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — In-app Help shows the same screenshots
+
+Help bundles `docs/screenshots/*.png` (Vite) and renders guide `![…](../screenshots/…)` lines — same pack as the website. Search still ignores image markup. E7 / docs/guides.
+
+---
+
+## 2026-07-19 — Docs split: DJs vs developers
+
+New plain guide [`guides/controllers-and-midi.md`](./guides/controllers-and-midi.md) (Help + website). Operator guides rewritten simpler; tech files `02`/`03`/`04`/`05` open with “DJs skip this”. Website `docs.html` sidebar: **For DJs** / **For developers** (midi-map no longer the DJ entry). Updating guide no longer mixes release-publish steps into booth instructions. E7 / R8.2 / docs.
+
+---
+
+## 2026-07-19 — Website consumes screenshot manifest
+
+`docs/screenshots/manifest.json` gains `website` / `websiteOrder` / `alt` for stentordecks.com. Site homepage + Docs → Screenshots pull the pack from GitHub raw. Broken `07-settings.png` link retired. E7 / docs.
+
+---
+
 ## 2026-07-19 — Doc screenshots pack for website (Settings + Help)
 
 Expanded Playwright suite: Help panel + Settings tabs (Faders, Jog, Library, Display, MIDI, Updates); cropped Settings panels; `docs/screenshots/README.md` + `manifest.json` for the marketing site. README embeds Faders / MIDI / Updates. E6 / E7 / R7.4.

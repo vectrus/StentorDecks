@@ -1,5 +1,9 @@
 # 03 — Audio engine
 
+> **DJs: you can skip this file.**  
+> Plain audio / volume help: [`guides/audio-and-volume.md`](./guides/audio-and-volume.md).  
+> This document is for developers (node graph, curves, ramps).
+
 All nodes Web Audio, master context (Plan A shown; Plan B differs only at the output stage).
 
 ## Per-deck graph

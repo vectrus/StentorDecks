@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { operatorBody, searchHelp, type HelpTopic } from './searchHelp';
+import { operatorBody, searchableBody, searchHelp, type HelpTopic } from './searchHelp';
 
 const TOPICS: HelpTopic[] = [
   {
@@ -29,10 +29,16 @@ describe('operatorBody', () => {
     expect(operatorBody(body)).toContain('30%');
   });
 
-  it('strips markdown image lines (website embeds)', () => {
+  it('keeps markdown image lines for Help display (same pack as website)', () => {
     const body = '# Title\n\n![Shot](../screenshots/x.png)\n\nKeep this.\n';
-    expect(operatorBody(body)).not.toContain('screenshots');
+    expect(operatorBody(body)).toContain('screenshots/x.png');
     expect(operatorBody(body)).toContain('Keep this');
+  });
+
+  it('searchableBody drops image lines so search ignores filenames', () => {
+    const body = '# Title\n\n![Shot](../screenshots/x.png)\n\nKeep this.\n';
+    expect(searchableBody(body)).not.toContain('screenshots');
+    expect(searchableBody(body)).toContain('Keep this');
   });
 });
 

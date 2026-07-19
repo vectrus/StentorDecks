@@ -1,5 +1,6 @@
 import type { HelpTopic } from './searchHelp';
 import getStarted from '../../../../docs/guides/get-started.md?raw';
+import controllers from '../../../../docs/guides/controllers-and-midi.md?raw';
 import prepLibrary from '../../../../docs/guides/prep-library.md?raw';
 import performance from '../../../../docs/guides/performance-and-mixer.md?raw';
 import syncJog from '../../../../docs/guides/sync-and-jog.md?raw';
@@ -14,6 +15,12 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
     title: 'Getting started',
     tags: ['start', 'first', 'boot', 'mst', 'volume', 'f1', 'help'],
     body: getStarted,
+  },
+  {
+    id: 'controllers-midi',
+    title: 'Controllers & MIDI',
+    tags: ['midi', 'rmx2', 'controller', 'learn', 'pioneer', 'flx4', 'inpulse', 'hercules', 'map'],
+    body: controllers,
   },
   {
     id: 'prep-library',
@@ -41,14 +48,14 @@ export const HELP_TOPICS: readonly HelpTopic[] = [
   },
   {
     id: 'audio-volume',
-    title: 'Audio routing & volume',
+    title: 'Audio & volume',
     tags: ['audio', 'plan', 'a', 'b', 'cue', 'phones', 'pfl', 'routing', 'master'],
     body: audio,
   },
   {
     id: 'updating',
     title: 'Updating the app',
-    tags: ['update', 'upgrade', 'release', 'github', 'install', 'setup'],
+    tags: ['update', 'upgrade', 'release', 'github', 'install', 'setup', 'smartscreen'],
     body: updating,
   },
 ];

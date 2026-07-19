@@ -1,28 +1,38 @@
-# Audio routing & volume
+# Audio & volume
 
-## Plan A vs Plan B
+![Audio setup](../screenshots/03-audio-setup.png)
 
-| Plan | Meaning |
-|------|---------|
-| **A** | One 4-channel device (RMX2): channels 1–2 master, 3–4 headphones |
-| **B** | Separate master and cue devices (or 2-channel fallback) |
+For DJs. Get sound to the booth and to your headphones without drama.
 
-Open **Audio** in the top bar to change devices. The active plan is shown in the top bar.
+## Pick your outputs
 
-## Levels — a simple gain stack
+Open **Audio** in the top bar.
 
-1. **Track trim (GAIN)** — match loudness between songs (auto-gain helps on load).  
-2. **EQ** — cut more than boost when possible.  
-3. **Channel fader** — blend in the mix.  
-4. **MST** — booth level (default **30%**).  
+| Setup | Meaning |
+|-------|---------|
+| **Best (Plan A)** | One box with 4 channels (typical RMX2): outs **1–2** = booth, **3–4** = headphones |
+| **Simple (Plan B)** | Separate device for booth and for headphones, or one stereo device for both |
 
-If the PA is hot, turn **MST** down first — don’t bury everything in EQ kills.
+The top bar shows which plan is active. Prefer a **named** device, not “Default”, when you can.
+
+## Loudness — four steps
+
+1. **GAIN** — match song loudness  
+2. **EQ** — cut more than you boost  
+3. **Channel fader** — blend into the mix  
+4. **MST** — booth level (starts around **30%**)
+
+If the room is too loud, turn **MST** down first — don’t bury everything in EQ kills.
 
 ## Headphones
 
-- Per-deck **PFL** (headphone icon) sends that deck to the cue bus.  
-- With PFL on, that deck’s **VU** shows pre-fader level (gain/EQ) even if the channel fader is down — use it to match volumes before you open the fader.  
-- VU **red / peak tip** means you’re peaking (above about −3 dBFS).  
-- **CUE** — RMX2 **Cue to Mix** (MIDI). Blends PFL cue vs master in the phones bus.  
-- **PHN** — software cue-bus level after that blend. The RMX2’s physical **phones volume** knob is analog (no MIDI), so it will not move the on-screen PHN; use PHN in the top bar, or Learn a spare knob.  
-- Default head-mix leans **cue-only** so PFL isn’t drowned by the master bus.
+- Tap the headphone icon on a deck (**PFL**) to hear that deck in your cans.  
+- With PFL on, the VU still shows level even if the channel fader is down — match volumes before you open the fader.  
+- **Red / peaking** on the VU = too hot. Ease GAIN or the fader.  
+- **CUE** (top bar) — blend “cue only” vs “a bit of the master” in your headphones.  
+- **PHN** — software headphone loudness.  
+  The RMX2’s physical phones knob is **analog** (not MIDI). Use on-screen **PHN**, or Learn a spare knob.
+
+## Spec links
+
+Operator guide ends here. Routing plans: [`../02-architecture.md`](../02-architecture.md), [`../03-audio-engine.md`](../03-audio-engine.md).

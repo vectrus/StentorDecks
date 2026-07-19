@@ -1,5 +1,13 @@
 # 04 — RMX2 MIDI map & learn mode
 
+> **DJs: stop here.**  
+> This file is for **developers and hardware nerds** (note numbers, CC pairs, learn rules).  
+> For booth how-to — plug in, Learn, other controllers — read the plain guide instead:  
+> **[`guides/controllers-and-midi.md`](./guides/controllers-and-midi.md)**  
+> (also in the app: Help → Controllers & MIDI, and on the website under **For DJs**).
+
+---
+
 Factory defaults below are taken from the Mixxx project's RMX2 mapping (community-verified against real hardware). All on MIDI channel 1. Notes are `0x90` (on) / `0x80` (off); CCs are `0xB0`. Values hex.
 
 **Trust level:** faders/knobs/transport/browse verified; FX pad notes **owner-confirmed 2026-07-18** on Julius’s RMX2 in FX mode (`01`/`02` / `11`/`12` — see `E3-HW-CHECKLIST.md`). Other pad modes (sample/cue/loop) still unused in v1.

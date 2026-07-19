@@ -1,44 +1,41 @@
-# Updating StentorDeck
+# Updating the app
 
-Two paths — pick the one that matches how you run the app.
-
-## Installed app (booth / Desktop shortcut → `.exe`)
-
-This is the real product path (R1.1 / E7).
+For DJs who installed StentorDeck with the **Setup.exe** (normal booth install).
 
 ![Settings — Updates](../screenshots/11-settings-updates.png)
 
-1. On a build machine: follow the release checklist in [`../DEVELOPMENT.md`](../DEVELOPMENT.md) — bump `version` in `package.json`, then:
+## How to update (installed app)
 
-   ```bash
-   npm run release
-   ```
+1. Open **Settings → Updates**.  
+2. Click **Check for updates** (or wait a few seconds after launch).  
+3. When a download finishes → **Restart & update**.  
+4. If a deck is playing, the app asks before it restarts.
 
-   Needs a GitHub token with `repo` scope (`GH_TOKEN` or `GITHUB_TOKEN`). Publishes a **full** GitHub Release (tag `v*`, not Pre-release) with `StentorDeck-Setup-*.exe`, `StentorDeck-ReleaseNotes-*.txt`, **and** `latest.yml`. Uploading only the Setup.exe (or marking Pre-release without `latest.yml`) makes Settings → Check for updates report no feed.
+Your music library, settings, and MIDI map stay on the computer. They are **not** wiped by an update.
 
-2. On the booth laptop (installed app):
-   - Open **Settings → Updates → Check for updates**, or wait a few seconds after launch.
-   - When download finishes: **Restart & update** (won’t force while a deck is playing without confirm).
-   - Library, analysis, MIDI mapping, and settings stay in `%APPDATA%` (userData).
+### Or install by hand
 
-**Fallback:** copy/run a new `StentorDeck-Setup-*.exe` over the previous install (same upgrade-in-place).
+Download the new `StentorDeck-Setup-….exe` from the website / GitHub Releases and run it over the old install.
 
-**SmartScreen (unsigned builds):** if Windows shows **“Windows protected your PC”**, click **More info** → **Run anyway**. Browser download block: Keep → Show more → Keep anyway. Do not disable SmartScreen. Auto-update still works (`verifyUpdateCodeSignature: false`). See also README.
+## Windows says the app is unsafe
 
-## Source tree (`npm start` / INSTALL.bat)
+Builds are not code-signed yet. That warning is expected.
 
-Do **not** use GitHub Desktop as the daily update tool (dirty local files block pulls).
+1. Click **More info**.  
+2. Click **Run anyway**.
 
-```bat
-UPDATE.bat
-```
-
-Or: `npm run update`  
-If you have uncommitted edits: commit them, or `UPDATE.bat --stash`.
-
-Then launch with **Start StentorDeck.bat** or the Desktop shortcut.
+If the **browser** blocked the download: Keep → Show more → Keep anyway.  
+Do **not** turn off SmartScreen or Defender.
 
 ## What not to do
 
-- Pulling `main` over uncommitted agent edits and expecting the installed `.exe` to change — it won’t. The installed app only updates via Releases / Setup.exe.
-- Deleting `%APPDATA%\stentordeck` (or similar) to “fix” an update — that wipes the library.
+- Don’t delete AppData folders to “fix” an update — that can wipe your library.  
+- Don’t expect GitHub Desktop or a source folder update to change the installed `.exe`. The booth app only updates via Releases / Setup.exe.
+
+## Running from source? (developers)
+
+If you use `npm start` / `INSTALL.bat` instead of the installer, use `UPDATE.bat` in the repo — not the in-app updater. Details: [`../DEVELOPMENT.md`](../DEVELOPMENT.md).
+
+## Spec links
+
+Operator guide ends here. How releases are published: [`../DEVELOPMENT.md`](../DEVELOPMENT.md).

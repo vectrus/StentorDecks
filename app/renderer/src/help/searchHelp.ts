@@ -20,9 +20,16 @@ export function operatorBody(markdown: string): string {
   let body = markdown;
   const cut = body.search(/\n##\s+Spec links\b/i);
   if (cut !== -1) body = body.slice(0, cut);
-  // Website/README embeds — booth Help has no screenshot asset pipeline.
-  body = body.replace(/^!\[[^\]]*\]\([^)]+\)\s*$/gm, '');
+  // Keep `![…](…)` lines — same screenshots as website (bundled from docs/screenshots/).
   return body.replace(/\n{3,}/g, '\n\n').trimEnd();
+}
+
+/** Text used for search ranking/snippets — ignore image markup noise. */
+export function searchableBody(markdown: string): string {
+  return operatorBody(markdown)
+    .replace(/^!\[[^\]]*\]\([^)]+\)\s*$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd();
 }
 
 function tokenize(q: string): string[] {
@@ -58,7 +65,8 @@ export function searchHelp(topics: readonly HelpTopic[], query: string): HelpSea
   for (const topic of topics) {
     const title = topic.title.toLowerCase();
     const tags = topic.tags.map((t) => t.toLowerCase()).join(' ');
-    const body = operatorBody(topic.body).toLowerCase();
+    const plain = searchableBody(topic.body);
+    const body = plain.toLowerCase();
     let score = 0;
     let snippet: string | null = null;
 
@@ -69,7 +77,7 @@ export function searchHelp(topics: readonly HelpTopic[], query: string): HelpSea
       else if (tags.includes(term)) score += 12;
       if (body.includes(term)) {
         score += 6;
-        if (!snippet) snippet = excerptAround(operatorBody(topic.body), term);
+        if (!snippet) snippet = excerptAround(plain, term);
       }
     }
 
@@ -78,7 +86,7 @@ export function searchHelp(topics: readonly HelpTopic[], query: string): HelpSea
     if (title.includes(phrase)) score += 10;
     if (body.includes(phrase)) {
       score += 4;
-      if (!snippet) snippet = excerptAround(operatorBody(topic.body), phrase);
+      if (!snippet) snippet = excerptAround(plain, phrase);
     }
 
     if (score > 0) hits.push({ topic, score, snippet });

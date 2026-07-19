@@ -2,20 +2,31 @@
 
 ![Settings — Faders & mixer](../screenshots/06-settings-faders-mixer.png)
 
-Hardware knobs and software values can disagree (you moved UI, or loaded a track that reset FX).
+For DJs. Why a knob sometimes “does nothing” — and how to wake it up.
 
-**Soft takeover** protects the PA: the physical control stays “dead” until it **crosses** the software value (or lands within a tiny deadband). Then it snaps live.
+## The problem
 
-## What you’ll see
+The screen and the physical knob can disagree — for example after you clicked the UI, or after loading a track.
 
-A hollow **pickup** mark on the control = hardware position.  
-Filled cap / pointer = software value.  
-Move the hardware through the software point → mark disappears → you’re live.
+If the software jumped straight to the knob position, the PA could **blast** or drop out. So StentorDeck waits.
+
+## Soft takeover (the fix)
+
+1. You see a hollow **pickup** mark on the control = where the hardware is.  
+2. The filled part = where the software is.  
+3. Move the hardware **through** the software value (or right onto it).  
+4. Mark disappears → you’re live again.
+
+That’s it. Cross the value once; don’t fight it.
 
 ## After loading a track
 
-- **Pitch & EQ** stay live if they already were (no full relearn).  
-- **Filter / wet** follow the last known hardware position (FX pads still turn off).  
-- **Gain** needs a quick pickup only when **auto-gain** rewrote trim on load. With auto-gain off, GAIN stays sticky and live.
+- **Pitch & EQ** usually stay live if they already were.  
+- **Filter / wet** follow the last hardware position (FX pads still turn off on load).  
+- **Gain** only needs a quick pickup when auto-gain changed the trim. With auto-gain off, GAIN stays put.
 
-You should not have to re-match every knob on every load.
+You should **not** have to re-match every knob on every load.
+
+## Spec links
+
+Operator guide ends here. Curve math: [`../03-audio-engine.md`](../03-audio-engine.md).
