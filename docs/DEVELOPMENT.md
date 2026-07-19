@@ -16,6 +16,9 @@ npm run dist                # NSIS Setup.exe (no publish)
 
 Requires Node 22 LTS (see `scripts/check-node.mjs`). Prefer a system Node — not Cursor’s helper Node on PATH.
 
+macOS DIY from source (unsupported — no installer, R1.1 stays Windows):
+[`guides/run-from-source-macos.md`](./guides/run-from-source-macos.md).
+
 ## MIDI fixtures
 
 - Decode / learn / takeover tests use recorded bytes under `shared` / `app/renderer` — CI never needs the RMX2.

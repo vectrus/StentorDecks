@@ -142,6 +142,14 @@ That script installs dependencies (Electron ABI for `better-sqlite3`), rebuilds 
 
 If it fails: close anything locking `node_modules`, delete that folder, run `INSTALL.bat` again. Prefer Node 22 — avoid Cursor’s helper Node on PATH (`where node` must not be under `…\cursor\…\helpers\`).
 
+### macOS from source (unsupported DIY)
+
+No Mac installer — product target stays Windows (R1.1). Willing to experiment from git?
+
+→ [`docs/guides/run-from-source-macos.md`](docs/guides/run-from-source-macos.md)
+
+Short version: Node 22 + Xcode CLT → `npm install` → `npm run rebuild:native` → `npm start`. Expect Plan B audio more often than Plan A; `npm run dist` still builds Windows only.
+
 ### Production-style (Explorer icon, no command window)
 
 ```bash

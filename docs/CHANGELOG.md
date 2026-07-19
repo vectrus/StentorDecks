@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — DIY macOS from-source guide (unsupported)
+
+Owner: no Mac product/installer — document how a willing person can try `npm start` on macOS from git. R1.1 stays Windows-only. Guide: [`guides/run-from-source-macos.md`](./guides/run-from-source-macos.md); README pointer. Not in in-app Help.
+
+---
+
 ## 2026-07-19 — Ship 0.2.7: Library mode, multi-controller profiles, live screenshots
 
 Booth polish since 0.2.6: topbar **Prep → Library**; Dev mode + MIDI monitor under Settings → Developer; opt-in MIDI controller profiles (RMX2 factory locked; community FLX4 / Inpulse 500); README screenshots from live Playwright app; MP3 click/squeak notes in README. R7.4, R8.2, docs/04, docs/06.
