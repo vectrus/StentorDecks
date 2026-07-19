@@ -46,12 +46,14 @@ export const VirtualBrowseList = observer(function VirtualBrowseList() {
 
   return (
     <div
-      className="prep-virt"
+      className={`prep-virt${libraryStore.browsePane === 'files' ? ' pane-focused' : ''}`}
       ref={scrollerRef}
       onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
       role="listbox"
       aria-label="Tracks"
       tabIndex={0}
+      onMouseDown={() => libraryStore.focusBrowsePane('files')}
+      onFocus={() => libraryStore.focusBrowsePane('files')}
       onKeyDown={(e) => {
         if (e.key === 'ArrowDown') {
           e.preventDefault();

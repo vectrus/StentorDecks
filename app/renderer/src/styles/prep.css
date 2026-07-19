@@ -215,7 +215,9 @@
   outline: none;
 }
 
-.prep-virt:focus {
+.prep-virt:focus,
+.prep-virt.pane-focused,
+.prep-tree.pane-focused {
   box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 

@@ -20,20 +20,36 @@ import { settingsStore } from './SettingsStore';
 
 /**
  * Library browser + RMX2 browse cluster target (E4 / R5.3).
- * MIDI and mouse drive the same cursor / enter / parent / load actions.
+ * Two panes (Djuced-style): folder tree left, tracks right.
+ * MIDI/keyboard up·down navigate the focused pane; left/right switch/expand.
  */
 
 export type LibraryBrowseEntry =
   | { kind: 'folder'; path: string; name: string }
   | { kind: 'track'; track: TrackRow; name: string };
 
+export type BrowsePane = 'tree' | 'files';
+
+export type TreeRow = {
+  path: string;
+  name: string;
+  depth: number;
+  hasChildren: boolean;
+};
+
 export class LibraryStore {
   folders: FolderNode[] = [];
   tracks: TrackRow[] = [];
-  /** Absolute folder path currently listed; null = roots list (browse top). */
+  /** Absolute folder path currently listed in the file pane; null = none. */
   openFolder: string | null = null;
   search = '';
-  /** Row cursor into `entries` (folders + tracks). */
+  /** Focused pane for browse up/down (R5.3). */
+  browsePane: BrowsePane = 'tree';
+  /** Expanded folder paths in the tree (MIDI + mouse). */
+  treeExpanded = new Set<string>();
+  /** Cursor into `visibleTreeRows`. */
+  treeCursor = 0;
+  /** Row cursor into file-pane `entries` (tracks). */
   cursor = 0;
   progress: LibraryProgress | null = null;
   scanning = false;
@@ -65,9 +81,9 @@ export class LibraryStore {
   }
 
   constructor() {
-    makeAutoObservable<LibraryStore, 'loadErrorTimer'>(
+    makeAutoObservable<LibraryStore, 'loadErrorTimer' | 'searchTimer'>(
       this,
-      { loadErrorTimer: false },
+      { loadErrorTimer: false, searchTimer: false },
       { autoBind: true },
     );
   }
@@ -91,6 +107,30 @@ export class LibraryStore {
       track: t,
       name: displayName(t),
     }));
+  }
+
+  /** Visible folder rows in the left tree (respects expand/collapse). */
+  get visibleTreeRows(): TreeRow[] {
+    const rows: TreeRow[] = [];
+    const walk = (nodes: FolderNode[], depth: number): void => {
+      const sorted = [...nodes].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+      );
+      for (const n of sorted) {
+        const hasChildren = n.children.length > 0;
+        rows.push({
+          path: n.path,
+          name: n.name,
+          depth,
+          hasChildren,
+        });
+        if (hasChildren && this.treeExpanded.has(n.path)) {
+          walk(n.children, depth + 1);
+        }
+      }
+    };
+    walk(this.folders, 0);
+    return rows;
   }
 
   get selected(): LibraryBrowseEntry | null {
@@ -176,7 +216,10 @@ export class LibraryStore {
         this.folders = folders;
         this.tracks = tracks;
         this.trackCount = stats.trackCount;
+        this.ensureRootFoldersExpanded();
+        this.syncTreeCursorToOpenFolder();
         this.clampCursor();
+        this.clampTreeCursor();
         this.error = null;
       });
     } catch (err) {
@@ -186,7 +229,12 @@ export class LibraryStore {
     }
   }
 
+  focusBrowsePane(pane: BrowsePane): void {
+    this.browsePane = pane;
+  }
+
   selectIndex(index: number): void {
+    this.browsePane = 'files';
     const n = this.entries.length;
     if (n === 0) {
       this.cursor = 0;
@@ -197,42 +245,141 @@ export class LibraryStore {
     this.cursor = next;
   }
 
-  up(): void {
-    this.selectIndex(this.cursor - 1);
+  /** Mouse / tree click — select folder and show its tracks (stay on tree pane). */
+  selectTreePath(path: string): void {
+    this.browsePane = 'tree';
+    this.applyTreeSelection(path);
   }
 
+  toggleTreeExpanded(path: string): void {
+    if (this.treeExpanded.has(path)) this.treeExpanded.delete(path);
+    else this.treeExpanded.add(path);
+    this.clampTreeCursor();
+  }
+
+  /** Up — move selection in the focused pane (R5.3). */
+  up(): void {
+    if (this.search.trim() || this.browsePane === 'files') {
+      this.browsePane = 'files';
+      this.selectIndex(this.cursor - 1);
+      return;
+    }
+    this.moveTreeCursor(-1);
+  }
+
+  /** Down — move selection in the focused pane (R5.3). */
   down(): void {
-    this.selectIndex(this.cursor + 1);
+    if (this.search.trim() || this.browsePane === 'files') {
+      this.browsePane = 'files';
+      this.selectIndex(this.cursor + 1);
+      return;
+    }
+    this.moveTreeCursor(1);
   }
 
   /**
-   * Right — drill into a child crate (R5.3).
-   * File pane is tracks-only; browse-right enters the first child folder of the
-   * current open folder (or the first library root when none is open).
+   * Right — tree: expand (if collapsed) or focus file pane; files: no-op (R5.3).
    */
   enter(): void {
-    const sel = this.selected;
-    if (sel?.kind === 'folder') {
-      this.setOpenFolder(sel.path);
+    if (this.search.trim()) return;
+    if (this.browsePane === 'files') return;
+
+    const row = this.visibleTreeRows[this.treeCursor];
+    if (!row) {
+      if (this.openFolder != null && this.entries.length > 0) {
+        this.browsePane = 'files';
+        this.cursor = 0;
+      }
       return;
     }
-    const child = this.firstChildFolderPath(this.openFolder);
-    if (child) this.setOpenFolder(child);
+    this.applyTreeSelection(row.path);
+    if (row.hasChildren && !this.treeExpanded.has(row.path)) {
+      this.treeExpanded.add(row.path);
+      return;
+    }
+    // Leaf or already expanded → move focus to the track list.
+    this.browsePane = 'files';
+    this.cursor = 0;
   }
 
-  /** Left — parent folder or clear search. */
+  /**
+   * Left — files: focus tree; tree: collapse (if expanded) or parent folder (R5.3).
+   * Never jumps to a blank “Library” root via browse.
+   */
   parent(): void {
     if (this.search.trim()) {
       this.setSearch('');
       return;
     }
-    if (this.openFolder == null) return;
-    if (this.isRootPath(this.openFolder)) {
-      this.setOpenFolder(null);
+    if (this.browsePane === 'files') {
+      this.browsePane = 'tree';
+      this.syncTreeCursorToOpenFolder();
       return;
     }
-    const parent = parentDir(this.openFolder);
-    this.setOpenFolder(parent);
+    const row = this.visibleTreeRows[this.treeCursor];
+    if (!row) return;
+    if (row.hasChildren && this.treeExpanded.has(row.path)) {
+      this.treeExpanded.delete(row.path);
+      return;
+    }
+    const parent = parentDir(row.path);
+    if (parent != null && this.findTreeRowIndex(parent) >= 0) {
+      this.applyTreeSelection(parent);
+      return;
+    }
+    // Already at a library root — stay put (do not clear openFolder).
+  }
+
+  private moveTreeCursor(delta: number): void {
+    const rows = this.visibleTreeRows;
+    if (rows.length === 0) return;
+    this.treeCursor = Math.max(0, Math.min(rows.length - 1, this.treeCursor + delta));
+    const row = rows[this.treeCursor];
+    if (row) this.applyTreeSelection(row.path);
+  }
+
+  private applyTreeSelection(path: string): void {
+    const changed =
+      this.openFolder == null || normPath(this.openFolder) !== normPath(path);
+    this.openFolder = path;
+    this.search = '';
+    this.ensureAncestorsExpanded(path);
+    this.syncTreeCursorToOpenFolder();
+    if (changed) {
+      this.cursor = 0;
+      void this.refresh();
+    }
+  }
+
+  private ensureRootFoldersExpanded(): void {
+    for (const r of this.folders) {
+      this.treeExpanded.add(r.path);
+    }
+  }
+
+  /** Expand parents so `path` is visible in `visibleTreeRows`. */
+  private ensureAncestorsExpanded(path: string): void {
+    let cur = parentDir(path);
+    while (cur != null) {
+      this.treeExpanded.add(cur);
+      if (this.isRootPath(cur)) break;
+      cur = parentDir(cur);
+    }
+  }
+
+  private syncTreeCursorToOpenFolder(): void {
+    if (this.openFolder == null) {
+      this.treeCursor = 0;
+      return;
+    }
+    this.ensureAncestorsExpanded(this.openFolder);
+    const idx = this.findTreeRowIndex(this.openFolder);
+    if (idx >= 0) this.treeCursor = idx;
+  }
+
+  private findTreeRowIndex(path: string): number {
+    const target = normPath(path);
+    return this.visibleTreeRows.findIndex((r) => normPath(r.path) === target);
   }
 
   private clampCursor(): void {
@@ -244,30 +391,31 @@ export class LibraryStore {
     if (this.cursor > n - 1) this.cursor = n - 1;
   }
 
+  private clampTreeCursor(): void {
+    const n = this.visibleTreeRows.length;
+    if (n === 0) {
+      this.treeCursor = 0;
+      return;
+    }
+    if (this.treeCursor > n - 1) this.treeCursor = n - 1;
+  }
+
   private isRootPath(folder: string): boolean {
     const n = normPath(folder);
     return this.folders.some((f) => normPath(f.path) === n);
   }
 
-  /** First child crate under `folder` (null = first library root). */
-  private firstChildFolderPath(folder: string | null): string | null {
-    if (folder == null) {
-      return this.folders[0]?.path ?? null;
-    }
-    const node = findFolderNode(this.folders, folder);
-    const kids = node?.children ?? [];
-    if (kids.length === 0) return null;
-    const sorted = [...kids].sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
-    );
-    return sorted[0]?.path ?? null;
-  }
-
   setOpenFolder(folder: string | null): void {
-    this.openFolder = folder;
-    this.search = '';
-    this.cursor = 0;
-    void this.refresh();
+    this.browsePane = 'tree';
+    if (folder == null) {
+      this.openFolder = null;
+      this.search = '';
+      this.cursor = 0;
+      this.treeCursor = 0;
+      void this.refresh();
+      return;
+    }
+    this.applyTreeSelection(folder);
   }
 
   setSearch(q: string): void {

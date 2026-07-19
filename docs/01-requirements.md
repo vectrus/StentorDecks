@@ -41,7 +41,7 @@ Source: design sessions with the owner (DJ, 54, declining eyesight, RMX2 hardwar
 ## R5 Library
 - R5.1 Library size 500–5000 tracks. Disk folders are the organizational structure ("crates"); the app never moves/renames files.
 - R5.2 Browser offers a folder tree mirroring the watched music folders plus flat search across the whole library (artist/title/filename).
-- R5.3 RMX2 browse cluster: up/down moves selection, right enters folder, left goes to parent.
+- R5.3 RMX2 browse cluster (two-pane): up/down moves selection in the **focused** pane (folder tree or track list). Right: tree → expand collapsed folder, or focus track list; files → no-op. Left: files → focus tree; tree → collapse expanded folder, or move to parent folder (never blank “Library” root via browse). Mouse click focuses the pane.
 - R5.4 Watched folders are monitored; new/changed/removed files are picked up automatically.
 - R5.5 All analysis results (BPM, key, duration, tags, waveform peaks, loudness) persist in SQLite. Keyed on path + size + mtime, with a partial content hash so moved/renamed files keep their analysis. A track is analyzed at most once per content.
 - R5.6 Sort defaults: inside a folder, **filename A→Z** (basename; matches disk-as-crate mental model). Operator may switch to artist, title, BPM, key, or duration; choice persists in settings. Whole-library search results sort **artist, then title**.

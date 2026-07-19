@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Browse cluster: dual-pane focus (R5.3)
+
+Up/down navigate the **focused** pane (folder tree or track list). Right expands a collapsed folder or moves focus to tracks; left returns focus to the tree, collapses, or walks to the parent folder — no more “enter first child” / jump to blank Library root. Tree expand state lives in `LibraryStore` so MIDI and mouse share it. Owner clarification of R5.3.
+
+---
+
 ## 2026-07-19 — Booth: prevent Windows screen dim
 
 Electron `powerSaveBlocker('prevent-display-sleep')` while StentorDeck is running so Windows does not dim/blank the display after idle minutes mid-gig (or Prep). Cleared on quit. E7.
@@ -13,7 +19,7 @@ Electron `powerSaveBlocker('prevent-display-sleep')` while StentorDeck is runnin
 
 ## 2026-07-19 — Library explorer: Djuced-style two panes
 
-Folder tree (narrow, left) + track list (wide, right) in Prep and Performance. File pane is **tracks only** — no `[dir]` rows mixed into the list. RMX2 browse-right drills the first child subfolder; left = parent. R5.2–R5.3, docs/06, mockup 02.
+Folder tree (narrow, left) + track list (wide, right) in Prep and Performance. File pane is **tracks only** — no `[dir]` rows mixed into the list. (Browse-right/left semantics refined in “dual-pane focus” entry.) R5.2–R5.3, docs/06, mockup 02.
 
 ---
 

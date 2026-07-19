@@ -152,21 +152,15 @@ Loading a new track **resets** that deck’s FX, filter, sync, cue, etc. — alw
 
 ## Keyboard & Hercules (same library!)
 
-Mouse, keyboard, and the RMX2 all move the **same** highlight (cursor).
+Mouse, keyboard, and the RMX2 all move the **same** highlight. Click a pane (folders or tracks) to focus it; ↑/↓ then move in that pane.
 
-**Keyboard (when the list is focused):**
+**Keyboard / Hercules browse cluster:**
 
-- ↑ / ↓ — move selection  
-- → — open folder  
-- ← — go up / leave search  
-- Enter — load selected track to **A**
-
-**Hercules browse cluster:**
-
-- Up / down — browse  
-- Right — open folder  
-- Left — go back  
-- Load A / Load B — load the selected track  
+- ↑ / ↓ — move selection in the focused pane (folder tree or track list)  
+- → — expand a collapsed folder, or move focus to the track list  
+- ← — focus the folder tree, collapse, or move to the parent folder (does not jump to blank Library)  
+- Enter — load selected track to **A** (keyboard)  
+- Load A / Load B — load the selected track (RMX2)  
 
 So: dig in Prep with the mouse, then keep browsing from the controller in Performance without losing your place.
 

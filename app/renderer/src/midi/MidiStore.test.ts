@@ -44,6 +44,7 @@ describe('MidiStore ingest (fixture traffic)', () => {
       },
     ];
     lib.cursor = 0;
+    lib.browsePane = 'files';
     return lib;
   }
 

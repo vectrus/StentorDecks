@@ -81,9 +81,11 @@ export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
 
           <ul
             ref={listRef}
-            className="perf-rows"
+            className={`perf-rows${libraryStore.browsePane === 'files' ? ' pane-focused' : ''}`}
             role="listbox"
             tabIndex={0}
+            onMouseDown={() => libraryStore.focusBrowsePane('files')}
+            onFocus={() => libraryStore.focusBrowsePane('files')}
             onKeyDown={(e) => {
               if (e.key === 'ArrowDown') {
                 e.preventDefault();
@@ -156,11 +158,19 @@ export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
       </div>
 
       <div className="perf-brow-actions">
-        <button type="button" onClick={() => libraryStore.parent()}>
-          Parent
+        <button
+          type="button"
+          onClick={() => libraryStore.parent()}
+          title="Focus folders, or collapse / parent folder"
+        >
+          Left
         </button>
-        <button type="button" onClick={() => libraryStore.enter()} title="Open first subfolder">
-          Subfolder
+        <button
+          type="button"
+          onClick={() => libraryStore.enter()}
+          title="Expand folder, or focus track list"
+        >
+          Right
         </button>
         <button
           type="button"

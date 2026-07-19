@@ -1,5 +1,4 @@
 import { observer } from 'mobx-react-lite';
-import { useMemo, useState } from 'react';
 import type { FolderNode } from '@stentordeck/shared';
 import { libraryStore } from '../../stores/root';
 
@@ -8,27 +7,20 @@ function norm(p: string): string {
 }
 
 export const FolderTree = observer(function FolderTree() {
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const open = libraryStore.openFolder;
-
   const roots = libraryStore.folders;
-
-  const autoExpanded = useMemo(() => {
-    const s = new Set(expanded);
-    if (open) {
-      for (const root of roots) {
-        walkExpand(root, open, s);
-      }
-    }
-    return s;
-  }, [expanded, open, roots]);
+  const treeFocused = libraryStore.browsePane === 'tree';
 
   if (roots.length === 0) {
     return <div className="prep-tree-empty">No library roots</div>;
   }
 
   return (
-    <nav className="prep-tree" aria-label="Folder tree">
+    <nav
+      className={`prep-tree${treeFocused ? ' pane-focused' : ''}`}
+      aria-label="Folder tree"
+      onMouseDown={() => libraryStore.focusBrowsePane('tree')}
+    >
       <button
         type="button"
         className={`prep-node${open == null && !libraryStore.search ? ' open' : ''}`}
@@ -44,16 +36,9 @@ export const FolderTree = observer(function FolderTree() {
           node={node}
           depth={0}
           openPath={open}
-          expanded={autoExpanded}
-          onToggle={(path) => {
-            setExpanded((prev) => {
-              const next = new Set(prev);
-              if (next.has(path)) next.delete(path);
-              else next.add(path);
-              return next;
-            });
-          }}
-          onSelect={(path) => libraryStore.setOpenFolder(path)}
+          expanded={libraryStore.treeExpanded}
+          onToggle={(path) => libraryStore.toggleTreeExpanded(path)}
+          onSelect={(path) => libraryStore.selectTreePath(path)}
         />
       ))}
     </nav>
@@ -71,7 +56,7 @@ function TreeNode(props: {
   const { node, depth, openPath, expanded, onToggle, onSelect } = props;
   const hasKids = node.children.length > 0;
   const isOpen = openPath != null && norm(openPath) === norm(node.path);
-  const isExp = expanded.has(node.path) || isOpen || depth === 0;
+  const isExp = expanded.has(node.path);
 
   return (
     <div>
@@ -113,18 +98,4 @@ function TreeNode(props: {
         : null}
     </div>
   );
-}
-
-function walkExpand(node: FolderNode, openPath: string, into: Set<string>): boolean {
-  if (norm(node.path) === norm(openPath)) {
-    into.add(node.path);
-    return true;
-  }
-  for (const c of node.children) {
-    if (walkExpand(c, openPath, into)) {
-      into.add(node.path);
-      return true;
-    }
-  }
-  return false;
 }
