@@ -5,6 +5,12 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Ship 0.2.7: Library mode, multi-controller profiles, live screenshots
+
+Booth polish since 0.2.6: topbar **Prep → Library**; Dev mode + MIDI monitor under Settings → Developer; opt-in MIDI controller profiles (RMX2 factory locked; community FLX4 / Inpulse 500); README screenshots from live Playwright app; MP3 click/squeak notes in README. R7.4, R8.2, docs/04, docs/06.
+
+---
+
 ## 2026-07-19 — Multi-controller profiles (RMX2 locked)
 
 Opt-in controller profile packs (Settings → MIDI): factory `rmx2` unchanged; community `pioneer-ddj-flx4` + `hercules-inpulse-500` (unverified, partial). Never auto-apply on hot-plug; Reset always restores RMX2. Deny list in README + [`BACKLOG-multi-controller.md`](./BACKLOG-multi-controller.md). R8.2, docs/04.
