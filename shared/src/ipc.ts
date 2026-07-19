@@ -13,6 +13,8 @@ export type TrackRow = {
   lowConfidence: boolean;
   /** Analyzed first-beat offset (sec); null if unknown. */
   beatGridOffsetSec: number | null;
+  /** Integrated loudness from analysis (R2.13 / R5.9 normalize); null until Detect. */
+  loudnessLufs: number | null;
 };
 
 export type TrackDetail = TrackRow & {
@@ -153,6 +155,8 @@ export type IpcInvokeMap = {
       wavBytes: Uint8Array;
       title: string;
       artist: string | null;
+      /** fixed = click/squeak (MP3); normalized = LUFS sibling (separate). Default fixed. */
+      kind?: 'fixed' | 'normalized';
     };
     res:
       | { ok: true; path: string; trackId: number }

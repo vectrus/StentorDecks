@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import { autoGainTrimDb, trimDbToGain } from './audioCurves.js';
 import {
   FIXED_BY_SD_MARK,
+  NORMALIZED_BY_SD_MARK,
   encodeWavPcm16le,
   fixedSiblingWavPath,
+  normalizeChannelsTowardLufs,
   uniqueFixedSiblingWavPath,
+  uniqueNormalizedSiblingWavPath,
   withFixedBySdTitle,
+  withNormalizedBySdTitle,
 } from './mp3Fix.js';
 
 describe('mp3Fix (R5.9)', () => {
@@ -32,6 +37,20 @@ describe('mp3Fix (R5.9)', () => {
   it('withFixedBySdTitle', () => {
     expect(withFixedBySdTitle('Phenomenal', 'file')).toBe(`Phenomenal${FIXED_BY_SD_MARK}`);
     expect(withFixedBySdTitle(`Already${FIXED_BY_SD_MARK}`, 'file')).toContain('Fixed by SD');
+  });
+
+  it('normalized sibling naming', () => {
+    expect(uniqueNormalizedSiblingWavPath('C:\\Music\\a.flac', () => false)).toBe(
+      `C:\\Music\\a${NORMALIZED_BY_SD_MARK}.wav`,
+    );
+    expect(withNormalizedBySdTitle('Tune', 'a')).toBe(`Tune${NORMALIZED_BY_SD_MARK}`);
+  });
+
+  it('normalizeChannelsTowardLufs applies gain and respects peak', () => {
+    const L = new Float32Array([0.1, -0.1]);
+    const g = normalizeChannelsTowardLufs(L.length ? [L] : [], -20, -14, trimDbToGain, autoGainTrimDb);
+    expect(g).toBeCloseTo(trimDbToGain(autoGainTrimDb(-20, -14)), 5);
+    expect(Math.abs(L[0]!)).toBeCloseTo(0.1 * g, 5);
   });
 
   it('encodeWavPcm16le writes RIFF header + samples', () => {

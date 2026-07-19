@@ -1,5 +1,6 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import {
+  autoGainTrimDb,
   averageTapBpm,
   camelotDisplayName,
   camelotHarmonicSortRank,
@@ -7,15 +8,20 @@ import {
   expectedMpegDurationSec,
   isCamelotKey,
   isLikelyTruncatedDecode,
+  normalizeChannelsTowardLufs,
   rescaleBeatGridOffsetSec,
+  trimDbToGain,
   withFixedBySdTitle,
+  withNormalizedBySdTitle,
   type AnalysisProgress,
   type FolderNode,
   type LibraryProgress,
   type Mp3InspectResult,
   type TrackRow,
 } from '@stentordeck/shared';
+import { audioEngine } from '../audio/AudioEngine';
 import { decodeArrayBufferOffThread } from '../audio/decodeAudio';
+import { phonesPreviewPlayer } from '../audio/PhonesPreviewPlayer';
 import { invoke, onIpc } from '../ipc/client';
 import { getPlayingReferenceKey } from './playingRefProvider';
 import { settingsStore } from './SettingsStore';
@@ -70,6 +76,14 @@ export class LibraryStore {
   mp3Inspect: Mp3InspectResult | null = null;
   mp3FixStatus: string | null = null;
   mp3FixBusy = false;
+  /**
+   * Bumped when context-menu “Click & squeak fixer” opens a track (R5.9).
+   * CorrectionStrip scrolls into view and briefly highlights.
+   */
+  mp3FixerFocusSeq = 0;
+  /** Phones-only Prep preview — fixer XOR normalize (never both). */
+  phonesPreviewKind: 'fixer' | 'normalize' | null = null;
+  phonesPreviewBusy = false;
   /** Live library size for Perf strip summary. */
   trackCount = 0;
 
@@ -88,6 +102,12 @@ export class LibraryStore {
       { loadErrorTimer: false, searchTimer: false },
       { autoBind: true },
     );
+    phonesPreviewPlayer.onIdle = () => {
+      runInAction(() => {
+        this.phonesPreviewKind = null;
+        this.phonesPreviewBusy = false;
+      });
+    };
   }
 
   /**
@@ -673,6 +693,28 @@ export class LibraryStore {
   }
 
   /**
+   * Prep R5.9 — select track + open the click/tick/squeak tools (correction strip).
+   * Call after switching to Library (`prep`) mode if needed.
+   */
+  openInMp3Fixer(trackId: number, opts?: { runCheck?: boolean }): void {
+    const idx = this.entries.findIndex(
+      (e) => e.kind === 'track' && e.track.id === trackId,
+    );
+    if (idx < 0) {
+      runInAction(() => {
+        this.mp3FixStatus = 'Track not in the current folder list — open its folder first';
+      });
+      return;
+    }
+    this.selectIndex(idx);
+    runInAction(() => {
+      this.mp3FixerFocusSeq += 1;
+      this.mp3FixStatus = null;
+    });
+    if (opts?.runCheck !== false) void this.checkSelectedMp3();
+  }
+
+  /**
    * Prep R5.9 — quick Chromium decode vs Xing/tag duration (does not write files).
    */
   async checkSelectedMp3(): Promise<void> {
@@ -703,7 +745,7 @@ export class LibraryStore {
       const payload = await invoke('library:read', { id: row.id });
       if (!payload) throw new Error('Could not read track file');
       const u8 = payload.bytes;
-      const ab = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+      const ab = copyToArrayBuffer(u8);
       const expected =
         expectedMpegDurationSec(u8, (payload.durationMs ?? row.durationMs ?? 0) / 1000) ??
         null;
@@ -732,6 +774,211 @@ export class LibraryStore {
     }
   }
 
+  /** Stop phones-only Prep preview (fixer or normalize). */
+  async stopPhonesPreview(): Promise<void> {
+    await phonesPreviewPlayer.stop();
+    runInAction(() => {
+      this.phonesPreviewKind = null;
+      this.phonesPreviewBusy = false;
+    });
+  }
+
+  /**
+   * Phones-only preview of resilient decode (click/squeak fixer).
+   * Stops normalize preview if that was playing. Does not write a file.
+   */
+  async toggleFixerPhonesPreview(): Promise<void> {
+    if (this.phonesPreviewKind === 'fixer' && phonesPreviewPlayer.playing) {
+      await this.stopPhonesPreview();
+      return;
+    }
+    const row = this.selectedTrack;
+    if (!row || !/\.mp3$/i.test(row.path)) {
+      runInAction(() => {
+        this.mp3FixStatus = 'Select an MP3 for fixer preview';
+      });
+      return;
+    }
+    runInAction(() => {
+      this.phonesPreviewBusy = true;
+      this.mp3FixStatus = 'Previewing fix on phones…';
+    });
+    try {
+      await phonesPreviewPlayer.stop();
+      const buf = await this.decodeSelectedLive({ resilient: true });
+      if (!buf) return;
+      await phonesPreviewPlayer.start(buf, { kind: 'fixer', gainLinear: 0.85 });
+      runInAction(() => {
+        this.phonesPreviewKind = 'fixer';
+        this.phonesPreviewBusy = false;
+        this.mp3FixStatus = 'Phones preview (fix) — Stop preview to end';
+      });
+    } catch (err) {
+      runInAction(() => {
+        this.phonesPreviewBusy = false;
+        this.phonesPreviewKind = null;
+        this.mp3FixStatus = err instanceof Error ? err.message : String(err);
+      });
+    }
+  }
+
+  /**
+   * Phones-only preview with LUFS normalize gain (separate from fixer).
+   * Does not write a file.
+   */
+  async toggleNormalizePhonesPreview(): Promise<void> {
+    if (this.phonesPreviewKind === 'normalize' && phonesPreviewPlayer.playing) {
+      await this.stopPhonesPreview();
+      return;
+    }
+    const row = this.selectedTrack;
+    if (!row) return;
+    if (row.loudnessLufs == null || !Number.isFinite(row.loudnessLufs)) {
+      runInAction(() => {
+        this.mp3FixStatus = 'No loudness yet — run Detect first, then Normalize preview';
+      });
+      return;
+    }
+    runInAction(() => {
+      this.phonesPreviewBusy = true;
+      this.mp3FixStatus = 'Previewing normalize on phones…';
+    });
+    try {
+      await phonesPreviewPlayer.stop();
+      const buf = await this.decodeSelectedLive({
+        resilient: /\.mp3$/i.test(row.path),
+      });
+      if (!buf) return;
+      const target = settingsStore.settings.audio.autoGainTargetLufs;
+      const gainLinear = trimDbToGain(autoGainTrimDb(row.loudnessLufs, target));
+      await phonesPreviewPlayer.start(buf, {
+        kind: 'normalize',
+        gainLinear: Math.min(gainLinear, 2),
+      });
+      runInAction(() => {
+        this.phonesPreviewKind = 'normalize';
+        this.phonesPreviewBusy = false;
+        this.mp3FixStatus = `Phones preview (normalize → ${target} LUFS) — Stop preview to end`;
+      });
+    } catch (err) {
+      runInAction(() => {
+        this.phonesPreviewBusy = false;
+        this.phonesPreviewKind = null;
+        this.mp3FixStatus = err instanceof Error ? err.message : String(err);
+      });
+    }
+  }
+
+  /**
+   * Write loudness-normalized sibling `* (Normalized by SD).wav`. Never touches source.
+   * Separate option from Write fixed WAV — stop phones preview first.
+   */
+  async writeNormalizedSibling(): Promise<void> {
+    const row = this.selectedTrack;
+    if (!row || this.mp3FixBusy) return;
+    if (row.loudnessLufs == null || !Number.isFinite(row.loudnessLufs)) {
+      runInAction(() => {
+        this.mp3FixStatus = 'No loudness yet — run Detect first';
+      });
+      return;
+    }
+    await this.stopPhonesPreview();
+    runInAction(() => {
+      this.mp3FixBusy = true;
+      this.mp3FixStatus = 'Decoding for normalize…';
+    });
+    try {
+      const payload = await invoke('library:read', { id: row.id });
+      if (!payload) throw new Error('Could not read track file');
+      const u8 = payload.bytes;
+      const ab = copyToArrayBuffer(u8);
+      const expected =
+        expectedMpegDurationSec(u8, (payload.durationMs ?? row.durationMs ?? 0) / 1000) ??
+        null;
+      await audioEngine.acquireDecode();
+      let buf: AudioBuffer;
+      try {
+        const ctx = audioEngine.masterCtx;
+        if (!ctx) throw new Error('Audio engine not ready');
+        buf = await decodeArrayBufferOffThread(ctx, ab.slice(0), {
+          expectedDurationSec: /\.mp3$/i.test(row.path) ? expected : null,
+        });
+      } finally {
+        audioEngine.endDecode();
+      }
+
+      const channels: Float32Array[] = [];
+      for (let c = 0; c < buf.numberOfChannels; c++) {
+        channels.push(new Float32Array(buf.getChannelData(c)));
+      }
+      const target = settingsStore.settings.audio.autoGainTargetLufs;
+      const applied = normalizeChannelsTowardLufs(
+        channels,
+        row.loudnessLufs,
+        target,
+        trimDbToGain,
+        autoGainTrimDb,
+      );
+
+      runInAction(() => {
+        this.mp3FixStatus = `Writing normalized sibling (${(20 * Math.log10(applied)).toFixed(1)} dB)…`;
+      });
+
+      const wavBytes = encodeWavPcm16le({
+        sampleRate: buf.sampleRate,
+        numberOfChannels: buf.numberOfChannels,
+        channelData: channels,
+      });
+      const title = withNormalizedBySdTitle(payload.title ?? row.title, 'Track');
+      const result = await invoke('library:mp3FixWrite', {
+        sourceTrackId: row.id,
+        wavBytes,
+        title,
+        artist: payload.artist ?? row.artist,
+        kind: 'normalized',
+      });
+      if (!result.ok) throw new Error(result.reason);
+
+      await this.refresh();
+      runInAction(() => {
+        const idx = this.entries.findIndex(
+          (e) => e.kind === 'track' && e.track.id === result.trackId,
+        );
+        if (idx >= 0) this.cursor = idx;
+        this.mp3FixStatus = `Wrote ${result.path.split(/[/\\]/).pop()} — original untouched`;
+        this.mp3FixBusy = false;
+      });
+    } catch (err) {
+      runInAction(() => {
+        this.mp3FixBusy = false;
+        this.mp3FixStatus = err instanceof Error ? err.message : String(err);
+      });
+    }
+  }
+
+  private async decodeSelectedLive(opts: {
+    resilient: boolean;
+  }): Promise<AudioBuffer | null> {
+    const row = this.selectedTrack;
+    if (!row) return null;
+    const payload = await invoke('library:read', { id: row.id });
+    if (!payload) throw new Error('Could not read track file');
+    const u8 = payload.bytes;
+    const ab = copyToArrayBuffer(u8);
+    const expected =
+      expectedMpegDurationSec(u8, (payload.durationMs ?? row.durationMs ?? 0) / 1000) ?? null;
+    await audioEngine.acquireDecode();
+    try {
+      const ctx = audioEngine.masterCtx;
+      if (!ctx) throw new Error('Audio engine not ready');
+      return await decodeArrayBufferOffThread(ctx, ab.slice(0), {
+        expectedDurationSec: opts.resilient ? expected : null,
+      });
+    } finally {
+      audioEngine.endDecode();
+    }
+  }
+
   /**
    * Prep R5.9 — resilient decode → sibling `* (Fixed by SD).wav`. Never touches the MP3.
    */
@@ -745,6 +992,7 @@ export class LibraryStore {
       return;
     }
 
+    await this.stopPhonesPreview();
     runInAction(() => {
       this.mp3FixBusy = true;
       this.mp3FixStatus = 'Decoding (resilient)…';
@@ -754,7 +1002,7 @@ export class LibraryStore {
       const payload = await invoke('library:read', { id: row.id });
       if (!payload) throw new Error('Could not read track file');
       const u8 = payload.bytes;
-      const ab = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+      const ab = copyToArrayBuffer(u8);
       const expected =
         expectedMpegDurationSec(u8, (payload.durationMs ?? row.durationMs ?? 0) / 1000) ??
         null;
@@ -783,6 +1031,7 @@ export class LibraryStore {
         wavBytes,
         title,
         artist: payload.artist ?? row.artist,
+        kind: 'fixed',
       });
 
       if (!result.ok) throw new Error(result.reason);
@@ -815,6 +1064,13 @@ export class LibraryStore {
 }
 
 export const libraryStore = new LibraryStore();
+
+/** Own ArrayBuffer — avoids SharedArrayBuffer union from TypedArray.buffer. */
+function copyToArrayBuffer(u8: Uint8Array): ArrayBuffer {
+  const out = new ArrayBuffer(u8.byteLength);
+  new Uint8Array(out).set(u8);
+  return out;
+}
 
 function displayName(t: TrackRow): string {
   if (t.artist && t.title) return `${t.artist} — ${t.title}`;

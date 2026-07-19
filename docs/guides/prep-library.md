@@ -89,7 +89,13 @@ Select a **track**, then:
 | **½** / **×2** | Fix half/double tempo mistakes |
 | **Detect** | Re-analyze that song (BPM, key, beatgrid, waveform). Need this if Sync says “no beatgrid” |
 | **Check MP3** | See if a damaged MP3 plays short |
-| **Write fixed WAV** | Makes a **new** fixed file next to it. Original MP3 is never changed |
+| **Preview fix** | **Phones only** — hear the resilient decode before writing. Not on booth/master |
+| **Write fixed WAV** | Makes a **new** fixed file next to it (`… (Fixed by SD).wav`). Original never changed |
+| **Preview normalize** | **Phones only** — hear loudness normalize (after **Detect**). Separate from fix preview — not both at once |
+| **Write normalized** | Makes a **new** file (`… (Normalized by SD).wav`) toward the auto-gain LUFS target. Original never changed |
+| **Stop preview** | Ends whichever phones preview is running |
+
+**Right-click** a track → **Click & squeak fixer…** selects it, jumps to these tools (switches to Library if you were in Performance), and runs Check for MP3s. Same menu has Check / Preview fix / Write fixed / Preview normalize / Write normalized / Load A / Load B.
 | **Camelot** | Set the key yourself, or clear with `—` |
 
 Fixes are remembered next time.

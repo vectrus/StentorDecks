@@ -51,7 +51,11 @@ export const FolderTree = observer(function FolderTree() {
       >
         <button
           type="button"
-          ref={open == null ? selectedRef : undefined}
+          ref={
+            open == null
+              ? (selectedRef as RefObject<HTMLButtonElement>)
+              : undefined
+          }
           className={`prep-node${open == null && !libraryStore.search ? ' open' : ''}`}
           onClick={() => libraryStore.setOpenFolder(null)}
           title="Clear folder selection"
@@ -90,12 +94,14 @@ function TreeNode(props: {
   const hasKids = node.children.length > 0;
   const isOpen = openPath != null && norm(openPath) === norm(node.path);
   const isExp = expanded.has(node.path);
+  // React 18 Ref types: useRef<T | null> is not assignable to RefObject<T> without cast.
+  const openRef = isOpen ? (selectedRef as RefObject<HTMLButtonElement>) : undefined;
 
   return (
     <div>
       <button
         type="button"
-        ref={isOpen ? selectedRef : undefined}
+        ref={openRef}
         className={`prep-node${isOpen ? ' open' : ''}${depth > 0 ? ' child' : ''}`}
         style={{ paddingLeft: `${0.5 + depth * 0.85}rem` }}
         onClick={() => onSelect(node.path)}

@@ -4,6 +4,10 @@
  */
 
 export const FIXED_BY_SD_MARK = ' (Fixed by SD)';
+/** Loudness-normalized sibling WAV (separate from click/squeak fix). Never overwrites source. */
+export const NORMALIZED_BY_SD_MARK = ' (Normalized by SD)';
+
+export type SiblingWavKind = 'fixed' | 'normalized';
 
 export type Mp3InspectResult = {
   trackId: number;
@@ -47,6 +51,81 @@ export function withFixedBySdTitle(title: string | null, fallbackStem: string): 
   const base = (title?.trim() || fallbackStem).trim() || 'Track';
   if (base.includes(FIXED_BY_SD_MARK.trim())) return base;
   return `${base}${FIXED_BY_SD_MARK}`;
+}
+
+export function normalizedSiblingWavPath(originalPath: string): string {
+  const { dir, base } = splitPath(originalPath);
+  const dot = base.lastIndexOf('.');
+  const stem = dot > 0 ? base.slice(0, dot) : base;
+  const cleaned = stem.includes(NORMALIZED_BY_SD_MARK.trim())
+    ? stem
+    : `${stem}${NORMALIZED_BY_SD_MARK}`;
+  return joinPath(dir, `${cleaned}.wav`);
+}
+
+export function uniqueNormalizedSiblingWavPath(
+  originalPath: string,
+  exists: (p: string) => boolean,
+): string {
+  const first = normalizedSiblingWavPath(originalPath);
+  if (!exists(first)) return first;
+  const { dir, base } = splitPath(first);
+  const stem = base.endsWith('.wav') ? base.slice(0, -4) : base;
+  for (let n = 2; n < 1000; n++) {
+    const candidate = joinPath(dir, `${stem} ${n}.wav`);
+    if (!exists(candidate)) return candidate;
+  }
+  throw new Error('Could not find a free sibling path for Normalized by SD');
+}
+
+export function withNormalizedBySdTitle(title: string | null, fallbackStem: string): string {
+  const base = (title?.trim() || fallbackStem).trim() || 'Track';
+  if (base.includes(NORMALIZED_BY_SD_MARK.trim())) return base;
+  return `${base}${NORMALIZED_BY_SD_MARK}`;
+}
+
+/** Peak of |samples| across channels. */
+export function peakAbsChannels(channelData: Float32Array[]): number {
+  let peak = 0;
+  for (const ch of channelData) {
+    for (let i = 0; i < ch.length; i++) {
+      const a = Math.abs(ch[i]!);
+      if (a > peak) peak = a;
+    }
+  }
+  return peak;
+}
+
+/** Multiply channels in place; returns the linear gain applied. */
+export function applyLinearGainInPlace(
+  channelData: Float32Array[],
+  linear: number,
+): number {
+  const g = Number.isFinite(linear) ? linear : 1;
+  for (const ch of channelData) {
+    for (let i = 0; i < ch.length; i++) {
+      ch[i]! *= g;
+    }
+  }
+  return g;
+}
+
+/**
+ * Gain toward target LUFS, then peak-limit so true peak stays ≤ 0.99.
+ * Returns linear gain actually applied.
+ */
+export function normalizeChannelsTowardLufs(
+  channelData: Float32Array[],
+  loudnessLufs: number,
+  targetLufs: number,
+  trimDbToGain: (db: number) => number,
+  autoGainTrimDb: (loudness: number, target: number) => number,
+): number {
+  const wanted = trimDbToGain(autoGainTrimDb(loudnessLufs, targetLufs));
+  const peak = peakAbsChannels(channelData);
+  const maxGain = peak > 1e-8 ? 0.99 / peak : wanted;
+  const g = Math.min(wanted, maxGain);
+  return applyLinearGainInPlace(channelData, g);
 }
 
 /**

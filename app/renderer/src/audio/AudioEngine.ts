@@ -187,6 +187,9 @@ export class AudioEngine {
     });
     this.epoch += 1;
     try {
+      // Stop phones-only Prep preview before tearing the graph down.
+      const { phonesPreviewPlayer } = await import('./PhonesPreviewPlayer');
+      await phonesPreviewPlayer.stop();
       // Decks re-decode stashed file bytes in afterRebuild — never clone PCM
       // from a context that is about to close.
       await this.teardown();
@@ -383,8 +386,24 @@ export class AudioEngine {
     this.merger = null;
     this.cueBridgeDest = null;
     this.cueBridgeSrc = null;
+    this.headGain = null;
+    this.cueSum = null;
+    this.cueFromPfl = null;
+    this.cueFromMaster = null;
+    this.masterBus = null;
+    this.masterGain = null;
+    this.limiter = null;
+    this.masterMeter = null;
     setVisualLatencySec(0);
     await Promise.all(closes);
+  }
+
+  /**
+   * Phones-only inject point (same node as testCue). Never master/limiter/booth.
+   * Library fixer / normalize preview connect here.
+   */
+  phonesInjectNode(): GainNode | null {
+    return this.headGain;
   }
 
   graph(id: DeckId): DeckGraph | null {

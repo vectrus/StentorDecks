@@ -1,23 +1,38 @@
 import { observer } from 'mobx-react-lite';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CAMELOT_KEYS } from '@stentordeck/shared';
 import { libraryStore } from '../../stores/root';
 
-/** Prep BPM/key correction strip (R6.6). */
+/** Prep BPM/key correction strip (R6.6) + MP3 click/squeak tools (R5.9). */
 export const CorrectionStrip = observer(function CorrectionStrip() {
   const track = libraryStore.selectedTrack;
   const [bpmDraft, setBpmDraft] = useState('');
+  const [flash, setFlash] = useState(false);
+  const focusSeq = libraryStore.mp3FixerFocusSeq;
+
+  useEffect(() => {
+    if (focusSeq <= 0) return;
+    const el = document.getElementById('prep-mp3-fixer');
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    setFlash(true);
+    const t = window.setTimeout(() => setFlash(false), 1600);
+    return () => window.clearTimeout(t);
+  }, [focusSeq]);
 
   if (!track) {
     return (
-      <div className="prep-correct dim">
+      <div id="prep-mp3-fixer" className="prep-correct dim">
         Select a track to edit BPM / key
       </div>
     );
   }
 
   return (
-    <div className="prep-correct">
+    <div
+      id="prep-mp3-fixer"
+      className={`prep-correct${flash ? ' mp3-fixer-focus' : ''}`}
+      aria-label="BPM, key, and click and squeak fixer"
+    >
       <label className="prep-correct-bpm">
         BPM
         <input
@@ -90,6 +105,19 @@ export const CorrectionStrip = observer(function CorrectionStrip() {
       </button>
       <button
         type="button"
+        className={`prep-mp3-preview${libraryStore.phonesPreviewKind === 'fixer' ? ' on' : ''}`}
+        title="Phones only — hear resilient decode before writing. Stops normalize preview if that was playing."
+        disabled={
+          libraryStore.mp3FixBusy ||
+          libraryStore.phonesPreviewBusy ||
+          !/\.mp3$/i.test(track.path)
+        }
+        onClick={() => void libraryStore.toggleFixerPhonesPreview()}
+      >
+        {libraryStore.phonesPreviewKind === 'fixer' ? 'Stop fix preview' : 'Preview fix'}
+      </button>
+      <button
+        type="button"
         className="prep-mp3-fix"
         title="Decode with resilient stitch → write sibling WAV named (Fixed by SD). Never changes the original."
         disabled={libraryStore.mp3FixBusy || !/\.mp3$/i.test(track.path)}
@@ -97,6 +125,40 @@ export const CorrectionStrip = observer(function CorrectionStrip() {
       >
         {libraryStore.mp3FixBusy ? 'Fixing…' : 'Write fixed WAV'}
       </button>
+      <button
+        type="button"
+        className={`prep-mp3-preview${libraryStore.phonesPreviewKind === 'normalize' ? ' on' : ''}`}
+        title="Phones only — hear LUFS normalize gain (Settings target). Separate from fixer; not both at once. Needs Detect loudness."
+        disabled={
+          libraryStore.mp3FixBusy ||
+          libraryStore.phonesPreviewBusy ||
+          track.loudnessLufs == null
+        }
+        onClick={() => void libraryStore.toggleNormalizePhonesPreview()}
+      >
+        {libraryStore.phonesPreviewKind === 'normalize'
+          ? 'Stop norm preview'
+          : 'Preview normalize'}
+      </button>
+      <button
+        type="button"
+        className="prep-mp3-norm"
+        title="Write sibling WAV named (Normalized by SD) toward auto-gain target LUFS. Never changes the original. Separate from Write fixed WAV."
+        disabled={libraryStore.mp3FixBusy || track.loudnessLufs == null}
+        onClick={() => void libraryStore.writeNormalizedSibling()}
+      >
+        Write normalized
+      </button>
+      {libraryStore.phonesPreviewKind != null ? (
+        <button
+          type="button"
+          className="prep-mp3-preview-stop"
+          title="Stop phones-only preview"
+          onClick={() => void libraryStore.stopPhonesPreview()}
+        >
+          Stop preview
+        </button>
+      ) : null}
       <label
         className="prep-correct-key"
         title="Camelot wheel: 1A–12A (minor) / 1B–12B (major). Compatible mixes are ±1 on the wheel (e.g. 8A↔9A, 8A↔8B)."

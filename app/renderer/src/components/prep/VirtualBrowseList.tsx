@@ -4,6 +4,10 @@ import type { LibraryBrowseEntry } from '../../stores/LibraryStore';
 import { mixReferenceKey } from '../../stores/mixReferenceKey';
 import { deckA, deckB, libraryStore, sessionPlayedStore } from '../../stores/root';
 import { KeyHint } from '../browse/KeyHint';
+import {
+  TrackContextMenu,
+  type TrackContextTarget,
+} from '../browse/TrackContextMenu';
 import { fmtBpm, fmtDur } from './fmt';
 
 /** docs/06 — browser row 42 px at 16 px type */
@@ -17,6 +21,7 @@ export const VirtualBrowseList = observer(function VirtualBrowseList() {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewH, setViewH] = useState(400);
+  const [ctx, setCtx] = useState<TrackContextTarget | null>(null);
 
   useEffect(() => {
     const el = scrollerRef.current;
@@ -84,6 +89,7 @@ export const VirtualBrowseList = observer(function VirtualBrowseList() {
               selected={index === cursor}
               offsetY={index * ROW_H}
               referenceKey={refKey}
+              onContextTrack={(t) => setCtx(t)}
             />
           );
         })}
@@ -97,6 +103,7 @@ export const VirtualBrowseList = observer(function VirtualBrowseList() {
               : 'No tracks in this folder'}
         </div>
       )}
+      <TrackContextMenu target={ctx} onClose={() => setCtx(null)} />
     </div>
   );
 });
@@ -107,8 +114,9 @@ const BrowseRow = observer(function BrowseRow(props: {
   selected: boolean;
   offsetY: number;
   referenceKey: string | null;
+  onContextTrack: (t: TrackContextTarget) => void;
 }) {
-  const { entry, index, selected, offsetY, referenceKey } = props;
+  const { entry, index, selected, offsetY, referenceKey, onContextTrack } = props;
   const played =
     entry.kind === 'track' && sessionPlayedStore.isPlayed(entry.track.id);
   return (
@@ -124,6 +132,17 @@ const BrowseRow = observer(function BrowseRow(props: {
         libraryStore.selectIndex(index);
         if (entry.kind === 'folder') libraryStore.enter();
         else libraryStore.requestLoad(deckA);
+      }}
+      onContextMenu={(e) => {
+        if (entry.kind !== 'track') return;
+        e.preventDefault();
+        libraryStore.selectIndex(index);
+        onContextTrack({
+          trackId: entry.track.id,
+          path: entry.track.path,
+          clientX: e.clientX,
+          clientY: e.clientY,
+        });
       }}
     >
       {entry.kind === 'folder' ? (

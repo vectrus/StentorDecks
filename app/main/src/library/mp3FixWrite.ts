@@ -1,12 +1,16 @@
 /**
- * Prep R5.9 — write Fixed-by-SD sibling WAV. Never mutates the source file.
+ * Prep sibling WAV writers — Fixed by SD (R5.9) and Normalized by SD.
+ * Never mutates the source file.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import {
   uniqueFixedSiblingWavPath,
+  uniqueNormalizedSiblingWavPath,
   withFixedBySdTitle,
+  withNormalizedBySdTitle,
+  type SiblingWavKind,
 } from '@stentordeck/shared';
 import type { DbHandle } from '../db/database';
 import { normalizePath } from '../db/tracksRepo';
@@ -27,7 +31,7 @@ function isUnderRoots(filePath: string, roots: string[]): boolean {
   return false;
 }
 
-export async function writeFixedMp3Sibling(
+export async function writeSiblingWav(
   db: DbHandle,
   roots: string[],
   req: {
@@ -35,8 +39,10 @@ export async function writeFixedMp3Sibling(
     wavBytes: Uint8Array;
     title: string;
     artist: string | null;
+    kind?: SiblingWavKind;
   },
 ): Promise<Mp3FixWriteResult> {
+  const kind: SiblingWavKind = req.kind ?? 'fixed';
   const row = db
     .prepare(
       `SELECT id, path, title, artist, bpm, key_camelot, key_name, bpm_source, key_source
@@ -62,8 +68,11 @@ export async function writeFixedMp3Sibling(
   if (!isUnderRoots(sourcePath, roots)) {
     return { ok: false, reason: 'Source is outside library roots' };
   }
-  if (!/\.mp3$/i.test(sourcePath)) {
+  if (kind === 'fixed' && !/\.mp3$/i.test(sourcePath)) {
     return { ok: false, reason: 'Only MP3 sources can be fixed (output is always WAV)' };
+  }
+  if (kind === 'normalized' && !/\.(mp3|flac|wav)$/i.test(sourcePath)) {
+    return { ok: false, reason: 'Normalize supports MP3 / FLAC / WAV sources' };
   }
   if (!fs.existsSync(sourcePath)) {
     return { ok: false, reason: 'Source file missing on disk' };
@@ -74,7 +83,10 @@ export async function writeFixedMp3Sibling(
 
   let dest: string;
   try {
-    dest = uniqueFixedSiblingWavPath(sourcePath, (p) => fs.existsSync(p));
+    dest =
+      kind === 'normalized'
+        ? uniqueNormalizedSiblingWavPath(sourcePath, (p) => fs.existsSync(p))
+        : uniqueFixedSiblingWavPath(sourcePath, (p) => fs.existsSync(p));
   } catch (err) {
     return {
       ok: false,
@@ -102,7 +114,6 @@ export async function writeFixedMp3Sibling(
     };
   }
 
-  // Belt: never allow a bug to replace the source after write.
   if (!fs.existsSync(sourcePath)) {
     return { ok: false, reason: 'Source vanished after write — aborting index' };
   }
@@ -113,7 +124,10 @@ export async function writeFixedMp3Sibling(
   }
 
   const stem = path.parse(sourcePath).name;
-  const fixedTitle = withFixedBySdTitle(req.title || row.title, stem);
+  const outTitle =
+    kind === 'normalized'
+      ? withNormalizedBySdTitle(req.title || row.title, stem)
+      : withFixedBySdTitle(req.title || row.title, stem);
 
   db.prepare(
     `UPDATE tracks SET
@@ -126,7 +140,7 @@ export async function writeFixedMp3Sibling(
        key_source = CASE WHEN ? IS NOT NULL THEN ? ELSE key_source END
      WHERE id = ?`,
   ).run(
-    fixedTitle,
+    outTitle,
     req.artist ?? row.artist,
     row.bpm,
     row.bpm,
@@ -139,4 +153,19 @@ export async function writeFixedMp3Sibling(
   );
 
   return { ok: true, path: destNorm, trackId: indexed.id };
+}
+
+/** @deprecated use writeSiblingWav — kept name for existing call sites */
+export async function writeFixedMp3Sibling(
+  db: DbHandle,
+  roots: string[],
+  req: {
+    sourceTrackId: number;
+    wavBytes: Uint8Array;
+    title: string;
+    artist: string | null;
+    kind?: SiblingWavKind;
+  },
+): Promise<Mp3FixWriteResult> {
+  return writeSiblingWav(db, roots, { ...req, kind: req.kind ?? 'fixed' });
 }

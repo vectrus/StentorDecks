@@ -32,7 +32,7 @@ import {
   readTrackFile,
   updateManualMeta,
 } from './db/tracksRepo';
-import { writeFixedMp3Sibling } from './library/mp3FixWrite';
+import { writeSiblingWav } from './library/mp3FixWrite';
 import { broadcast } from './ipcBroadcast';
 import { createLibraryWatcher, type LibraryWatcher } from './scanner/libraryWatcher';
 import { scanLibraryRoots } from './scanner/scanLibrary';
@@ -117,7 +117,7 @@ export function registerIpcHandlers(ctx: Ctx): void {
   );
   handle('library:mp3FixWrite', async (req) => {
     const roots = ctx.getSettingsState().settings.library.roots;
-    const result = await writeFixedMp3Sibling(getDb(), roots, req);
+    const result = await writeSiblingWav(getDb(), roots, req);
     if (result.ok) {
       supervisor.enqueue([result.trackId], 'new');
       broadcast('library:progress', {

@@ -12,6 +12,7 @@ export const FIXTURE_TRACKS: TrackRow[] = [
     bpmSource: 'tag',
     lowConfidence: false,
     beatGridOffsetSec: 0.05,
+    loudnessLufs: -12.5,
   },
   {
     id: 2,
@@ -24,6 +25,7 @@ export const FIXTURE_TRACKS: TrackRow[] = [
     bpmSource: 'analysis',
     lowConfidence: false,
     beatGridOffsetSec: 0.12,
+    loudnessLufs: -14.2,
   },
   {
     id: 3,
@@ -36,6 +38,7 @@ export const FIXTURE_TRACKS: TrackRow[] = [
     bpmSource: null,
     lowConfidence: false,
     beatGridOffsetSec: null,
+    loudnessLufs: null,
   },
 ];
 

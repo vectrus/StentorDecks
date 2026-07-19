@@ -46,6 +46,7 @@ type TrackRowDb = {
   bpm_source: 'tag' | 'analysis' | 'manual' | null;
   low_confidence: number;
   beat_grid_offset_sec: number | null;
+  loudness_lufs: number | null;
   album: string | null;
   genre: string | null;
 };
@@ -62,6 +63,7 @@ function toTrackRow(r: TrackRowDb): TrackRow {
     bpmSource: r.bpm_source,
     lowConfidence: r.low_confidence !== 0,
     beatGridOffsetSec: r.beat_grid_offset_sec,
+    loudnessLufs: r.loudness_lufs,
   };
 }
 
@@ -95,7 +97,7 @@ export function queryTracks(db: DbHandle, q: LibraryQuery): TrackRow[] {
 
   const sql = `
     SELECT id, path, title, artist, bpm, key_camelot, duration_ms, bpm_source, low_confidence,
-           beat_grid_offset_sec, album, genre
+           beat_grid_offset_sec, loudness_lufs, album, genre
     FROM tracks
     WHERE ${where.join(' AND ')}
     ORDER BY ${order}
@@ -139,7 +141,7 @@ export function getTrackDetail(db: DbHandle, id: number): TrackDetail | null {
   const r = db
     .prepare(
       `SELECT id, path, title, artist, bpm, key_camelot, duration_ms, bpm_source, low_confidence,
-              beat_grid_offset_sec, album, genre
+              beat_grid_offset_sec, loudness_lufs, album, genre
        FROM tracks WHERE id = ? AND missing_since IS NULL`,
     )
     .get(id) as TrackRowDb | undefined;

@@ -43,6 +43,11 @@ export class UiStore {
   }
 
   async setMode(mode: AppModeState['mode']): Promise<void> {
+    // Leaving Library stops phones-only Prep preview (fixer XOR normalize).
+    if (this.mode === 'prep' && mode !== 'prep') {
+      const { phonesPreviewPlayer } = await import('../audio/PhonesPreviewPlayer');
+      await phonesPreviewPlayer.stop();
+    }
     const next = await invoke('app:mode:set', { mode });
     runInAction(() => {
       this.mode = next.mode;

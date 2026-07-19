@@ -29,6 +29,7 @@ describe('MidiStore ingest (fixture traffic)', () => {
         bpmSource: null,
         lowConfidence: false,
         beatGridOffsetSec: null,
+        loudnessLufs: null,
       },
       {
         id: 2,
@@ -41,6 +42,7 @@ describe('MidiStore ingest (fixture traffic)', () => {
         bpmSource: null,
         lowConfidence: false,
         beatGridOffsetSec: null,
+        loudnessLufs: null,
       },
     ];
     lib.cursor = 0;

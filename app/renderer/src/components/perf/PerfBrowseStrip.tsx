@@ -3,6 +3,10 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { deckA, deckB, libraryStore, sessionPlayedStore } from '../../stores/root';
 import { mixReferenceKey } from '../../stores/mixReferenceKey';
 import { KeyHint } from '../browse/KeyHint';
+import {
+  TrackContextMenu,
+  type TrackContextTarget,
+} from '../browse/TrackContextMenu';
 import { FolderTree } from '../prep/FolderTree';
 import { fmtBpm, fmtDur } from '../prep/fmt';
 
@@ -17,6 +21,7 @@ const MIN_ROWS = 3;
 export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
   const listRef = useRef<HTMLUListElement>(null);
   const [visibleCount, setVisibleCount] = useState(MIN_ROWS);
+  const [ctx, setCtx] = useState<TrackContextTarget | null>(null);
 
   useLayoutEffect(() => {
     const el = listRef.current;
@@ -123,6 +128,16 @@ export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
                     libraryStore.selectIndex(index);
                     libraryStore.requestLoad(deckA);
                   }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    libraryStore.selectIndex(index);
+                    setCtx({
+                      trackId: entry.track.id,
+                      path: entry.track.path,
+                      clientX: e.clientX,
+                      clientY: e.clientY,
+                    });
+                  }}
                 >
                   <span className="perf-col track">
                     {played ? (
@@ -190,6 +205,7 @@ export const PerfBrowseStrip = observer(function PerfBrowseStrip() {
           <span className="mono hint">{libraryStore.loadError}</span>
         ) : null}
       </div>
+      <TrackContextMenu target={ctx} onClose={() => setCtx(null)} />
     </section>
   );
 });

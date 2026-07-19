@@ -5,9 +5,21 @@ Newest first. Each entry cites owner sign-off context and R-IDs touched.
 
 ---
 
+## 2026-07-19 — Prep: phones-only fix/normalize preview (R5.9)
+
+Library correction strip + context menu: **Preview fix** and **Preview normalize** play on **headphones only** (never booth/master), mutually exclusive. **Write normalized** writes a sibling `* (Normalized by SD).wav` toward the auto-gain LUFS target — separate from **Write fixed WAV**. Source files still never overwritten. R5.9, R2.13 target LUFS.
+
+---
+
 ## 2026-07-19 — Doc screenshots: harmonic + Next up
 
 Regenerated Playwright pack for Library / Settings → Library; added `12-next-up.png`. Manifest website gallery includes Library settings + Next up. E7 / docs.
+
+---
+
+## 2026-07-19 — Library: right-click → click & squeak fixer (R5.9)
+
+Track context menu in Library and Performance browse: **Click & squeak fixer…** selects the track, opens Library correction strip (highlight), runs Check MP3; also Check / Write fixed WAV / Load A·B. Original file still never overwritten.
 
 ---
 

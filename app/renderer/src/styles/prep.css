@@ -395,6 +395,17 @@
   color: var(--deck-b);
 }
 
+.prep-correct button.prep-mp3-norm {
+  border-color: var(--deck-a);
+  color: var(--deck-a);
+}
+
+.prep-correct button.prep-mp3-preview.on,
+.prep-correct button.prep-mp3-preview-stop {
+  border-color: var(--vu-hot, #ffb454);
+  color: var(--vu-hot, #ffb454);
+}
+
 .prep-mp3-detail {
   flex: 1 1 100%;
   color: var(--text-dim);
@@ -402,6 +413,67 @@
 
 .prep-mp3-detail.needs-fix {
   color: var(--vu-hot, #ffb454);
+}
+
+.prep-correct.mp3-fixer-focus {
+  outline: 2px solid var(--deck-b, #5bd0ff);
+  outline-offset: 4px;
+  border-radius: 0.4rem;
+  animation: mp3-fixer-pulse 1.4s ease-out 1;
+}
+
+@keyframes mp3-fixer-pulse {
+  0% {
+    background: rgba(91, 208, 255, 0.14);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+/* Track right-click menu (R5.9) — glanceable rows ≥42 px */
+.track-ctx {
+  position: fixed;
+  z-index: 80;
+  min-width: 220px;
+  padding: 6px 0;
+  background: var(--bg-raised, #161b22);
+  border: 1px solid var(--border-strong, #232b36);
+  border-radius: 0.5rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.track-ctx button {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  color: var(--text, #f4f7fb);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.track-ctx button:hover:not(:disabled) {
+  background: rgba(255, 180, 84, 0.12);
+}
+
+.track-ctx button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.track-ctx-primary {
+  color: var(--deck-b, #5bd0ff) !important;
+}
+
+.track-ctx-sep {
+  height: 1px;
+  margin: 6px 0;
+  background: var(--border, #232b36);
 }
 
 .prep-foot {

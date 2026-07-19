@@ -25,6 +25,7 @@ export const DOC_LIBRARY: MockLibraryFixture = {
       bpmSource: 'analysis',
       lowConfidence: false,
       beatGridOffsetSec: 0.04,
+      loudnessLufs: -12.0,
     },
     {
       id: 2,
@@ -37,6 +38,7 @@ export const DOC_LIBRARY: MockLibraryFixture = {
       bpmSource: 'tag',
       lowConfidence: false,
       beatGridOffsetSec: 0.02,
+      loudnessLufs: -13.5,
     },
     {
       id: 3,
@@ -49,6 +51,7 @@ export const DOC_LIBRARY: MockLibraryFixture = {
       bpmSource: 'manual',
       lowConfidence: false,
       beatGridOffsetSec: 0.0,
+      loudnessLufs: -11.0,
     },
     {
       id: 4,
@@ -61,6 +64,7 @@ export const DOC_LIBRARY: MockLibraryFixture = {
       bpmSource: 'analysis',
       lowConfidence: true,
       beatGridOffsetSec: 0.08,
+      loudnessLufs: -15.0,
     },
     // Extra rows so Next up / harmonic soft-rank look populated in screenshots.
     {
@@ -74,6 +78,7 @@ export const DOC_LIBRARY: MockLibraryFixture = {
       bpmSource: 'analysis',
       lowConfidence: false,
       beatGridOffsetSec: 0.03,
+      loudnessLufs: -12.8,
     },
     {
       id: 6,
@@ -86,6 +91,7 @@ export const DOC_LIBRARY: MockLibraryFixture = {
       bpmSource: 'analysis',
       lowConfidence: false,
       beatGridOffsetSec: 0.05,
+      loudnessLufs: -13.2,
     },
     {
       id: 7,
@@ -98,6 +104,7 @@ export const DOC_LIBRARY: MockLibraryFixture = {
       bpmSource: 'tag',
       lowConfidence: false,
       beatGridOffsetSec: 0.01,
+      loudnessLufs: -14.0,
     },
     {
       id: 8,
@@ -110,6 +117,7 @@ export const DOC_LIBRARY: MockLibraryFixture = {
       bpmSource: 'analysis',
       lowConfidence: false,
       beatGridOffsetSec: 0.06,
+      loudnessLufs: -12.5,
     },
   ],
   trackCount: 8,
