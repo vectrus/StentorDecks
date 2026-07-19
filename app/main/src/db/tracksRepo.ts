@@ -71,8 +71,12 @@ export function queryTracks(db: DbHandle, q: LibraryQuery): TrackRow[] {
   const searching = Boolean(q.search && q.search.trim());
 
   if (searching) {
-    const like = `%${q.search!.trim()}%`;
-    where.push(`(artist LIKE ? OR title LIKE ? OR path LIKE ?)`);
+    // Escape LIKE wildcards so searching "100%" or "mix_01" matches literally.
+    const escaped = q.search!.trim().replace(/[\\%_]/g, (m) => `\\${m}`);
+    const like = `%${escaped}%`;
+    where.push(
+      `(artist LIKE ? ESCAPE '\\' OR title LIKE ? ESCAPE '\\' OR path LIKE ? ESCAPE '\\')`,
+    );
     params.push(like, like, like);
   } else if (q.folder != null && q.folder !== '') {
     where.push(`folder = ?`);
@@ -153,11 +157,11 @@ export function getTrackDetail(db: DbHandle, id: number): TrackDetail | null {
 }
 
 /** Read file bytes for deck load — only if path is under a configured library root. */
-export function readTrackFile(
+export async function readTrackFile(
   db: DbHandle,
   id: number,
   roots: string[],
-): LibraryReadResult | null {
+): Promise<LibraryReadResult | null> {
   const r = db
     .prepare(
       `SELECT id, path, title, artist, bpm, key_camelot, loudness_lufs, duration_ms,
@@ -180,8 +184,13 @@ export function readTrackFile(
   if (!r) return null;
   const filePath = normalizePath(r.path);
   if (!isUnderRoots(filePath, roots)) return null;
-  if (!fs.existsSync(filePath)) return null;
-  const buf = fs.readFileSync(filePath);
+  // Async read — a sync read of a large file would stall the whole main process.
+  let buf: Buffer;
+  try {
+    buf = await fs.promises.readFile(filePath);
+  } catch {
+    return null;
+  }
   return {
     id: r.id,
     path: filePath,

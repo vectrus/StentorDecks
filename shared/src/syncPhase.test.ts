@@ -1,14 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
+  PHASE_ASSIST_BIAS_SLEW_PER_SEC,
+  PHASE_ASSIST_ENGAGE_SEC,
+  PHASE_ASSIST_INTEGRAL_MAX,
+  PHASE_ASSIST_RELEASE_SEC,
   beatPeriodSec,
   beatPhaseSec,
+  createPhaseAssistState,
   phaseAssistDeltaSec,
   phaseAssistDeltaTrackSec,
   phaseAssistRateBias,
+  phaseAssistStep,
   phaseSnapDeltaSec,
   phaseSnapDeltaTrackSec,
   rescaleBeatGridOffsetSec,
   wrapPhaseSec,
+  type PhaseAssistState,
 } from './syncPhase.js';
 
 describe('phaseSnapDeltaSec', () => {
@@ -124,5 +131,63 @@ describe('phaseAssistRateBias', () => {
 
   it('speeds when this is behind (negative delta)', () => {
     expect(phaseAssistRateBias(-0.02)).toBeGreaterThan(1);
+  });
+});
+
+describe('phaseAssistStep (PI controller)', () => {
+  const DT = 1 / 60;
+
+  function run(state: PhaseAssistState, errSec: number, steps: number): PhaseAssistState {
+    let s = state;
+    for (let i = 0; i < steps; i++) s = phaseAssistStep(s, errSec, DT);
+    return s;
+  }
+
+  it('stays disengaged below the engage threshold', () => {
+    const s = phaseAssistStep(createPhaseAssistState(), PHASE_ASSIST_ENGAGE_SEC * 0.6, DT);
+    expect(s.engaged).toBe(false);
+  });
+
+  it('hysteresis: engages high, stays engaged between edges, releases low', () => {
+    let s = phaseAssistStep(createPhaseAssistState(), PHASE_ASSIST_ENGAGE_SEC + 0.001, DT);
+    expect(s.engaged).toBe(true);
+    // Error between release and engage — must stay engaged (no flapping).
+    s = phaseAssistStep(s, (PHASE_ASSIST_ENGAGE_SEC + PHASE_ASSIST_RELEASE_SEC) / 2, DT);
+    expect(s.engaged).toBe(true);
+    s = phaseAssistStep(s, PHASE_ASSIST_RELEASE_SEC * 0.5, DT);
+    expect(s.engaged).toBe(false);
+  });
+
+  it('slows when ahead, speeds when behind', () => {
+    const ahead = run(createPhaseAssistState(), 0.015, 30);
+    const behind = run(createPhaseAssistState(), -0.015, 30);
+    expect(ahead.bias).toBeLessThan(1);
+    expect(behind.bias).toBeGreaterThan(1);
+  });
+
+  it('slew-limits the bias per step', () => {
+    const s = phaseAssistStep(createPhaseAssistState(), 0.02, DT);
+    expect(Math.abs(s.bias - 1)).toBeLessThanOrEqual(
+      PHASE_ASSIST_BIAS_SLEW_PER_SEC * DT + 1e-9,
+    );
+  });
+
+  it('integral accumulates under sustained error and clamps', () => {
+    const s = run(createPhaseAssistState(), 0.015, 60 * 30); // 30 s sustained
+    expect(s.integral).toBeGreaterThan(0);
+    expect(s.integral).toBeLessThanOrEqual(PHASE_ASSIST_INTEGRAL_MAX);
+  });
+
+  it('integral holds the correction after the error is gone (steady-state killer)', () => {
+    const wound = run(createPhaseAssistState(), 0.015, 60 * 10);
+    const after = run(wound, 0, 60); // 1 s at zero error
+    // P released, but the integral keeps compensating the tempo mismatch.
+    expect(after.bias).toBeLessThan(1 - after.integral / 2);
+    expect(after.integral).toBeGreaterThan(0);
+  });
+
+  it('does not integrate outside the rate regime (anti-windup)', () => {
+    const s = run(createPhaseAssistState(), 0.5, 60); // seek-level error
+    expect(s.integral).toBe(0);
   });
 });

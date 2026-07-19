@@ -90,38 +90,45 @@ export function createAnalysisSupervisor(): AnalysisSupervisor {
     if (win && !win.isDestroyed()) return;
 
     ready = false;
-    win = new BrowserWindow({
+    // Sandboxed — this renderer decodes untrusted media files. Bytes are read
+    // here in main and shipped with the job; the window has no Node access.
+    const w = new BrowserWindow({
       show: false,
       width: 400,
       height: 300,
       webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        sandbox: false,
+        preload: path.join(__dirname, 'analysisPreload.js'),
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true,
         backgroundThrottling: false,
       },
     });
+    win = w;
 
-    win.webContents.on('render-process-gone', (_e, details) => {
+    w.webContents.on('render-process-gone', (_e, details) => {
       console.error('[analysis] renderer gone', details);
       if (current) {
         queue.unshift({ ...current, seq: seq++ });
         sortQueue();
       }
-      win = null;
+      if (win === w) win = null;
       ready = false;
       busy = false;
       current = null;
+      if (!w.isDestroyed()) w.destroy();
       ensureAnalysisWindow();
       pump();
     });
 
-    win.on('closed', () => {
-      win = null;
-      ready = false;
+    w.on('closed', () => {
+      if (win === w) {
+        win = null;
+        ready = false;
+      }
     });
 
-    void win.loadFile(analysisHtmlPath());
+    void w.loadFile(analysisHtmlPath());
   }
 
   function enqueue(trackIds: number[], priority: AnalysisPriority): number {
@@ -190,7 +197,25 @@ export function createAnalysisSupervisor(): AnalysisSupervisor {
     busy = true;
     current = next;
     emit(next.trackId, 'decode');
-    win.webContents.send('analysis:run', next as AnalysisJob);
+    void dispatch(next);
+  }
+
+  /** Read bytes here (async — never block main) and ship them with the job. */
+  async function dispatch(job: QueueItem): Promise<void> {
+    try {
+      const buf = await fs.promises.readFile(job.path);
+      const bytes = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+      // Window may have died mid-read; render-process-gone already requeued.
+      if (current !== job || !win || win.isDestroyed()) return;
+      win.webContents.send('analysis:run', job as AnalysisJob, bytes);
+    } catch (err) {
+      console.warn('[analysis] read failed', job.path, err);
+      if (current !== job) return;
+      busy = false;
+      current = null;
+      emit(job.trackId, 'idle');
+      pump();
+    }
   }
 
   function onReady(): void {

@@ -1,58 +1,47 @@
 /**
- * Analysis renderer entry (hidden BrowserWindow, nodeIntegration).
- * Receives jobs from main, runs OfflineAudioContext pipeline, returns results.
+ * Analysis renderer entry (hidden sandboxed BrowserWindow).
+ * Receives jobs + file bytes from main via the preload bridge, runs the
+ * OfflineAudioContext pipeline, returns results. No Node access here —
+ * this window decodes untrusted media files.
  */
 
-import type { AnalysisJob, AnalysisJobOutcome, AnalysisStage } from '@stentordeck/shared';
+import type {
+  AnalysisBridge,
+  AnalysisJob,
+  AnalysisJobOutcome,
+  AnalysisStage,
+} from '@stentordeck/shared';
 import { runAnalysisPipeline } from './pipeline';
 
-type ElectronIpc = {
-  on: (channel: string, listener: (event: unknown, ...args: unknown[]) => void) => void;
-  send: (channel: string, ...args: unknown[]) => void;
-};
-
-function ipc(): ElectronIpc {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { ipcRenderer } = require('electron') as { ipcRenderer: ElectronIpc };
-  return ipcRenderer;
+const bridge = (globalThis as { stentorAnalysis?: AnalysisBridge }).stentorAnalysis;
+if (!bridge) {
+  throw new Error('stentorAnalysis bridge missing — analysisPreload not loaded');
 }
+const bus: AnalysisBridge = bridge;
 
-function readFileBuffer(filePath: string): ArrayBuffer {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const fs = require('fs') as typeof import('fs');
-  const buf = fs.readFileSync(filePath) as Buffer;
-  const copy = new Uint8Array(buf.byteLength);
-  copy.set(buf);
-  // Slice to the view — never return a pooled Buffer's oversized .buffer.
-  return copy.buffer.slice(copy.byteOffset, copy.byteOffset + copy.byteLength);
-}
-
-const bus = ipc();
-
-bus.on('analysis:run', (_e, raw) => {
-  void handleJob(raw as AnalysisJob);
+bus.onRun((job, bytes) => {
+  void handleJob(job, bytes);
 });
 
-bus.send('analysis:ready', {});
+bus.sendReady();
 
-async function handleJob(job: AnalysisJob): Promise<void> {
+async function handleJob(job: AnalysisJob, bytes: ArrayBuffer): Promise<void> {
   const report = (stage: AnalysisStage) => {
-    bus.send('analysis:stage', { trackId: job.trackId, stage });
+    bus.sendStage({ trackId: job.trackId, stage });
   };
 
   try {
     report('decode');
-    const ab = readFileBuffer(job.path);
-    const outcome: AnalysisJobOutcome = await runAnalysisPipeline(job, ab, report);
+    const outcome: AnalysisJobOutcome = await runAnalysisPipeline(job, bytes, report);
     // Structured clone: ensure Uint8Array transfers
-    bus.send('analysis:result', outcome);
+    bus.sendResult(outcome);
   } catch (err) {
     const failure: AnalysisJobOutcome = {
       trackId: job.trackId,
       ok: false,
       error: err instanceof Error ? err.message : String(err),
     };
-    bus.send('analysis:result', failure);
+    bus.sendResult(failure);
   }
 }
 

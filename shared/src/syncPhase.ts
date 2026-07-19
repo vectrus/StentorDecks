@@ -143,7 +143,79 @@ export const PHASE_ASSIST_RATE_BIAS_MAX = 0.004;
 /** Min ms between assist seeks (large errors only). */
 export const PHASE_ASSIST_SEEK_MIN_INTERVAL_MS = 64;
 
+/** Proportional term engages above this |error| (hysteresis high edge). */
+export const PHASE_ASSIST_ENGAGE_SEC = 0.008;
+/** Proportional term releases below this |error| (hysteresis low edge). */
+export const PHASE_ASSIST_RELEASE_SEC = 0.003;
+/** Integral clamp — absorbs steady tempo mismatch up to ±0.1 % rate. */
+export const PHASE_ASSIST_INTEGRAL_MAX = 0.001;
+/** Integral gain: rate/sec accumulated per second of phase error. */
+export const PHASE_ASSIST_INTEGRAL_GAIN_PER_SEC = 0.02;
+/** Max |Δbias| per second — no per-tick rate steps (micro-wow). */
+export const PHASE_ASSIST_BIAS_SLEW_PER_SEC = 0.03;
+
 /**
+ * Soft-assist PI controller state. Pure — step with phaseAssistStep.
+ * P: hysteresis-gated proportional pull toward target phase.
+ * I: slow clamped integral that kills the steady-state error left by a
+ *    slightly wrong analyzed BPM (pure-P rides the seek threshold forever).
+ * Output bias is slew-limited so `playbackRate` targets move smoothly.
+ */
+export type PhaseAssistState = {
+  engaged: boolean;
+  /** Clamped integral (rate offset; positive = this deck persistently ahead). */
+  integral: number;
+  /** Slew-limited playback-rate multiplier (1 = no correction). */
+  bias: number;
+};
+
+export function createPhaseAssistState(): PhaseAssistState {
+  return { engaged: false, integral: 0, bias: 1 };
+}
+
+/**
+ * One controller step. `errSec` is the signed phase error toward the target
+ * (positive = this deck ahead → slow down). `dtSec` since the previous step.
+ */
+export function phaseAssistStep(
+  state: PhaseAssistState,
+  errSec: number,
+  dtSec: number,
+): PhaseAssistState {
+  if (!Number.isFinite(errSec)) errSec = 0;
+  const dt = Number.isFinite(dtSec) ? Math.min(0.1, Math.max(0, dtSec)) : 0;
+  const a = Math.abs(errSec);
+
+  let engaged = state.engaged;
+  if (!engaged && a >= PHASE_ASSIST_ENGAGE_SEC) engaged = true;
+  else if (engaged && a <= PHASE_ASSIST_RELEASE_SEC) engaged = false;
+
+  // Anti-windup: only integrate inside the rate regime — larger errors are
+  // corrected by micro-seeks, and integrating them would overshoot after.
+  let integral = state.integral;
+  if (a <= PHASE_ASSIST_RATE_BIAS_MAX_ERR_SEC) {
+    integral += errSec * PHASE_ASSIST_INTEGRAL_GAIN_PER_SEC * dt;
+    integral = Math.min(
+      PHASE_ASSIST_INTEGRAL_MAX,
+      Math.max(-PHASE_ASSIST_INTEGRAL_MAX, integral),
+    );
+  }
+
+  let p = 0;
+  if (engaged) {
+    const t = Math.min(1, a / PHASE_ASSIST_RATE_BIAS_MAX_ERR_SEC);
+    p = Math.sign(errSec) * PHASE_ASSIST_RATE_BIAS_MAX * t;
+  }
+
+  const target = 1 - (p + integral);
+  const maxStep = PHASE_ASSIST_BIAS_SLEW_PER_SEC * dt;
+  const bias =
+    state.bias + Math.min(maxStep, Math.max(-maxStep, target - state.bias));
+  return { engaged, integral, bias };
+}
+
+/**
+ * @deprecated Superseded by phaseAssistStep (hysteresis + integral + slew).
  * Temporary playback-rate multiplier toward zero phase error.
  * Positive delta (this ahead) → slow down slightly.
  */

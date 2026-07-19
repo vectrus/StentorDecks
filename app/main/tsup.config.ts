@@ -4,6 +4,7 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     preload: 'src/preload.ts',
+    analysisPreload: 'src/analysisPreload.ts',
   },
   format: ['cjs'],
   platform: 'node',

@@ -55,7 +55,11 @@ export class LibraryStore {
   }
 
   constructor() {
-    makeAutoObservable(this, { loadErrorTimer: false }, { autoBind: true });
+    makeAutoObservable<LibraryStore, 'loadErrorTimer'>(
+      this,
+      { loadErrorTimer: false },
+      { autoBind: true },
+    );
   }
 
   get entries(): LibraryBrowseEntry[] {

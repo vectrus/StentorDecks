@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import type { DeckStore } from '../../stores/DeckStore';
 import { settingsStore } from '../../stores/SettingsStore';
 import { registerFrameDraw } from '../../audio/frameClock';
-import { drawDetailWaveform } from '../../waveform/drawDetail';
+import { DETAIL_HALF_WINDOW_SEC, drawDetailWaveform } from '../../waveform/drawDetail';
 
 type Props = {
   deck: DeckStore;
@@ -48,6 +48,11 @@ export const DetailWaveform = observer(function DetailWaveform({ deck, accent }:
       }
       const blob = deck.detailWaveform;
       if (blob && deck.state !== 'empty' && deck.duration > 0) {
+        // Output-time window (±4 s of *listening* time): both decks scroll at
+        // the same pixel speed, and synced decks' beat grids get identical
+        // pixel spacing — vertical tick alignment across the well = in phase.
+        // pitchOnlyRate (not effectiveRate) so jog nudges don't zoom-wobble.
+        const rate = Math.min(4, Math.max(0.25, deck.pitchOnlyRate || 1));
         drawDetailWaveform(ctx, blob, {
           width: pw,
           height: ph,
@@ -62,6 +67,7 @@ export const DetailWaveform = observer(function DetailWaveform({ deck, accent }:
           beatGridOffsetSec: deck.beatGridOffsetSec,
           showBeatTicks: settingsStore.settings.ui.showBeatTicks,
           devicePixelRatio: dpr,
+          halfWindowSec: DETAIL_HALF_WINDOW_SEC * rate,
         });
       } else {
         ctx.clearRect(0, 0, pw, ph);

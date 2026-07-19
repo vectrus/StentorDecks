@@ -28,6 +28,13 @@ export type DetailDrawOpts = {
   showBeatTicks: boolean;
   /** Device pixel ratio — column step ≈ 1 CSS px (E7). */
   devicePixelRatio?: number;
+  /**
+   * Visible half-window in track seconds (default ±4 s). Pass
+   * DETAIL_HALF_WINDOW_SEC × effectiveRate for an output-time window: both
+   * decks then scroll at identical pixel speed and, when synced, their beat
+   * grids have identical pixel spacing — vertical alignment = phase alignment.
+   */
+  halfWindowSec?: number;
 };
 
 export type DetailSample = { min: number; max: number; rms: number };
@@ -150,12 +157,16 @@ export function drawDetailWaveform(
   ctx.clearRect(0, 0, width, height);
   if (detail.length < 3 || width <= 0 || height <= 0 || durationSec <= 0) return;
 
+  const halfWindow =
+    opts.halfWindowSec != null && Number.isFinite(opts.halfWindowSec) && opts.halfWindowSec > 0
+      ? opts.halfWindowSec
+      : DETAIL_HALF_WINDOW_SEC;
   const pps = detailPps > 0 ? detailPps : DETAIL_PPS_DEFAULT;
   const bucketCount = detailBucketCount(detail);
   const mid = height / 2;
   const centerX = width / 2;
-  const t0 = positionSec - DETAIL_HALF_WINDOW_SEC;
-  const t1 = positionSec + DETAIL_HALF_WINDOW_SEC;
+  const t0 = positionSec - halfWindow;
+  const t1 = positionSec + halfWindow;
   const span = t1 - t0;
   if (span <= 0) return;
 
@@ -185,22 +196,32 @@ export function drawDetailWaveform(
   }
 
   if (showBeatTicks && gridBpm != null && gridBpm > 0) {
-    ctx.globalAlpha = 0.35;
+    const period = 60 / gridBpm;
+    const fullOffset =
+      beatGridOffsetSec != null && Number.isFinite(beatGridOffsetSec) && beatGridOffsetSec >= 0
+        ? beatGridOffsetSec
+        : 0;
     ctx.fillStyle = tickColor;
     for (const t of beatTimesInWindow(
       positionSec,
       gridBpm,
-      DETAIL_HALF_WINDOW_SEC,
+      halfWindow,
       beatGridOffsetSec ?? 0,
     )) {
-      const x = Math.round(timeToDetailX(t, positionSec, width));
+      const x = Math.round(timeToDetailX(t, positionSec, width, halfWindow));
       if (x < 0 || x > width) continue;
-      ctx.fillRect(x, 0, 1, height);
+      // Beat index on the analyzed grid — every 4th beat (bar, assuming 4/4)
+      // draws stronger/wider so bars read at a glance while beatmatching.
+      const idx = Math.round((t - fullOffset) / period);
+      const downbeat = ((idx % 4) + 4) % 4 === 0;
+      ctx.globalAlpha = downbeat ? 0.6 : 0.3;
+      const w = downbeat ? Math.max(1, Math.round(devicePixelRatio)) : 1;
+      ctx.fillRect(x, 0, w, height);
     }
   }
 
   if (cueOffsetSec >= 0 && cueOffsetSec <= durationSec) {
-    const cueX = timeToDetailX(cueOffsetSec, positionSec, width);
+    const cueX = timeToDetailX(cueOffsetSec, positionSec, width, halfWindow);
     if (cueX >= -1 && cueX <= width + 1) {
       ctx.globalAlpha = 1;
       ctx.fillStyle = accent;

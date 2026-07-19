@@ -5,7 +5,11 @@ import type {
   IpcInvokeMap,
   Settings,
 } from '@stentordeck/shared';
-import { createAnalysisSupervisor, setAnalysisProgressBroadcast } from './analysisSupervisor';
+import {
+  createAnalysisSupervisor,
+  setAnalysisProgressBroadcast,
+  type AnalysisSupervisor,
+} from './analysisSupervisor';
 import {
   checkForAppUpdates,
   getUpdateStatus,
@@ -44,10 +48,11 @@ type Ctx = {
   setMode: (m: AppModeState) => void;
 };
 
-const analysis = createAnalysisSupervisor();
+// Single supervisor instance — created in registerIpcHandlers (a second
+// createAnalysisSupervisor() would steal the ipcMain result listeners and
+// stall this one's queue after its first job).
+let analysis: AnalysisSupervisor | null = null;
 let libraryWatcher: LibraryWatcher | null = null;
-
-setAnalysisProgressBroadcast((p) => broadcast('analysis:progress', p));
 
 function handle<K extends keyof IpcInvokeMap>(
   channel: K,
@@ -59,6 +64,9 @@ function handle<K extends keyof IpcInvokeMap>(
 }
 
 export function registerIpcHandlers(ctx: Ctx): void {
+  const supervisor = createAnalysisSupervisor();
+  analysis = supervisor;
+  setAnalysisProgressBroadcast((p) => broadcast('analysis:progress', p));
   libraryWatcher = createLibraryWatcher(getDb, (p) => broadcast('library:progress', p));
   libraryWatcher.setRoots(ctx.getSettingsState().settings.library.roots);
 
@@ -119,12 +127,12 @@ export function registerIpcHandlers(ctx: Ctx): void {
       markMissing: !partial,
     });
     libraryWatcher?.setRoots(settings.library.roots);
-    analysis.kickBackfill();
+    supervisor.kickBackfill();
     return { ok: true as const };
   });
 
   handle('analysis:enqueue', (req) => {
-    const queueDepth = analysis.enqueue(req.trackIds, req.priority);
+    const queueDepth = supervisor.enqueue(req.trackIds, req.priority);
     return { ok: true as const, queueDepth };
   });
 
@@ -183,5 +191,6 @@ export function registerIpcHandlers(ctx: Ctx): void {
 export function disposeIpc(): void {
   void libraryWatcher?.close();
   libraryWatcher = null;
-  analysis.destroy();
+  analysis?.destroy();
+  analysis = null;
 }

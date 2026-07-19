@@ -40,6 +40,12 @@ describe('detail window math', () => {
     expect(timeToDetailX(14, 10, 400)).toBe(400);
   });
 
+  it('timeToDetailX scales with a rate-aware half window', () => {
+    // ±8 s window (rate 2.0): same absolute time lands closer to center.
+    expect(timeToDetailX(14, 10, 400, 8)).toBe(300);
+    expect(timeToDetailX(2, 10, 400, 8)).toBe(0);
+  });
+
   it('beatTimesInWindow lists beats from 0:00 origin', () => {
     // 120 BPM → 0.5 s period; window 6..14 around position 10
     const beats = beatTimesInWindow(10, 120);

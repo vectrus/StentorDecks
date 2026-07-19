@@ -255,8 +255,10 @@ export class AudioEngine {
     this.deckA?.disconnect();
     this.deckB?.disconnect();
     const closes: Promise<void>[] = [];
-    if (this.masterCtx) closes.push(this.masterCtx.close());
-    if (this.cueCtx) closes.push(this.cueCtx.close());
+    // close() rejects if the context already died (device yanked) — must not
+    // abort the rebuild that follows teardown.
+    if (this.masterCtx) closes.push(this.masterCtx.close().catch(() => undefined));
+    if (this.cueCtx) closes.push(this.cueCtx.close().catch(() => undefined));
     this.masterCtx = null;
     this.cueCtx = null;
     this.deckA = null;

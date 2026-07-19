@@ -4,15 +4,15 @@ import {
   endOfTrackWarnLevel,
   createJogActivity,
   createJogImpulse,
+  createPhaseAssistState,
   gateJogPlayingSeek,
   jogFeelFromSettings,
-  PHASE_ASSIST_DEADBAND_SEC,
   PHASE_ASSIST_JOG_MUTE_MS,
   PHASE_ASSIST_MAX_SEEK_SEC,
   PHASE_ASSIST_RATE_BIAS_MAX_ERR_SEC,
   PHASE_ASSIST_SEEK_MIN_INTERVAL_MS,
   phaseAssistDeltaTrackSec,
-  phaseAssistRateBias,
+  phaseAssistStep,
   phaseErrorTrackSec,
   phaseSnapDeltaTrackSec,
   pitchPosFromRate,
@@ -118,6 +118,11 @@ export class DeckStore {
 
   private nudgeTimer: number | null = null;
   private seekHoldTimer: number | null = null;
+  /**
+   * Bumped on every explicit transport op (play/pause/cue/load) so deferred
+   * soft-stop timeouts can detect they're stale and must not apply.
+   */
+  private opGen = 0;
   /** Tick-rate EMA for dual-zone jog (fine vs spinback). */
   private jogActivity = createJogActivity();
   /** Fine-zone impulse window (heavy-platter seek cap). */
@@ -128,6 +133,10 @@ export class DeckStore {
   private lastAssistSeekMs = 0;
   /** Soft phase rate bias while assisting (1 = none). */
   private phaseAssistRateFactor = 1;
+  /** PI assist controller (hysteresis + integral + slew) — not observable. */
+  private phaseAssist = createPhaseAssistState();
+  /** Timestamp of last controller step (dt for integral/slew). */
+  private lastAssistStepMs = 0;
   private lastDisplayPosMs = 0;
   /** Temporary pitch bend while held (docs/04: ±0.5%). */
   bendFactor = 1;
@@ -145,18 +154,32 @@ export class DeckStore {
   constructor(id: DeckId, getSettings: () => Settings) {
     this.id = id;
     this.getSettings = getSettings;
-    makeAutoObservable(
+    makeAutoObservable<
+      DeckStore,
+      | 'opGen'
+      | 'jogActivity'
+      | 'jogImpulse'
+      | 'jogSeekPendingSec'
+      | 'lastAssistSeekMs'
+      | 'phaseAssistRateFactor'
+      | 'phaseAssist'
+      | 'lastAssistStepMs'
+      | 'lastDisplayPosMs'
+    >(
       this,
       {
         fileBytes: false,
         takeoverSoftwareChange: false,
         takeoverLoaded: false,
         visualPosSec: false,
+        opGen: false,
         jogActivity: false,
         jogImpulse: false,
         jogSeekPendingSec: false,
         lastAssistSeekMs: false,
         phaseAssistRateFactor: false,
+        phaseAssist: false,
+        lastAssistStepMs: false,
         lastDisplayPosMs: false,
       },
       { autoBind: true },
@@ -211,6 +234,7 @@ export class DeckStore {
     if (this.state === 'playing') {
       throw new DeckPlayingError(this.id);
     }
+    this.opGen += 1;
     this.loading = true;
     try {
       await audioEngine.acquireDecode();
@@ -321,6 +345,7 @@ export class DeckStore {
   play(opts?: { soft?: boolean }): void {
     const t = audioEngine.transport(this.id);
     if (!t || this.state === 'empty') return;
+    this.opGen += 1;
     void audioEngine.ensureRunning();
     if (opts?.soft !== false) {
       // Default soft-start — avoids PA/cue clicks on buffer create.
@@ -335,11 +360,15 @@ export class DeckStore {
   pause(opts?: { brake?: boolean; soft?: boolean }): void {
     const t = audioEngine.transport(this.id);
     if (!t || this.state !== 'playing') return;
+    this.opGen += 1;
+    const gen = this.opGen;
     const s = this.getSettings();
     const graph = audioEngine.graph(this.id);
     if (opts?.soft) {
       graph?.softStopInput(0.015);
       window.setTimeout(() => {
+        // Stale if the user pressed play/cue/load in the meantime.
+        if (gen !== this.opGen) return;
         runInAction(() => {
           if (opts?.brake ?? s.audio.brakeOnStop) {
             t.brake(s.audio.brakeMs);
@@ -372,6 +401,7 @@ export class DeckStore {
   cuePress(): void {
     const t = audioEngine.transport(this.id);
     if (!t || this.state === 'empty') return;
+    this.opGen += 1;
     const action = resolveCuePress(this.state, t.position(), this.cueOffset);
     if (action.kind === 'setCue') {
       this.cueOffset = action.cueOffset;
@@ -404,12 +434,15 @@ export class DeckStore {
   cueHoldEnd(): void {
     const action = resolveCueHoldEnd(this.cuePreviewing, this.cueOffset);
     if (action.kind !== 'stopSnapCue') return;
+    this.opGen += 1;
+    const gen = this.opGen;
     this.cuePreviewing = false;
     const t = audioEngine.transport(this.id);
     const graph = audioEngine.graph(this.id);
     // Longer soft-stop before pause — cue release was the main click source.
     graph?.softStopInput(0.025);
     window.setTimeout(() => {
+      if (gen !== this.opGen) return;
       runInAction(() => {
         t?.pause();
         t?.seek(action.seekTo);
@@ -469,7 +502,10 @@ export class DeckStore {
     // Playing seek = transport overlap crossfade (docs/03); soft duck is optional legacy.
     audioEngine.transport(this.id)?.seek(clamped, { micro: opts?.micro });
     this.position = clamped;
-    this.visualPosSec = visualPositionSec(clamped);
+    // Latency compensation only while audio is in flight — paused jog cueing
+    // must show the exact sample the deck will start from.
+    this.visualPosSec =
+      this.state === 'playing' ? visualPositionSec(clamped) : clamped;
     if (opts?.soft && this.state === 'playing') {
       audioEngine.graph(this.id)?.softStartInput(0.02);
     }
@@ -496,6 +532,8 @@ export class DeckStore {
     this.syncClamped = false;
     this.syncHasGrid = false;
     this.clearPhaseGlue();
+    this.phaseAssist = createPhaseAssistState();
+    this.lastAssistStepMs = 0;
     if (this.phaseAssistRateFactor !== 1) {
       this.phaseAssistRateFactor = 1;
       audioEngine.transport(this.id)?.setRate(this.effectiveRate);
@@ -708,33 +746,28 @@ export class DeckStore {
       otherOff,
       target,
     );
-    if (Math.abs(delta) < PHASE_ASSIST_DEADBAND_SEC) {
-      if (this.phaseAssistRateFactor !== 1) {
-        this.phaseAssistRateFactor = 1;
-        audioEngine.transport(this.id)?.setRate(this.effectiveRate);
-      }
-      return;
-    }
-
-    // Small error → rate bias (no seek zipper / crawl). Larger → throttled micro-seek.
-    if (Math.abs(delta) <= PHASE_ASSIST_RATE_BIAS_MAX_ERR_SEC) {
-      const bias = phaseAssistRateBias(delta);
-      if (Math.abs(bias - this.phaseAssistRateFactor) > 1e-5) {
-        this.phaseAssistRateFactor = bias;
-        audioEngine.transport(this.id)?.setRate(this.effectiveRate);
-      }
-      return;
-    }
-
-    if (this.phaseAssistRateFactor !== 1) {
-      this.phaseAssistRateFactor = 1;
-      audioEngine.transport(this.id)?.setRate(this.effectiveRate);
-    }
 
     const now =
       typeof performance !== 'undefined' && typeof performance.now === 'function'
         ? performance.now()
         : Date.now();
+    const dt =
+      this.lastAssistStepMs > 0 ? Math.min(0.1, (now - this.lastAssistStepMs) / 1000) : 1 / 60;
+    this.lastAssistStepMs = now;
+
+    // Rate regime (incl. hysteresis deadband): PI controller — proportional pull
+    // plus a slow integral that absorbs BPM-estimate mismatch. Slew-limited.
+    if (Math.abs(delta) <= PHASE_ASSIST_RATE_BIAS_MAX_ERR_SEC) {
+      this.phaseAssist = phaseAssistStep(this.phaseAssist, delta, dt);
+      this.applyAssistBias(this.phaseAssist.bias);
+      return;
+    }
+
+    // Large error → throttled micro-seek. Ease bias toward the integral-only
+    // value (keep the tempo-mismatch correction; drop the proportional pull).
+    this.phaseAssist = phaseAssistStep({ ...this.phaseAssist, engaged: false }, 0, dt);
+    this.applyAssistBias(this.phaseAssist.bias);
+
     if (
       this.lastAssistSeekMs > 0 &&
       now - this.lastAssistSeekMs < PHASE_ASSIST_SEEK_MIN_INTERVAL_MS
@@ -745,6 +778,13 @@ export class DeckStore {
     const step =
       Math.sign(delta) * Math.min(Math.abs(delta), PHASE_ASSIST_MAX_SEEK_SEC);
     this.seek(thisPos + step, { micro: true });
+  }
+
+  private applyAssistBias(bias: number): void {
+    if (Math.abs(bias - this.phaseAssistRateFactor) > 1e-5) {
+      this.phaseAssistRateFactor = bias;
+      audioEngine.transport(this.id)?.setRate(this.effectiveRate);
+    }
   }
 
   setFileBpm(bpm: number | null): void {
@@ -906,8 +946,10 @@ export class DeckStore {
     const dur = t.duration;
     this.position = pos;
     this.duration = dur;
-    // Waveforms read visualPosSec from the shared frame clock (latency-compensated).
-    this.visualPosSec = visualPositionSec(pos);
+    // Waveforms read visualPosSec from the shared frame clock. Latency
+    // compensation only while playing — a stopped playhead is exact.
+    this.visualPosSec =
+      this.state === 'playing' ? visualPositionSec(pos) : pos;
 
     const now =
       typeof performance !== 'undefined' && typeof performance.now === 'function'
@@ -946,6 +988,11 @@ export class DeckStore {
     } else {
       this.eotWarn = 0;
       if (this.phaseAssistRateFactor !== 1) this.phaseAssistRateFactor = 1;
+      // Stopped — drop controller memory so a stale integral can't bias play.
+      if (this.phaseAssist.engaged || this.phaseAssist.integral !== 0 || this.phaseAssist.bias !== 1) {
+        this.phaseAssist = createPhaseAssistState();
+        this.lastAssistStepMs = 0;
+      }
     }
 
     // Keep graph rate in sync (no-op inside setRate when already on target).

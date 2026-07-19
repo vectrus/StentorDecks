@@ -272,6 +272,10 @@ export class DeckTransport {
   private rateAccumOffset = 0;
   private rateAccumCtxTime = 0;
   private rateAccumRate = 1;
+  /** Pending brake completion — any explicit transport op must cancel it. */
+  private brakeTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Ramp anchor while braking so position() follows the audible spin-down. */
+  private brakeInfo: { t0: number; offset0: number; r0: number; t1: number } | null = null;
 
   constructor(
     private readonly ctx: AudioContext,
@@ -301,6 +305,15 @@ export class DeckTransport {
   position(): number {
     if (!this.buffer) return 0;
     if (!this.snap.playing) return this.snap.offset;
+    if (this.brakeInfo) {
+      // Trapezoidal integral of the linear rate ramp — elapsed × live rate
+      // would freeze the playhead near the brake start.
+      const b = this.brakeInfo;
+      const now = Math.min(this.ctx.currentTime, b.t1);
+      const dt = Math.max(0, now - b.t0);
+      const live = this.source?.playbackRate.value ?? 0;
+      return Math.min(this.buffer.duration, b.offset0 + (dt * (b.r0 + live)) / 2);
+    }
     // Use live AudioParam during ramps so the playhead doesn't race ahead of audio.
     const rate = this.source?.playbackRate.value ?? this.rateAccumRate;
     const elapsed = (this.ctx.currentTime - this.rateAccumCtxTime) * rate;
@@ -308,8 +321,33 @@ export class DeckTransport {
   }
 
   play(rate: number): void {
-    if (!this.buffer || this.snap.playing) return;
+    if (!this.buffer) return;
+    if (this.snap.playing) {
+      // Play during a brake spins back up instead of dying when the timer fires.
+      if (this.brakeTimer != null) this.resumeFromBrake(rate);
+      return;
+    }
     this.startSource(this.snap.offset, rate);
+  }
+
+  private resumeFromBrake(rate: number): void {
+    const pos = this.position();
+    this.cancelBrake();
+    const src = this.source;
+    if (!src) {
+      this.snap.playing = false;
+      this.snap.offset = pos;
+      this.startSource(pos, rate);
+      return;
+    }
+    const t = this.ctx.currentTime;
+    this.rateAccumOffset = pos;
+    this.rateAccumCtxTime = t;
+    this.rateAccumRate = rate;
+    this.snap.rate = rate;
+    src.playbackRate.cancelScheduledValues(t);
+    src.playbackRate.setValueAtTime(src.playbackRate.value, t);
+    src.playbackRate.linearRampToValueAtTime(rate, t + 0.05);
   }
 
   pause(): void {
@@ -323,6 +361,15 @@ export class DeckTransport {
   seek(offset: number, opts?: { micro?: boolean }): void {
     const dur = this.buffer?.duration ?? 0;
     const next = Math.max(0, Math.min(dur, offset));
+    if (this.brakeTimer != null) {
+      // Deck state is already 'stopped' during a brake — land stopped at the
+      // target instead of crossfade-resuming at full rate.
+      this.cancelBrake();
+      this.stopImmediate();
+      this.snap.offset = next;
+      this.rateAccumOffset = next;
+      return;
+    }
     const wasPlaying = this.snap.playing && this.source != null;
     const rate = this.snap.rate;
     if (!wasPlaying) {
@@ -339,6 +386,12 @@ export class DeckTransport {
 
   setRate(rate: number): void {
     if (!Number.isFinite(rate) || rate <= 0) return;
+    if (this.brakeTimer != null) {
+      // Braking — record for the next play; don't fight the spin-down ramp
+      // (pitch moves while stopped must not audibly resume the deck).
+      this.snap.rate = rate;
+      return;
+    }
     // Avoid restarting a 20 ms ramp every rAF when already on target (waveform drift).
     const live = this.source?.playbackRate.value ?? this.snap.rate;
     if (
@@ -366,20 +419,37 @@ export class DeckTransport {
       this.pause();
       return;
     }
+    this.cancelBrake();
     const src = this.source;
     const t = this.ctx.currentTime;
+    const r0 = src.playbackRate.value;
+    const durSec = Math.max(0.01, ms / 1000);
+    const offset0 = this.position();
+    this.brakeInfo = { t0: t, offset0, r0, t1: t + durSec };
     src.playbackRate.cancelScheduledValues(t);
-    src.playbackRate.setValueAtTime(src.playbackRate.value, t);
-    src.playbackRate.linearRampToValueAtTime(0.001, t + ms / 1000);
-    globalThis.setTimeout(() => {
-      const pos = this.position();
+    src.playbackRate.setValueAtTime(r0, t);
+    src.playbackRate.linearRampToValueAtTime(0.001, t + durSec);
+    this.brakeTimer = globalThis.setTimeout(() => {
+      this.brakeTimer = null;
+      const pos = this.position(); // ramp-integrated — where the audio actually stopped
+      this.brakeInfo = null;
       this.stopImmediate();
       this.snap.offset = pos;
+      this.rateAccumOffset = pos;
       this.snap.playing = false;
     }, ms + 20);
   }
 
+  private cancelBrake(): void {
+    if (this.brakeTimer != null) {
+      globalThis.clearTimeout(this.brakeTimer);
+      this.brakeTimer = null;
+    }
+    this.brakeInfo = null;
+  }
+
   stopImmediate(): void {
+    this.cancelBrake();
     this.killSourcePair(this.source, this.sourceGain);
     this.source = null;
     this.sourceGain = null;

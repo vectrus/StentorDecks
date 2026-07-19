@@ -50,3 +50,15 @@ export type AnalysisFailure = {
 };
 
 export type AnalysisJobOutcome = AnalysisResult | AnalysisFailure;
+
+/**
+ * `window.stentorAnalysis` bridge exposed by the sandboxed analysis preload.
+ * File bytes are read in main and shipped with the job — the analysis renderer
+ * decodes untrusted media, so it must never have Node access itself.
+ */
+export type AnalysisBridge = {
+  onRun: (listener: (job: AnalysisJob, bytes: ArrayBuffer) => void) => void;
+  sendReady: () => void;
+  sendStage: (payload: { trackId: number; stage: AnalysisStage }) => void;
+  sendResult: (outcome: AnalysisJobOutcome) => void;
+};

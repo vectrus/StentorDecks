@@ -1,7 +1,6 @@
 import { app, BrowserWindow, dialog } from 'electron';
 import path from 'node:path';
 import { startAutoUpdater } from './autoUpdate';
-import { createAnalysisSupervisor } from './analysisSupervisor';
 import { getSchemaVersion, openDatabase } from './db/database';
 import { registerIpcHandlers } from './ipcHandlers';
 import { gracefulShutdown, registerLifecycleHandlers } from './lifecycle';
@@ -90,8 +89,6 @@ async function boot(): Promise<void> {
     },
   });
   startAutoUpdater();
-
-  createAnalysisSupervisor();
 
   const startWindowedDev = process.env.STENTOR_WINDOWED === '1' || !app.isPackaged;
   const rendererUrl = process.env.VITE_DEV_SERVER_URL ?? null;

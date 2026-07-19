@@ -3,9 +3,53 @@
 </p>
 
 <p align="center">
-  Two-deck DJ application for Windows, built around the Hercules DJConsole RMX2.<br />
+  A two-deck DJ application for Windows, purpose-built around the Hercules DJConsole RMX2.<br />
+  Not a toy, not a demo — a booth-ready instrument.<br />
   <em>for julius</em>
 </p>
+
+## What StentorDeck is
+
+StentorDeck is a complete DJ system: a real-time dual-deck audio engine, deep
+hardware integration for the RMX2, a self-maintaining music library with
+automatic analysis, and a performance UI designed to be read from a meter away
+in a dark booth. It installs from a single `Setup.exe`, updates itself from
+GitHub Releases, and shuts down cleanly when you close the lid.
+
+### Why it's great
+
+- **An audio engine that respects your ears.** Two independent decks with
+  trim / 3-band EQ + kills / filter / flanger per channel, headphone cue with
+  PFL and head-mix, and two routing plans — Plan A (one 4-channel interface)
+  or Plan B (any two stereo devices, bridged). Every gain change is ramped,
+  every playing seek is a crossfade, stop can brake with a realistic vinyl
+  spin-down (the waveform decelerates with the audio), and a −3 dB brickwall
+  limiter guards the PA. Master volume boots booth-safe.
+- **The RMX2 feels native.** Factory mapping out of the box, MIDI learn for
+  everything, soft takeover so faders never jump, LED feedback, and a
+  dual-zone jog wheel with tunable feel — fine vinyl-style nudge on the rim,
+  spinback when you rip it.
+- **A library that looks after itself.** Point it at your folders: SQLite
+  index, live file watcher, instant search, and a background analysis
+  pipeline (in a sandboxed worker window) that computes waveforms, BPM with a
+  real beatgrid, musical key (Camelot), and LUFS loudness for auto-gain —
+  including resilient decoding of damaged MP3s. Tag and manual values always
+  win over analysis; idle backfill fills in the rest.
+- **SYNC that behaves like a good human, not a robot.** One-shot beat snap on
+  the analyzed grid, tempo follow of the partner's pitch fader, then a soft
+  PI phase assist: hysteresis so it never hunts, a slow integral that absorbs
+  slightly-off BPM analysis (the classic "synced but slowly drifting" case),
+  and slew-limited rate moves you can't hear. Release SYNC and *phase glue*
+  keeps holding the musical offset you jogged in — your mix, not the grid's.
+- **A waveform well built for beatmatching.** Both decks stacked with a shared
+  latency-compensated playhead, downbeat-emphasized beatgrid ticks, and
+  rate-aware windows: both strips scroll at the same pixel speed regardless of
+  pitch, so when ticks line up vertically, the decks are in phase. You see
+  drift before you hear it.
+- **Engineered like it matters.** Strict TypeScript across four workspaces, a
+  typed IPC contract with a channel allowlist, sandboxed renderers, ~200 unit
+  and component tests, Playwright e2e, and hardware-verified checklists for
+  the audio and MIDI layers.
 
 **Spec is law:** see [`docs/README.md`](docs/README.md), [`docs/ROADMAP.md`](docs/ROADMAP.md), [`docs/CHANGELOG.md`](docs/CHANGELOG.md).
 
@@ -72,6 +116,33 @@ npm run shortcut      # Desktop StentorDeck.lnk → exe (or Launch-StentorDeck.v
 
 Windows packaging embeds `build/icon.ico` via an `afterPack` rcedit hook (avoids winCodeSign symlink issues).
 
+#### What `npm run dist` actually does
+
+1. **`npm run icons`** — [`scripts/make-windows-icon.mjs`](scripts/make-windows-icon.mjs)
+   converts `build/icon.png` (from `brand/`) into a multi-size `build/icon.ico`
+   using electron-builder's bundled `app-builder-bin`.
+2. **`npm run build`** — compiles all four workspaces: `shared` (tsc),
+   `app/main` + `app/analysis` (tsup, incl. both preloads), `app/renderer` (Vite).
+3. **electron-builder** (config in `package.json` `"build"`):
+   - rebuilds `better-sqlite3` against the packaged Electron ABI;
+   - packs the `dist/` outputs + `package.json` into `resources/app.asar`,
+     with native modules (`**/*.node`, better-sqlite3) kept outside the
+     archive via `asarUnpack` (native code can't load from inside an asar);
+   - runs the `afterPack` hook ([`scripts/embed-win-icon.cjs`](scripts/embed-win-icon.cjs))
+     to stamp the icon + version metadata into `StentorDeck.exe` with `rcedit`;
+   - builds the **NSIS installer** → `release/StentorDeck-Setup-<version>.exe`
+     (per-user, choosable install dir, Desktop + Start Menu shortcuts), plus
+     `latest.yml` and a `.blockmap` — the manifest + delta map `electron-updater`
+     uses for in-app updates from GitHub Releases.
+
+Builds are intentionally **unsigned** (`CSC_IDENTITY_AUTO_DISCOVERY=false`, no
+cert yet): first run on a new machine may show a SmartScreen prompt, and
+`verifyUpdateCodeSignature` is disabled so auto-update accepts our own builds.
+
+The installed app is single-instance: launching a second copy (or the Setup
+shortcut while the app runs — including a dev `npm start` instance) focuses
+the running window and exits.
+
 Double-click **StentorDeck** on the Desktop. Closing the window shuts down analysis, DB, and MIDI cleanly. Boot shows a short branded splash.
 
 Silent helper: [`scripts/Launch-StentorDeck.vbs`](scripts/Launch-StentorDeck.vbs).
@@ -119,7 +190,7 @@ See [`docs/TESTING.md`](docs/TESTING.md).
 | `shared` | IPC contract, settings zod, MIDI/audio pure logic, analysis contract |
 | `app/main` | Electron main, SQLite, scanner/watcher, analysis supervisor, IPC, splash |
 | `app/renderer` | React/MobX UI + audio/MIDI engines + Prep browser |
-| `app/analysis` | Hidden BrowserWindow — decode / waveform / BPM / key / loudness (E5) |
+| `app/analysis` | Hidden **sandboxed** BrowserWindow — decode / waveform / BPM / key / loudness (E5); file bytes are read in main and shipped with the job | 
 
 ## Roadmap & status
 
