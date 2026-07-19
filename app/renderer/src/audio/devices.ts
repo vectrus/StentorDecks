@@ -49,7 +49,9 @@ async function probeMaxChannels(deviceId: string): Promise<number | null> {
   const ctx = new Ctx({ latencyHint: 'interactive' });
   try {
     const sinkId = (ctx as AudioContext & { setSinkId?: (id: string) => Promise<void> }).setSinkId;
-    if (sinkId) {
+    // Virtual ids reject in setSinkId — the fresh context already points at
+    // the system default, so just read its channel count.
+    if (sinkId && !isVirtualDeviceId(deviceId)) {
       await sinkId.call(ctx, deviceId);
     }
     return ctx.destination.maxChannelCount;
@@ -63,6 +65,15 @@ async function probeMaxChannels(deviceId: string): Promise<number | null> {
 export function looksLikeRmx(label: string): boolean {
   const u = label.toUpperCase();
   return u.includes('RMX') || u.includes('HERCULES') || u.includes('DJCONSOLE');
+}
+
+/**
+ * Chromium exposes virtual "default" / "communications" endpoints that mirror
+ * a real device. AudioContext.setSinkId() rejects these ids (NotFoundError) —
+ * treat them as "follow system default" and never auto-suggest them.
+ */
+export function isVirtualDeviceId(id: string | null | undefined): boolean {
+  return id == null || id === '' || id === 'default' || id === 'communications';
 }
 
 /**
@@ -109,7 +120,11 @@ export function suggestRmxDefaults(devices: AudioDeviceInfo[]): {
   masterChannels: [number, number];
   cueChannels: [number, number];
 } {
-  const outputs = devices.filter((d) => d.kind === 'audiooutput');
+  // Real endpoints only — the virtual "Default – …" entry cannot be bound
+  // with AudioContext.setSinkId and must never be suggested.
+  const outputs = devices.filter(
+    (d) => d.kind === 'audiooutput' && !isVirtualDeviceId(d.deviceId),
+  );
   const rmx = outputs.filter((d) => looksLikeRmx(d.label));
   const four = rmx.find((d) => (d.maxChannelCount ?? 0) >= 4) ?? outputs.find((d) => (d.maxChannelCount ?? 0) >= 4);
 

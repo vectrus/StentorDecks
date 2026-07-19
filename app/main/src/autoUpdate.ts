@@ -4,7 +4,30 @@
  */
 import { app } from 'electron';
 import type { AppUpdateStatus } from '@stentordeck/shared';
+import type { AppUpdater } from 'electron-updater';
 import { broadcast } from './ipcBroadcast';
+
+type UpdaterModule = {
+  autoUpdater?: AppUpdater;
+  default?: { autoUpdater?: AppUpdater };
+};
+
+/**
+ * Interop-safe access to electron-updater's lazy `autoUpdater` export.
+ * The package defines it via an `Object.defineProperty` getter, which Node's
+ * CJS named-export detection can't see — so `const { autoUpdater } =
+ * await import('electron-updater')` is undefined in the packaged app and only
+ * `.default` carries the real module ("reading 'checkForUpdates'" crash).
+ */
+export function resolveAutoUpdater(mod: UpdaterModule): AppUpdater {
+  const updater = mod.autoUpdater ?? mod.default?.autoUpdater;
+  if (!updater) throw new Error('electron-updater loaded but autoUpdater export missing');
+  return updater;
+}
+
+async function loadAutoUpdater(): Promise<AppUpdater> {
+  return resolveAutoUpdater((await import('electron-updater')) as UpdaterModule);
+}
 
 let status: AppUpdateStatus = {
   phase: 'disabled',
@@ -41,7 +64,7 @@ export async function checkForAppUpdates(): Promise<AppUpdateStatus> {
     });
   }
   try {
-    const { autoUpdater } = await import('electron-updater');
+    const autoUpdater = await loadAutoUpdater();
     publish({ phase: 'checking', error: null });
     await autoUpdater.checkForUpdates();
     return getUpdateStatus();
@@ -59,7 +82,7 @@ export async function installAppUpdate(): Promise<{ ok: true } | { ok: false; re
     return { ok: false, reason: 'No update downloaded yet.' };
   }
   try {
-    const { autoUpdater } = await import('electron-updater');
+    const autoUpdater = await loadAutoUpdater();
     // Let lifecycle before-quit run gracefulShutdown.
     autoUpdater.quitAndInstall(false, true);
     return { ok: true };
@@ -91,7 +114,7 @@ export function startAutoUpdater(): void {
 
   void (async () => {
     try {
-      const { autoUpdater } = await import('electron-updater');
+      const autoUpdater = await loadAutoUpdater();
       autoUpdater.logger = console;
       autoUpdater.autoDownload = true;
       autoUpdater.autoInstallOnAppQuit = true;

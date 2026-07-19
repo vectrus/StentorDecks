@@ -2,12 +2,49 @@ import { DEFAULT_MASTER_GAIN, equalPowerCrossfade, type Settings } from '@stento
 import {
   type AudioDeviceInfo,
   type RoutingPlan,
+  isVirtualDeviceId,
   resolveRoutingPlan,
 } from './devices';
 import { DeckGraph, DeckTransport, type DeckId } from './DeckGraph';
 import { setVisualLatencySec } from './frameClock';
 import { linearRampParam } from './ramp';
 import { playStereoTestTone } from './testTone';
+
+/**
+ * Connect a stereo source to a specific output channel pair of a context's
+ * destination (Plan B on a multi-channel device — e.g. cue on RMX2 outs 3-4
+ * while master runs over USB to another interface). Falls back to a plain
+ * stereo connect for [0,1], invalid pairs, or devices without enough
+ * channels. Returns true when a non-default pair was applied.
+ */
+export function connectStereoToChannelPair(
+  ctx: AudioContext,
+  source: AudioNode,
+  pair: [number, number],
+): boolean {
+  const [l, r] = pair;
+  const needed = Math.max(l, r) + 1;
+  const supported =
+    Number.isInteger(l) &&
+    Number.isInteger(r) &&
+    l >= 0 &&
+    r >= 0 &&
+    l !== r &&
+    needed <= ctx.destination.maxChannelCount;
+  if ((l === 0 && r === 1) || !supported) {
+    source.connect(ctx.destination);
+    return false;
+  }
+  ctx.destination.channelCount = needed;
+  ctx.destination.channelCountMode = 'explicit';
+  const splitter = ctx.createChannelSplitter(2);
+  const merger = ctx.createChannelMerger(needed);
+  source.connect(splitter);
+  splitter.connect(merger, 0, l);
+  splitter.connect(merger, 1, r);
+  merger.connect(ctx.destination);
+  return true;
+}
 
 export type MeterLevels = {
   aDb: number;
@@ -30,6 +67,8 @@ export class AudioEngine {
   plan: RoutingPlan = 'B';
   planReason = '';
   deviceLost = false;
+  /** Human-readable sink binding problem from the last rebuild (UI banner). */
+  sinkWarning: string | null = null;
   /** Bumps on every rebuild — load/decode paths must re-check after await. */
   epoch = 0;
 
@@ -110,7 +149,20 @@ export class AudioEngine {
     }
   }
 
-  async rebuild(opts: {
+  /** Serializes rebuilds — concurrent rebuilds (rapid device switching in
+   *  Audio setup) clobbered each other's contexts and wedged the engine. */
+  private rebuildQueue: Promise<void> = Promise.resolve();
+
+  rebuild(opts: {
+    settings: Settings;
+    devices: AudioDeviceInfo[];
+  }): Promise<void> {
+    const run = this.rebuildQueue.then(() => this.rebuildImpl(opts));
+    this.rebuildQueue = run.catch(() => undefined);
+    return run;
+  }
+
+  private async rebuildImpl(opts: {
     settings: Settings;
     devices: AudioDeviceInfo[];
   }): Promise<void> {
@@ -150,9 +202,10 @@ export class AudioEngine {
     this.planReason = resolved.reason;
 
     const latencyHint = Math.max(0.005, settings.audio.bufferHintMs / 1000);
+    this.sinkWarning = null;
     const masterCtx = new AudioContext({ latencyHint });
     this.masterCtx = masterCtx;
-    await this.setSink(masterCtx, settings.audio.masterDevice);
+    await this.setSink(masterCtx, settings.audio.masterDevice, 'master');
 
     this.masterBus = masterCtx.createGain();
     this.masterGain = masterCtx.createGain();
@@ -195,7 +248,12 @@ export class AudioEngine {
     this.setPhonesGain(1);
 
     if (this.plan === 'A') {
-      masterCtx.destination.channelCount = Math.min(4, masterCtx.destination.maxChannelCount);
+      // Clamp ≥2 — a device reporting 0/1 max channels would make this
+      // assignment throw and abort the whole build.
+      masterCtx.destination.channelCount = Math.min(
+        4,
+        Math.max(2, masterCtx.destination.maxChannelCount || 2),
+      );
       masterCtx.destination.channelCountMode = 'explicit';
       this.merger = masterCtx.createChannelMerger(4);
       const masterSplit = masterCtx.createChannelSplitter(2);
@@ -208,15 +266,23 @@ export class AudioEngine {
       headSplit.connect(this.merger, 1, 3);
       this.merger.connect(masterCtx.destination);
     } else {
-      this.limiter.connect(masterCtx.destination);
+      const mCh = settings.audio.masterChannels;
+      if (connectStereoToChannelPair(masterCtx, this.limiter, mCh)) {
+        this.planReason += ` · master → outs ${mCh[0] + 1}-${mCh[1] + 1}`;
+      }
       // Cue on second context
       const cueCtx = new AudioContext({ latencyHint });
       this.cueCtx = cueCtx;
-      await this.setSink(cueCtx, settings.audio.cueDevice);
+      await this.setSink(cueCtx, settings.audio.cueDevice, 'cue');
       this.cueBridgeDest = masterCtx.createMediaStreamDestination();
       this.headGain.connect(this.cueBridgeDest);
       this.cueBridgeSrc = cueCtx.createMediaStreamSource(this.cueBridgeDest.stream);
-      this.cueBridgeSrc.connect(cueCtx.destination);
+      // Honor cueChannels on multi-channel cue devices — e.g. RMX2 phones
+      // (outs 3-4) while master is a different USB interface.
+      const cCh = settings.audio.cueChannels;
+      if (connectStereoToChannelPair(cueCtx, this.cueBridgeSrc, cCh)) {
+        this.planReason += ` · cue → outs ${cCh[0] + 1}-${cCh[1] + 1}`;
+      }
     }
 
     this.deviceLost = false;
@@ -239,13 +305,25 @@ export class AudioEngine {
     setVisualLatencySec(base + out);
   }
 
-  private async setSink(ctx: AudioContext, deviceId: string | null): Promise<void> {
+  private async setSink(
+    ctx: AudioContext,
+    deviceId: string | null,
+    which: 'master' | 'cue',
+  ): Promise<void> {
+    // Virtual ids ("default"/"communications") reject in AudioContext.setSinkId
+    // (NotFoundError). System default IS the context's default sink — skip.
+    if (isVirtualDeviceId(deviceId)) return;
     const setSinkId = (ctx as AudioContext & { setSinkId?: (id: string) => Promise<void> }).setSinkId;
     if (!setSinkId || !deviceId) return;
     try {
       await setSinkId.call(ctx, deviceId);
     } catch (err) {
       console.warn('[audio] setSinkId failed', deviceId, err);
+      // Never silent — audio is now going to the system default device.
+      this.sinkWarning =
+        `${which === 'master' ? 'Master' : 'Cue'} output device could not be bound — ` +
+        `audio is playing to the Windows default device instead. ` +
+        `Open Audio setup and re-select the ${which} device.`;
     }
   }
 

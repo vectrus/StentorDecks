@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { looksLikeRmx, resolveRoutingPlan, suggestRmxDefaults } from './devices';
+import {
+  isVirtualDeviceId,
+  looksLikeRmx,
+  resolveRoutingPlan,
+  suggestRmxDefaults,
+} from './devices';
 
 describe('routing plan probe', () => {
   const fourCh = {
@@ -51,5 +56,35 @@ describe('routing plan probe', () => {
     expect(s.masterDevice).toBe('rmx-4');
     expect(s.cueDevice).toBe('rmx-4');
     expect(s.cueChannels).toEqual([2, 3]);
+  });
+
+  it('flags Chromium virtual endpoints', () => {
+    expect(isVirtualDeviceId('default')).toBe(true);
+    expect(isVirtualDeviceId('communications')).toBe(true);
+    expect(isVirtualDeviceId('')).toBe(true);
+    expect(isVirtualDeviceId(null)).toBe(true);
+    expect(isVirtualDeviceId('rmx-4')).toBe(false);
+  });
+
+  it('never suggests virtual "Default –" endpoints (setSinkId rejects them)', () => {
+    // Windows ordering: virtual default/communications first, real device last.
+    const virtualDefault = {
+      deviceId: 'default',
+      label: 'Default - Headphones (Realtek)',
+      kind: 'audiooutput' as const,
+      maxChannelCount: 2,
+      groupId: 'g0',
+    };
+    const comms = { ...virtualDefault, deviceId: 'communications', groupId: 'g0c' };
+    const speakers = {
+      deviceId: 'spk-1',
+      label: 'Speakers (Realtek)',
+      kind: 'audiooutput' as const,
+      maxChannelCount: 2,
+      groupId: 'g3',
+    };
+    const s = suggestRmxDefaults([virtualDefault, comms, speakers]);
+    expect(s.masterDevice).toBe('spk-1');
+    expect(s.cueDevice).toBe('spk-1');
   });
 });

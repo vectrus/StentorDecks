@@ -33,4 +33,15 @@ describe('autoUpdate (dev / unpackaged)', () => {
       expect(res.reason).toMatch(/installed app/i);
     }
   });
+
+  it('resolveAutoUpdater handles both interop shapes (getter export hides behind .default)', async () => {
+    const { resolveAutoUpdater } = await import('./autoUpdate');
+    const updater = { checkForUpdates: vi.fn() };
+    // Named export visible (plain require / bundled)
+    expect(resolveAutoUpdater({ autoUpdater: updater as never })).toBe(updater);
+    // Native dynamic import of CJS: getter export invisible to cjs-module-lexer,
+    // only .default carries the module (the packaged-app crash).
+    expect(resolveAutoUpdater({ default: { autoUpdater: updater as never } })).toBe(updater);
+    expect(() => resolveAutoUpdater({})).toThrow(/autoUpdater export missing/);
+  });
 });

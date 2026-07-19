@@ -3,6 +3,7 @@ import type { Settings } from '@stentordeck/shared';
 import { audioEngine } from '../audio/AudioEngine';
 import {
   enumerateAudioDevices,
+  isVirtualDeviceId,
   suggestRmxDefaults,
   type AudioDeviceInfo,
   type RoutingPlan,
@@ -30,7 +31,12 @@ export class AudioDeviceStore {
   }
 
   get outputs(): AudioDeviceInfo[] {
-    return this.devices.filter((d) => d.kind === 'audiooutput');
+    // Real endpoints only. Chromium's virtual "Default –"/"Communications"
+    // entries reject in AudioContext.setSinkId — offering them produced
+    // configs where neither master nor cue addressed a real device.
+    return this.devices.filter(
+      (d) => d.kind === 'audiooutput' && !isVirtualDeviceId(d.deviceId),
+    );
   }
 
   get inputs(): AudioDeviceInfo[] {
@@ -68,6 +74,8 @@ export class AudioDeviceStore {
    */
   async ensureValidDeviceSelection(): Promise<void> {
     const { masterDevice, cueDevice } = this.settingsStore.settings.audio;
+    // `outputs` excludes virtual endpoints, so a saved "default"/
+    // "communications" id from older builds fails this check and gets healed.
     const ids = new Set(this.outputs.map((d) => d.deviceId));
     const masterOk = masterDevice != null && ids.has(masterDevice);
     const cueOk = cueDevice != null && ids.has(cueDevice);
@@ -80,10 +88,15 @@ export class AudioDeviceStore {
     }
 
     if (masterDevice != null || cueDevice != null) {
+      const hadVirtual =
+        (masterDevice != null && isVirtualDeviceId(masterDevice)) ||
+        (cueDevice != null && isVirtualDeviceId(cueDevice));
       await this.settingsStore.set({
         audio: { masterDevice: null, cueDevice: null },
       });
-      this.banner = 'Audio devices changed — open Audio setup and re-select the RMX2.';
+      this.banner = hadVirtual
+        ? 'Audio selection pointed at a Windows virtual "Default" device (no real output) — pick your actual speakers and headphones in Audio setup.'
+        : 'Audio devices changed — open Audio setup and re-select the RMX2.';
     }
   }
 
@@ -124,13 +137,27 @@ export class AudioDeviceStore {
       this.activePlan = audioEngine.plan;
       this.planReason = audioEngine.planReason;
       this.engineReady = true;
+      // Sink binding failures must be visible, not console-only (speakers
+      // silently falling back to the default device is undebuggable in a booth).
+      if (audioEngine.sinkWarning) this.banner = audioEngine.sinkWarning;
     });
     await this.afterRebuild?.();
   }
 
   async saveAndRebuild(patch: Partial<Settings['audio']>): Promise<void> {
     await this.settingsStore.set({ audio: patch });
-    await this.rebuildEngine();
+    try {
+      await this.rebuildEngine();
+    } catch (err) {
+      // Callers `void` this promise — a swallowed failure looks like "test
+      // tone does nothing". Surface it.
+      console.error('[audio] rebuild failed', err);
+      runInAction(() => {
+        this.engineReady = false;
+        this.banner =
+          'Audio engine rebuild failed — try a different device, or restart the app.';
+      });
+    }
   }
 
   async testTone(which: 'master' | 'cue'): Promise<void> {

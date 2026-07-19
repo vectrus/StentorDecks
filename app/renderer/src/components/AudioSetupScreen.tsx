@@ -7,6 +7,27 @@ export const AudioSetupScreen = observer(function AudioSetupScreen(props: {
 }) {
   const audio = settingsStore.settings.audio;
   const outputs = audioDeviceStore.outputs;
+  const masterDev = outputs.find((d) => d.deviceId === audio.masterDevice);
+  const cueDev = outputs.find((d) => d.deviceId === audio.cueDevice);
+
+  const pairSelect = (
+    which: 'masterChannels' | 'cueChannels',
+    value: [number, number],
+    label: string,
+  ) => (
+    <select
+      className="chpair"
+      aria-label={label}
+      value={value.join(',')}
+      onChange={(e) => {
+        const pair = e.target.value.split(',').map(Number) as [number, number];
+        void audioDeviceStore.saveAndRebuild({ [which]: pair });
+      }}
+    >
+      <option value="0,1">Outs 1-2</option>
+      <option value="2,3">Outs 3-4</option>
+    </select>
+  );
 
   return (
     <div className="audio-setup">
@@ -33,6 +54,9 @@ export const AudioSetupScreen = observer(function AudioSetupScreen(props: {
               </option>
             ))}
           </select>
+          {(masterDev?.maxChannelCount ?? 0) >= 4
+            ? pairSelect('masterChannels', audio.masterChannels, 'Master output channels')
+            : null}
           <button
             type="button"
             className={audioDeviceStore.testing === 'master' ? 'test ok' : 'test'}
@@ -63,6 +87,9 @@ export const AudioSetupScreen = observer(function AudioSetupScreen(props: {
               </option>
             ))}
           </select>
+          {(cueDev?.maxChannelCount ?? 0) >= 4
+            ? pairSelect('cueChannels', audio.cueChannels, 'Cue output channels')
+            : null}
           <button
             type="button"
             className={audioDeviceStore.testing === 'cue' ? 'test ok' : 'test'}
@@ -74,8 +101,8 @@ export const AudioSetupScreen = observer(function AudioSetupScreen(props: {
         </div>
         <p className="note">
           Plan A: single 4-channel device (outs 1-2 master / 3-4 cue), sample-locked. Plan B: two
-          stereo devices (cue latency slightly higher). Active:{' '}
-          <strong>Plan {audioDeviceStore.activePlan}</strong>
+          devices (cue latency slightly higher); on a 4-channel device you can pick which output
+          pair each side uses. Active: <strong>Plan {audioDeviceStore.activePlan}</strong>
         </p>
       </section>
 
