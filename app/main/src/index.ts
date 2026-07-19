@@ -4,6 +4,7 @@ import { startAutoUpdater } from './autoUpdate';
 import { getSchemaVersion, openDatabase } from './db/database';
 import { registerIpcHandlers } from './ipcHandlers';
 import { gracefulShutdown, registerLifecycleHandlers } from './lifecycle';
+import { startBoothDisplayStayAwake } from './powerSave';
 import { loadSettings, type SettingsFileState } from './settingsFile';
 import { closeSplash, showSplash } from './splash';
 import { waitForUrl } from './waitForUrl';
@@ -112,6 +113,8 @@ async function boot(): Promise<void> {
     startFullscreen: settingsState.settings.ui.startInFullscreen,
     startWindowedDev,
   });
+  // E7 booth: Windows must not dim/blank the screen mid-set (or during Prep).
+  startBoothDisplayStayAwake();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

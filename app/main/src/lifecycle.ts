@@ -1,6 +1,7 @@
 import { app } from 'electron';
 import { closeDatabase } from './db/database';
 import { disposeIpc } from './ipcHandlers';
+import { stopBoothDisplayStayAwake } from './powerSave';
 import { closeSplash } from './splash';
 
 let shuttingDown = false;
@@ -13,6 +14,11 @@ export function gracefulShutdown(reason: string): void {
   if (shuttingDown) return;
   shuttingDown = true;
   console.info(`[app] shutting down (${reason})`);
+  try {
+    stopBoothDisplayStayAwake();
+  } catch {
+    /* ignore */
+  }
   try {
     closeSplash();
   } catch {
