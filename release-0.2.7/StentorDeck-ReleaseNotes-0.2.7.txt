@@ -1,0 +1,20 @@
+StentorDeck 0.2.7
+Installer: StentorDeck-Setup-0.2.7.exe
+Date: 2026-07-19
+
+Install over your current build. Library, settings, and MIDI map stay in %APPDATA%.
+
+What's new
+-----------
+2026-07-19 - Ship 0.2.7: Library mode, multi-controller profiles, live screenshots
+Booth polish since 0.2.6: topbar Prep -> Library; Dev mode + MIDI monitor under Settings -> Developer; opt-in MIDI controller profiles (RMX2 factory locked; community FLX4 / Inpulse 500); README screenshots from live Playwright app; MP3 click/squeak notes in README. R7.4, R8.2, docs/04, docs/06.
+
+How to update
+-------------
+- Run StentorDeck-Setup-0.2.7.exe, or use Settings > Updates > Check for updates (needs latest.yml on GitHub).
+- Open StentorDeck from the desktop shortcut (not only the source .bat).
+
+Notes
+-----
+- Builds are unsigned - Windows SmartScreen may warn once.
+- Auto-update requires a full GitHub Release with latest.yml (not Setup.exe alone).
