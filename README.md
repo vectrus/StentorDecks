@@ -3,9 +3,16 @@
 </p>
 
 <p align="center">
-  A two-deck DJ application for Windows, purpose-built around the Hercules DJConsole RMX2.<br />
+  As a developer and former DJ  took out my Hercules RMX2 one day and felt that every piece of <br/>
+  DJ Software required registration and/or was really bad and did not right the RMX<br/>
+  With more then a decade of DJ experience, a few decades of software development and a proper <br/>
+  and some proper AI agents and a boring day with nothing to do, hence taking out the dusty RMX, we got to this.<br/>
+  I spent some time using it and i'm happy. Besides the small jogs and faders it feel a lot more like 2 CDJ's
+  Added a proper filter. Decent flanger.<br/> 
+  A two-deck DJ application for Windows, purpose-built around the Hercules DJConsole RMX2.<br/> 
+  (Other Hercules and brands may work but need MIDI mapping) <br />
   Not a toy, not a demo — a booth-ready instrument.<br />
-  <em>for julius</em>
+  
 </p>
 
 ## What StentorDeck is
